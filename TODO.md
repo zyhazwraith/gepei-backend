@@ -21,12 +21,12 @@
 - [x] 功能测试通过
 - [x] 提交FP-002代码到git并推送到GitHub
 
-## FP-003: 用户登录功能
+## FP-003: 用户登录功能 ✅
 
-- [ ] 实现登录API (POST /api/auth/login)
-- [ ] 更新数据库查询函数
-- [ ] 编写单元测试
-- [ ] 提交FP-003代码到git并推送到GitHub
+- [x] 实现登录API (POST /api/auth/login)
+- [x] 密码验证功能
+- [x] 功能测试通过
+- [x] 提交FP-003代码到git并推送到GitHub
 
 ## FP-004: 获取当前用户信息
 

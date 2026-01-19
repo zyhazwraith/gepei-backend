@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { ValidationError, ConflictError, ERROR_CODES } from '../utils/errors';
+import { ValidationError, ConflictError, AuthenticationError, ERROR_CODES } from '../utils/errors';
 import { validatePhone, validatePassword } from '../utils/validation';
 import { generateToken } from '../utils/jwt';
 import { findUserByPhone, createUser, toPublicUser } from '../models/user.model';
-import { ApiResponse, RegisterRequest } from '../types';
+import { ApiResponse, RegisterRequest, LoginRequest } from '../types';
 
 // 用户注册
 export async function register(req: Request, res: Response): Promise<void> {
@@ -55,4 +55,49 @@ export async function register(req: Request, res: Response): Promise<void> {
   };
 
   res.status(201).json(response);
+}
+
+// 用户登录
+export async function login(req: Request, res: Response): Promise<void> {
+  const { phone, password }: LoginRequest = req.body;
+
+  // 验证手机号格式
+  if (!phone || !validatePhone(phone)) {
+    throw new ValidationError('手机号格式不正确', ERROR_CODES.INVALID_PHONE);
+  }
+
+  // 验证密码格式
+  if (!password || !validatePassword(password)) {
+    throw new ValidationError('密码格式不正确', ERROR_CODES.INVALID_PASSWORD);
+  }
+
+  // 查找用户
+  const user = await findUserByPhone(phone);
+  if (!user) {
+    throw new AuthenticationError('手机号或密码错误', ERROR_CODES.INVALID_PASSWORD);
+  }
+
+  // 验证密码
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new AuthenticationError('手机号或密码错误', ERROR_CODES.INVALID_PASSWORD);
+  }
+
+  // 生成 Token
+  const token = generateToken({
+    userId: user.id,
+    phone: user.phone,
+    role: user.role,
+  });
+
+  // 返回响应
+  const response: ApiResponse = {
+    success: true,
+    data: {
+      user: toPublicUser(user),
+      token,
+    },
+  };
+
+  res.json(response);
 }
