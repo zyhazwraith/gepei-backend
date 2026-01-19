@@ -51,3 +51,10 @@
 - [x] GuideEdit页面：添加真实姓名输入框
 - [x] GuideEdit页面：实现城市搜索功能
 - [x] GuideEdit页面：修改API调用（PUT → POST）
+
+## 紧急修复：登录接口404错误
+
+- [x] 检查后端路由配置
+- [x] 检查auth.routes是否正确注册
+- [x] 测试登录接口
+- [x] 修复__dirname问题（ES模块不支持）

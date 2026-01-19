@@ -1,6 +1,10 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
@@ -26,7 +30,7 @@ export function createApp(): Application {
   });
 
   // 静态文件服务（上传的图片）
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  app.use('/uploads', express.static('uploads'));
 
   // API 路由（添加/v1版本号）
   app.use('/api/v1/auth', authRoutes);

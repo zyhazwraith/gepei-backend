@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { authenticate } from '../middleware/auth.middleware';
 import { uploadFile } from '../controllers/upload.controller';
 
@@ -10,7 +14,7 @@ const router = Router();
 // 配置multer存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
+    cb(null, 'uploads');
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
