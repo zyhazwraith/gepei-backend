@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import authRoutes from './routes/auth.routes';
 
 // 创建 Express 应用
 export function createApp(): Application {
@@ -20,8 +21,8 @@ export function createApp(): Application {
     });
   });
 
-  // API 路由（待添加）
-  // app.use('/api/auth', authRoutes);
+  // API 路由
+  app.use('/api/auth', authRoutes);
 
   // 404 处理
   app.use(notFoundHandler);
