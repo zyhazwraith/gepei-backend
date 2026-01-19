@@ -1,9 +1,9 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { AuthenticationError, ERROR_CODES } from './errors';
 
 // 测试环境JWT配置（硬编码）
 const JWT_SECRET = process.env.JWT_SECRET || 'gepei_test_jwt_secret_2026_UNcwX9XFV65zjBuc30LxJ';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 // Token payload 接口
 export interface TokenPayload {
@@ -15,7 +15,7 @@ export interface TokenPayload {
 // 生成 JWT Token
 export function generateToken(payload: TokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
+    expiresIn: JWT_EXPIRES_IN as any,
   });
 }
 
