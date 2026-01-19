@@ -28,10 +28,11 @@
 - [x] 功能测试通过
 - [x] 提交FP-003代码到git并推送到GitHub
 
-## FP-004: 获取当前用户信息
+## FP-004: 获取当前用户信息 ✅
 
-- [ ] 创建认证中间件 (src/middleware/auth.middleware.ts)
-- [ ] 实现获取当前用户API (GET /api/auth/me)
-- [ ] 更新路由配置
-- [ ] 编写单元测试
-- [ ] 提交FP-004代码到git并推送到GitHub
+- [x] 创建认证中间件 (src/middleware/auth.middleware.ts)
+- [x] 实现获取当前用户API (GET /api/auth/me)
+- [x] 更新路由配置
+- [x] JWT Token验证功能
+- [x] 功能测试通过
+- [x] 提交FP-004代码到git并推送到GitHub
