@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, ERROR_CODES } from '../utils/errors';
-import { verifyToken, extractTokenFromHeader, TokenPayload } from '../utils/jwt';
-import { findUserById } from '../models/user.model';
-import { User } from '../types';
+import { AuthenticationError, ERROR_CODES } from '../utils/errors.js';
+import { verifyToken, extractTokenFromHeader, TokenPayload } from '../utils/jwt.js';
+import { findUserById } from '../models/user.model.js';
+import { User } from '../types/index.js';
 
 // 扩展Express Request类型，添加user属性
 declare global {

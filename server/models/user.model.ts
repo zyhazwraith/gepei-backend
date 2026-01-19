@@ -1,5 +1,5 @@
-import { query } from '../config/database';
-import { User, UserPublic } from '../types';
+import { query } from '../config/database.js';
+import { User, UserPublic } from '../types/index.js';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 // 根据手机号查询用户

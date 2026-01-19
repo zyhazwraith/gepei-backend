@@ -50,14 +50,17 @@
 - [x] 功能测试通过
 - [x] 提交FP-004代码到git并推送到GitHub
 
-## FP-001~FP-004 前端集成
+## FP-001~FP-004 前端集成 ✅
 
-- [ ] 复制前端页面到client/目录
-- [ ] 创建API客户端配置 (client/src/lib/api.ts)
-- [ ] 创建Token存储工具 (client/src/utils/token.ts)
-- [ ] 创建认证Context (client/src/contexts/AuthContext.tsx)
-- [ ] 集成注册页面API调用
-- [ ] 集成登录页面API调用
-- [ ] 集成个人中心API调用
-- [ ] 前后端联调测试
-- [ ] 提交前端集成代码到git
+- [x] 复制前端页面到client/目录
+- [x] 创建API客户端配置 (client/src/lib/api.ts)
+- [x] 创建Token存储工具 (client/src/utils/token.ts)
+- [x] 创建认证Context (client/src/contexts/AuthContext.tsx)
+- [x] 集成注册页面API调用
+- [x] 集成登录页面API调用
+- [x] 修改App.tsx添加AuthProvider
+- [x] 配置vite代理
+- [x] 删除tRPC相关代码
+- [x] 修夏ES模块导入路径
+- [x] 前后端联调测试
+- [x] 提交前端集成代码到git

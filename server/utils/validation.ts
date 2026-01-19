@@ -1,4 +1,4 @@
-import { ValidationError, ERROR_CODES } from './errors';
+import { ValidationError, ERROR_CODES } from './errors.js';
 
 // 验证手机号格式（中国大陆手机号）
 export function validatePhone(phone: string): boolean {

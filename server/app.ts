@@ -1,7 +1,7 @@
 import express, { Application } from 'express';
 import cors from 'cors';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import authRoutes from './routes/auth.routes';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/auth.routes.js';
 
 // 创建 Express 应用
 export function createApp(): Application {

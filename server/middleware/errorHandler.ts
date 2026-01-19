@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../utils/errors';
-import { ErrorCodes, ErrorCodeToHttpStatus, ErrorCodeToMessage } from '../../shared/errorCodes';
-import { errorResponse } from '../utils/response';
+import { AppError } from '../utils/errors.js';
+import { ErrorCodes, ErrorCodeToHttpStatus, ErrorCodeToMessage } from '../../shared/errorCodes.js';
+import { errorResponse } from '../utils/response.js';
 
 // 全局错误处理中间件
 export function errorHandler(

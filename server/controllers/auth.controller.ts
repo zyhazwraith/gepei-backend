@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { ErrorCodes } from '../../shared/errorCodes';
-import { validatePhone, validatePassword } from '../utils/validation';
-import { generateToken } from '../utils/jwt';
-import { findUserByPhone, createUser } from '../models/user.model';
-import { successResponse, errorResponse } from '../utils/response';
-import { RegisterRequest, LoginRequest, AuthResponse } from '../../shared/types';
+import { ErrorCodes } from '../../shared/errorCodes.js';
+import { validatePhone, validatePassword } from '../utils/validation.js';
+import { generateToken } from '../utils/jwt.js';
+import { findUserByPhone, createUser } from '../models/user.model.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { RegisterRequest, LoginRequest, AuthResponse } from '../../shared/types.js';
 
 /**
  * 用户注册

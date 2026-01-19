@@ -4,8 +4,8 @@
  */
 
 import { Response } from 'express';
-import { ErrorCodes, ErrorCodeToHttpStatus, ErrorCodeToMessage } from '../../shared/errorCodes';
-import { ApiResponse } from '../../shared/types';
+import { ErrorCodes, ErrorCodeToHttpStatus, ErrorCodeToMessage } from '../../shared/errorCodes.js';
+import { ApiResponse } from '../../shared/types.js';
 
 /**
  * 成功响应

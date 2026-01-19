@@ -1,5 +1,5 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { AuthenticationError, ERROR_CODES } from './errors';
+import { AuthenticationError, ERROR_CODES } from './errors.js';
 
 // 测试环境JWT配置（硬编码）
 const JWT_SECRET = process.env.JWT_SECRET || 'gepei_test_jwt_secret_2026_UNcwX9XFV65zjBuc30LxJ';
