@@ -43,10 +43,11 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
+  /* 地陪应用主题色 - 橙色 #FF7A45 */
+  --primary: oklch(70% 0.18 35);
+  --primary-foreground: oklch(100% 0 0);
+  --sidebar-primary: oklch(70% 0.18 35);
+  --sidebar-primary-foreground: oklch(100% 0 0);
   --chart-1: var(--color-blue-300);
   --chart-2: var(--color-blue-500);
   --chart-3: var(--color-blue-600);
