@@ -101,3 +101,20 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   res.json(response);
 }
+
+// 获取当前用户信息
+export async function getCurrentUser(req: Request, res: Response): Promise<void> {
+  // 用户信息已由认证中间件附加到req.user
+  if (!req.user) {
+    throw new AuthenticationError('未找到用户信息', ERROR_CODES.UNAUTHORIZED);
+  }
+
+  const response: ApiResponse = {
+    success: true,
+    data: {
+      user: toPublicUser(req.user),
+    },
+  };
+
+  res.json(response);
+}
