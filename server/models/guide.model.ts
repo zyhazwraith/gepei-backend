@@ -34,11 +34,12 @@ export async function findGuideByUserId(userId: number): Promise<Guide | null> {
 
   const guide = rows[0];
   
-  // 解析JSON字段
+  // MySQL JSON类型已自动解析，不需要再次JSON.parse
+  // 如果是字符串则解析，如果已经是对象则直接使用
   return {
     ...guide,
-    tags: guide.tags ? JSON.parse(guide.tags) : null,
-    photos: guide.photos ? JSON.parse(guide.photos) : null,
+    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
+    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
   } as Guide;
 }
 
@@ -57,11 +58,12 @@ export async function findGuideByIdNumber(idNumber: string): Promise<Guide | nul
 
   const guide = rows[0];
   
-  // 解析JSON字段
+  // MySQL JSON类型已自动解析，不需要再次JSON.parse
+  // 如果是字符串则解析，如果已经是对象则直接使用
   return {
     ...guide,
-    tags: guide.tags ? JSON.parse(guide.tags) : null,
-    photos: guide.photos ? JSON.parse(guide.photos) : null,
+    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
+    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
   } as Guide;
 }
 

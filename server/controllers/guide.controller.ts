@@ -61,15 +61,18 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       return;
     }
 
-    // 检查身份证号是否已被其他用户使用
-    const existingGuide = await findGuideByIdNumber(id_number);
-    if (existingGuide && existingGuide.user_id !== user.id) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
-      return;
-    }
-
     // 查找当前用户的地陪信息
     const currentGuide = await findGuideByUserId(user.id);
+
+    // 检查身份证号是否已被其他用户使用
+    // 如果是更新操作且身份证号未改变，则跳过检查
+    if (!currentGuide || currentGuide.id_number !== id_number) {
+      const existingGuide = await findGuideByIdNumber(id_number);
+      if (existingGuide && existingGuide.user_id !== user.id) {
+        errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
+        return;
+      }
+    }
 
     let guideId: number;
 
@@ -126,8 +129,21 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     };
 
     successResponse(res, response);
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新地陪资料失败:', error);
+    
+    // 处理数据库唯一约束错误
+    if (error.code === 'ER_DUP_ENTRY') {
+      if (error.message.includes('id_number')) {
+        errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
+        return;
+      }
+      if (error.message.includes('user_id')) {
+        errorResponse(res, ErrorCodes.INVALID_PARAMS, '您已经提交过地陪认证');
+        return;
+      }
+    }
+    
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
 }
