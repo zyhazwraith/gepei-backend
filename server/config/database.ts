@@ -1,3 +1,7 @@
+/**
+ * @deprecated This file is deprecated. Please use Drizzle ORM (server/db/index.ts) instead.
+ * Only kept for compatibility with legacy code (e.g. guide.model.ts).
+ */
 import mysql from 'mysql2/promise';
 
 // 测试环境数据库配置（硬编码）
