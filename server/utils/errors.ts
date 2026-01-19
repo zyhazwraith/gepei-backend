@@ -16,6 +16,10 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
   constructor(message: string, code: string = 'VALIDATION_ERROR') {
     super(message, 400, code);
+    this.message = message;
+    this.name = 'ValidationError'; 
+    // Re-enable setPrototypeOf but use standard Object.setPrototypeOf
+    Object.setPrototypeOf(this, ValidationError.prototype); 
   }
 }
 

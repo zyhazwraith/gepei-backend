@@ -124,7 +124,71 @@ export interface GetGuidesResponse {
   pagination: Pagination;
 }
 
+export interface CreateOrderRequest {
+  service_date: string;
+  city: string;
+  content: string;
+  budget: number;
+  requirements?: string;
+}
+
+export interface CreateOrderResponse {
+  order_id: number;
+  amount: number;
+}
+
+export interface PayOrderResponse {
+  order_id: number;
+  status: string;
+}
+
+export interface CustomRequirements {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  peopleCount: number;
+  budget: string;
+  specialRequirements: string;
+}
+
+export interface OrderDetailResponse {
+  id: number;
+  orderNumber: string;
+  userId: number;
+  guideId: number | null;
+  orderType: 'normal' | 'custom';
+  status: 'pending' | 'paid' | 'in_progress' | 'completed' | 'cancelled';
+  serviceDate: string;
+  serviceHours: number;
+  amount: string;
+  deposit: string;
+  requirements: string | null;
+  createdAt: string;
+  custom_requirements?: CustomRequirements | null;
+}
+
 // ==================== API方法 ====================
+
+/**
+ * 创建定制订单
+ */
+export async function createOrder(data: CreateOrderRequest): Promise<ApiResponse<CreateOrderResponse>> {
+  return apiClient.post('/orders', data);
+}
+
+/**
+ * 获取订单详情
+ */
+export async function getOrderById(id: number): Promise<ApiResponse<OrderDetailResponse>> {
+  return apiClient.get(`/orders/${id}`);
+}
+
+/**
+ * 支付订单
+ */
+export async function payOrder(orderId: number, paymentMethod: 'wechat' | 'alipay'): Promise<ApiResponse<PayOrderResponse>> {
+  return apiClient.post(`/orders/${orderId}/payment`, { payment_method: paymentMethod });
+}
 
 /**
  * 获取地陪列表

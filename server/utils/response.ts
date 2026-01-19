@@ -28,9 +28,10 @@ export function errorResponse(
   message?: string,
   httpStatus?: number
 ): Response {
-  const response: ApiResponse = {
+  const response: ApiResponse<null> = {
     code,
     message: message || ErrorCodeToMessage[code] || '未知错误',
+    data: null,
   };
   
   const status = httpStatus || ErrorCodeToHttpStatus[code] || 500;

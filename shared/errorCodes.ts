@@ -18,6 +18,7 @@ export const ErrorCodes = {
   INVALID_ORDER_STATUS: 1008,   // 订单状态不允许该操作
   INSUFFICIENT_BALANCE: 1009,   // 余额不足
   INVALID_PARAMS: 1010,         // 参数错误
+  VALIDATION_ERROR: 2002,       // 字段验证错误
   
   // 服务器错误 (2001+)
   INTERNAL_ERROR: 2001,         // 服务器内部错误
@@ -40,6 +41,7 @@ export const ErrorCodeToHttpStatus: Record<number, number> = {
   [ErrorCodes.INVALID_ORDER_STATUS]: 400,
   [ErrorCodes.INSUFFICIENT_BALANCE]: 400,
   [ErrorCodes.INVALID_PARAMS]: 400,
+  [ErrorCodes.VALIDATION_ERROR]: 400,
   [ErrorCodes.INTERNAL_ERROR]: 500,
 };
 
@@ -58,5 +60,6 @@ export const ErrorCodeToMessage: Record<number, string> = {
   [ErrorCodes.INVALID_ORDER_STATUS]: '订单状态不允许该操作',
   [ErrorCodes.INSUFFICIENT_BALANCE]: '余额不足',
   [ErrorCodes.INVALID_PARAMS]: '参数错误',
+  [ErrorCodes.VALIDATION_ERROR]: '字段验证错误',
   [ErrorCodes.INTERNAL_ERROR]: '服务器内部错误',
 };

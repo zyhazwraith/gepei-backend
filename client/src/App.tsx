@@ -13,6 +13,7 @@ import Guides from "./pages/Guides";
 import Messages from "./pages/Messages";
 import Custom from "./pages/Custom";
 import GuideEdit from "./pages/GuideEdit";
+import OrderDetail from "./pages/OrderDetail";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path={"/messages"} component={Messages} />
       <Route path={"/custom"} component={Custom} />
       <Route path={"/guide-edit"} component={GuideEdit} />
+      <Route path={"/orders/:id"} component={OrderDetail} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
