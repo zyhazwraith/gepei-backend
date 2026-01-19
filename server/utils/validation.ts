@@ -6,9 +6,17 @@ export function validatePhone(phone: string): boolean {
   return phoneRegex.test(phone);
 }
 
-// 验证密码格式（6-20位）
+// 验证密码格式（8-20位，包含字母和数字）
 export function validatePassword(password: string): boolean {
-  return password.length >= 6 && password.length <= 20;
+  if (password.length < 8 || password.length > 20) {
+    return false;
+  }
+  
+  // 检查是否包含字母和数字
+  const hasLetter = /[A-Za-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  
+  return hasLetter && hasNumber;
 }
 
 // 验证昵称格式（1-50位）

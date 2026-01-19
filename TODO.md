@@ -1,5 +1,18 @@
 # 地陪应用后端开发 - TODO
 
+## 架构重构任务
+
+- [ ] 重命名src/为server/
+- [ ] 创建client/目录
+- [ ] 创建shared/目录
+- [ ] 修改API路径添加/v1版本号
+- [ ] 修改API响应格式为{code, message, data}
+- [ ] 创建shared/errorCodes.ts错误码定义
+- [ ] 修改所有控制器使用新的响应格式
+- [ ] 修改密码验证规则为8-20位包含字母和数字
+- [ ] 修改数据库字段命名为下划线风格
+- [ ] 提交重构代码到git
+
 ## FP-001: 项目初始化与环境配置 ✅
 
 - [x] 初始化Node.js项目并配置package.json
@@ -36,3 +49,15 @@
 - [x] JWT Token验证功能
 - [x] 功能测试通过
 - [x] 提交FP-004代码到git并推送到GitHub
+
+## FP-001~FP-004 前端集成
+
+- [ ] 复制前端页面到client/目录
+- [ ] 创建API客户端配置 (client/src/lib/api.ts)
+- [ ] 创建Token存储工具 (client/src/utils/token.ts)
+- [ ] 创建认证Context (client/src/contexts/AuthContext.tsx)
+- [ ] 集成注册页面API调用
+- [ ] 集成登录页面API调用
+- [ ] 集成个人中心API调用
+- [ ] 前后端联调测试
+- [ ] 提交前端集成代码到git

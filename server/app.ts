@@ -21,8 +21,8 @@ export function createApp(): Application {
     });
   });
 
-  // API 路由
-  app.use('/api/auth', authRoutes);
+  // API 路由（添加/v1版本号）
+  app.use('/api/v1/auth', authRoutes);
 
   // 404 处理
   app.use(notFoundHandler);
