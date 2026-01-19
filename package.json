@@ -4,9 +4,9 @@
   "description": "\u5730\u966a\u5e94\u7528\u540e\u7aef\u670d\u52a1",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch server/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server/server.js",
     "test": "jest"
   },
   "keywords": [
