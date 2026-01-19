@@ -100,7 +100,47 @@ export interface LoginResponse {
   is_guide: number;
 }
 
+export interface Guide {
+  id: number;
+  user_id: number;
+  name: string;
+  city: string;
+  intro: string | null;
+  hourly_price: number | null;
+  tags: string[] | null;
+  photos: string[] | null;
+  created_at: string;
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface GetGuidesResponse {
+  list: Guide[];
+  pagination: Pagination;
+}
+
 // ==================== API方法 ====================
+
+/**
+ * 获取地陪列表
+ */
+export async function getGuides(
+  page: number = 1,
+  pageSize: number = 20,
+  city?: string,
+  keyword?: string
+): Promise<ApiResponse<GetGuidesResponse>> {
+  const params: any = { page, page_size: pageSize };
+  if (city) params.city = city;
+  if (keyword) params.keyword = keyword;
+  
+  return apiClient.get('/guides', { params });
+}
 
 /**
  * 用户注册

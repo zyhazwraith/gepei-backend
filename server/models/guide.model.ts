@@ -131,6 +131,53 @@ export async function updateGuide(
 }
 
 /**
+ * 获取所有地陪列表（支持分页和筛选）
+ */
+export async function findAllGuides(
+  page: number = 1,
+  pageSize: number = 20,
+  city?: string,
+  keyword?: string
+): Promise<{ guides: Guide[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  const conditions: string[] = ['deleted_at IS NULL'];
+  const params: any[] = [];
+
+  if (city) {
+    conditions.push('city = ?');
+    params.push(city);
+  }
+
+  if (keyword) {
+    conditions.push('(name LIKE ? OR intro LIKE ?)');
+    params.push(`%${keyword}%`, `%${keyword}%`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  // 获取总数
+  const [countRows] = await pool.query<RowDataPacket[]>(
+    `SELECT COUNT(*) as total FROM guides ${whereClause}`,
+    params
+  );
+  const total = countRows[0].total;
+
+  // 获取数据
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM guides ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+
+  const guides = rows.map((guide) => ({
+    ...guide,
+    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
+    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
+  })) as Guide[];
+
+  return { guides, total };
+}
+
+/**
  * 更新用户的is_guide状态
  */
 export async function updateUserIsGuide(userId: number, isGuide: boolean): Promise<boolean> {

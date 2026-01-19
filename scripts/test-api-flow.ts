@@ -82,6 +82,40 @@ async function runTests() {
     logFail('Guide Verification Failed', e.response?.data || e.message);
   }
 
+  // 4.1 Get Guide Profile
+  try {
+    const res = await axios.get(`${API_URL}/guides/profile`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.data.code === 0 && res.data.data.id_number === validId) {
+      logPass('Guide Profile retrieval verified');
+    } else {
+      throw new Error('Guide Profile mismatch or failed');
+    }
+  } catch (e: any) {
+    logFail('Get Guide Profile Failed', e.response?.data || e.message);
+  }
+
+  // 4.2 Guide List & Search (Public API)
+  try {
+    // Search by City
+    const resCity = await axios.get(`${API_URL}/guides`, { params: { city: 'Beijing' } });
+    const foundInCity = resCity.data.data.list.some((g: any) => g.name === 'Real Name');
+    
+    // Search by Keyword (Intro)
+    const resKeyword = await axios.get(`${API_URL}/guides`, { params: { keyword: 'Test Intro' } });
+    const foundInKeyword = resKeyword.data.data.list.some((g: any) => g.name === 'Real Name');
+
+    // Check Privacy (Should NOT return id_number)
+    const hasPrivacyLeak = resCity.data.data.list.some((g: any) => g.id_number !== undefined);
+
+    if (foundInCity && foundInKeyword && !hasPrivacyLeak) {
+      logPass('Guide List Search & Privacy verified');
+    } else {
+      throw new Error(`Search failed or privacy leak detected. CityFound: ${foundInCity}, KeywordFound: ${foundInKeyword}, Leak: ${hasPrivacyLeak}`);
+    }
+  } catch (e: any) {
+    logFail('Guide List Search Failed', e.response?.data || e.message);
+  }
+
   // 5. Guide Verification (Boundary: Invalid ID)
   try {
     await axios.post(`${API_URL}/guides/profile`, {

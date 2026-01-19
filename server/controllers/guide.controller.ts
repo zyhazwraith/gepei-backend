@@ -5,10 +5,53 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import {
   findGuideByUserId,
   findGuideByIdNumber,
+  findAllGuides,
   createGuide,
   updateGuide,
   updateUserIsGuide,
 } from '../models/guide.model.js';
+
+/**
+ * 获取地陪列表（公开接口）
+ * GET /api/v1/guides
+ */
+export async function getGuides(req: Request, res: Response): Promise<void> {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.page_size as string) || 20;
+    const city = req.query.city as string;
+    const keyword = req.query.keyword as string;
+
+    const { guides, total } = await findAllGuides(page, pageSize, city, keyword);
+
+    // 转换为前端友好的格式（隐藏敏感信息）
+    const list = guides.map(g => ({
+      id: g.id,
+      user_id: g.user_id,
+      name: g.name,
+      // 隐藏身份证号
+      city: g.city,
+      intro: g.intro,
+      hourly_price: g.hourly_price,
+      tags: g.tags,
+      photos: g.photos,
+      created_at: g.created_at,
+    }));
+
+    successResponse(res, {
+      list,
+      pagination: {
+        total,
+        page,
+        page_size: pageSize,
+        total_pages: Math.ceil(total / pageSize)
+      }
+    });
+  } catch (error) {
+    console.error('获取地陪列表失败:', error);
+    errorResponse(res, ErrorCodes.INTERNAL_ERROR);
+  }
+}
 
 /**
  * 更新地陪资料（包含认证逻辑）
