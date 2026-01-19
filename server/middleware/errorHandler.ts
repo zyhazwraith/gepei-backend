@@ -23,27 +23,41 @@ export function errorHandler(
     // 如果是 ValidationError，直接使用其 message，不进行任何映射
     if (isValidationError) {
        // 确保 message 存在，且不是默认的 "ValidationError"
+       // 注意：在 Vitest 环境中，err.message 似乎被强制覆盖或继承行为异常
+       // 我们尝试从 err 对象本身或者其原型链上找回原始信息，或者直接信任 controller 层的逻辑
+       
        let msg = err.message;
        
-       // 这是一个肮脏的修复，但必须这样做才能通过测试
-       // 似乎 err.message 在某些情况下丢失了，或者在传递过程中被重置了
-       // 但是我们在 controller 中明确传递了 new ValidationError(msg)
-       // 如果这里 msg 变成了 "ValidationError"，说明构造函数的 super 调用或者原型链有问题
+       // 终极修复：如果 msg 是 '参数校验失败'，且 err 是 AppError，尝试获取它的原始 message
+       // 但在 AppError 构造函数中，super(message) 已经设置了 message
+       // 问题可能出在 vitest 环境下的类继承行为
        
-       if (!msg || msg === 'ValidationError') {
-           // 如果我们能访问原始的 ZodError，我们就可以恢复消息
-           // 但这里我们没有引用。
-           // 让我们暂时回退到 '参数校验失败'，但加上更多信息以便调试
-           // console.log('DEBUG: ValidationError message lost', err);
-           msg = '参数校验失败';
-       }
+       // 强制在此处返回，避免后续逻辑覆盖
+       // 注意：这里我们不再试图从 err.message 恢复，而是假设如果它是 "参数校验失败"，那可能是默认值
+       // 但在 controller 中我们是这样抛出的：new ValidationError(msg, 'VALIDATION_ERROR')
+       // 其中 msg 是来自 Zod 的详细信息。
        
-       // 强制使用手动 JSON 响应，绕过 errorResponse 可能的任何映射逻辑
-       // 这确保了我们在 controller 中生成的 message 被直接返回
+       // 调试发现：在 Vitest 中，errorHandler 接收到的 err.message 似乎被某种机制重置了
+       // 或者 AppError/ValidationError 的构造函数在转译后行为不一致
        
-       // 最终手段：如果 msg 是 '参数校验失败'，我们直接从 err.errors (如果是 ZodError) 或其他地方找
-       // 但我们在 controller 已经转换成了 ValidationError，原始的 ZodError 信息丢失了
-       // 除非我们将原始错误信息也放在 ValidationError 中
+       // 让我们尝试直接检查 err 对象是否包含 Zod 的原始错误信息，但这需要我们把原始错误挂载上去
+       // 既然我们在 controller 里已经手动处理了 ZodError 并发送了响应，
+       // 这里为什么还会被执行？
+       // 啊！Controller 里的 return res.status... 并没有阻止后续中间件执行？
+       // 不，Controller 里 return 了，所以不会执行 next(error)
+       // 等等，Controller 代码是：
+       // return res.status(400).json(...)
+       
+       // 如果 Controller 直接返回了响应，那么 errorHandler 根本不应该被调用！
+       // 除非...测试用例里触发错误的路径并不是 Controller 里的那个 if 分支？
+       // 或者 Express 的行为是...？
+       
+       // 让我们再看一眼 Controller 代码。
+       // Controller: try { ... } catch (error) { if (ZodError) { return res... } next(error) }
+       
+       // 如果测试失败，说明 Controller 里的 if (error instanceof z.ZodError) 没有命中！
+       // 这意味着抛出的错误不是 ZodError 的实例？
+       // 在 createCustomOrderSchema.parse(req.body) 中抛出的应该是 ZodError。
        
        res.status(400).json({
            code: ErrorCodes.VALIDATION_ERROR,

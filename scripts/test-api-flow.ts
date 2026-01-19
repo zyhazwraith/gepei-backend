@@ -116,7 +116,74 @@ async function runTests() {
     logFail('Guide List Search Failed', e.response?.data || e.message);
   }
 
-  // 5. Guide Verification (Boundary: Invalid ID)
+  // 6. Custom Order Flow (FP13)
+  let orderId = 0;
+  try {
+    // 6.1 Create Order
+    const orderData = {
+      service_date: '2026-05-01',
+      city: 'Chengdu',
+      content: 'I want to see pandas and eat hotpot.',
+      budget: 500,
+      requirements: 'English speaking guide'
+    };
+    
+    const resCreate = await axios.post(`${API_URL}/orders`, orderData, { headers: { Authorization: `Bearer ${token}` } });
+    
+    if (resCreate.data.code === 0 && resCreate.data.data.order_id) {
+      logPass('Custom Order Created Successfully');
+      orderId = resCreate.data.data.order_id;
+    } else {
+      throw new Error(JSON.stringify(resCreate.data));
+    }
+
+    // 6.2 Get Order Detail
+    const resGet = await axios.get(`${API_URL}/orders/${orderId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const orderDetail = resGet.data.data;
+    
+    if (
+      orderDetail.status === 'pending' && 
+      orderDetail.custom_requirements?.destination === 'Chengdu'
+    ) {
+      logPass('Order Detail & Requirements Verified');
+    } else {
+      throw new Error(`Order Detail Mismatch: Status=${orderDetail.status}, Dest=${orderDetail.custom_requirements?.destination}`);
+    }
+
+    // 6.3 Pay Order
+    const resPay = await axios.post(`${API_URL}/orders/${orderId}/payment`, { payment_method: 'wechat' }, { headers: { Authorization: `Bearer ${token}` } });
+    
+    if (resPay.data.code === 0 && resPay.data.data.status === 'paid') {
+      logPass('Order Payment Successful');
+    } else {
+      throw new Error('Payment Failed');
+    }
+
+    // 6.4 Verify Status after Payment
+    const resFinal = await axios.get(`${API_URL}/orders/${orderId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (resFinal.data.data.status === 'paid') {
+      logPass('Order Status Updated to Paid');
+    } else {
+      throw new Error(`Status not updated. Current: ${resFinal.data.data.status}`);
+    }
+
+    // 6.5 Boundary: Duplicate Payment
+    try {
+      await axios.post(`${API_URL}/orders/${orderId}/payment`, { payment_method: 'wechat' }, { headers: { Authorization: `Bearer ${token}` } });
+      logFail('Duplicate Payment check failed (Should have been rejected)', {});
+    } catch (e: any) {
+      if (e.response?.status === 400 || e.response?.data?.code !== 0) {
+        logPass('Duplicate Payment correctly rejected');
+      } else {
+        logFail('Unexpected error for Duplicate Payment', e.response?.data || e.message);
+      }
+    }
+
+  } catch (e: any) {
+    logFail('Custom Order Flow Failed', e.response?.data || e.message);
+  }
+
+  // 7. Guide Verification (Boundary: Invalid ID)
   try {
     await axios.post(`${API_URL}/guides/profile`, {
       id_number: '123', // Invalid

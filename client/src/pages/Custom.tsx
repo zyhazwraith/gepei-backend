@@ -119,6 +119,7 @@ export default function Custom() {
             id="date"
             type="date"
             className="pl-9"
+            min={new Date().toISOString().split("T")[0]}
             value={formData.service_date}
             onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
           />
