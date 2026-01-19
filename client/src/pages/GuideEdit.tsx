@@ -34,6 +34,7 @@ export default function GuideEdit() {
   // 表单状态
   const [idNumber, setIdNumber] = useState('');
   const [name, setName] = useState(''); // 真实姓名
+  const [idError, setIdError] = useState('');
   const [city, setCity] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
@@ -146,11 +147,29 @@ export default function GuideEdit() {
     }
   };
 
+  // 身份证号校验
+  const validateIdNumber = () => {
+    if (!idNumber) {
+      setIdError('');
+      return;
+    }
+    if (!/^\d{17}[\dXx]$/.test(idNumber)) {
+      setIdError('身份证号格式不正确（需18位）');
+    } else {
+      setIdError('');
+    }
+  };
+
   // 保存修改
   const handleSave = async () => {
     // 验证必填字段
     if (!idNumber.trim()) {
       toast.error('请输入身份证号');
+      return;
+    }
+
+    if (idError) {
+      toast.error(idError);
       return;
     }
 
@@ -239,10 +258,16 @@ export default function GuideEdit() {
           <Input
             type="text"
             value={idNumber}
-            onChange={(e) => setIdNumber(e.target.value)}
+            onChange={(e) => {
+              setIdNumber(e.target.value);
+              if (idError) setIdError(''); // 输入时清除错误
+            }}
+            onBlur={validateIdNumber}
             placeholder="请输入18位身份证号"
             maxLength={18}
+            className={idError ? "border-red-500" : ""}
           />
+          {idError && <p className="text-xs text-red-500 mt-1">{idError}</p>}
         </div>
 
         {/* 真实姓名 */}
