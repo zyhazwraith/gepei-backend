@@ -12,14 +12,14 @@
 - [x] 配置.gitignore
 - [x] 提交FP-001代码到git并推送到GitHub
 
-## FP-002: 用户注册功能
+## FP-002: 用户注册功能 ✅
 
-- [ ] 创建认证路由 (src/routes/auth.ts)
-- [ ] 创建认证控制器 (src/controllers/auth.controller.ts)
-- [ ] 创建数据库查询函数 (src/models/user.model.ts)
-- [ ] 实现注册API (POST /api/auth/register)
-- [ ] 编写单元测试
-- [ ] 提交FP-002代码到git并推送到GitHub
+- [x] 创建认证路由 (src/routes/auth.routes.ts)
+- [x] 创建认证控制器 (src/controllers/auth.controller.ts)
+- [x] 创建数据库查询函数 (src/models/user.model.ts)
+- [x] 实现注册API (POST /api/auth/register)
+- [x] 功能测试通过
+- [x] 提交FP-002代码到git并推送到GitHub
 
 ## FP-003: 用户登录功能
 
