@@ -68,7 +68,7 @@ export default function Profile() {
       {
         icon: Edit,
         label: "地陪资料编辑",
-        onClick: () => toast.info("功能开发中"),
+        onClick: () => setLocation("/guide-edit"),
       },
       {
         icon: Settings,
