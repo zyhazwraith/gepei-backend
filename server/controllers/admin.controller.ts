@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { orders, users, customRequirements } from '../db/schema';
-import { eq, desc, count } from 'drizzle-orm';
+import { eq, desc, count, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
@@ -128,11 +128,20 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
 export async function getUsers(req: Request, res: Response) {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
+  const keyword = req.query.keyword as string;
   const offset = (page - 1) * limit;
 
   try {
+    // 构建查询条件
+    const whereCondition = keyword 
+      ? or(like(users.phone, `%${keyword}%`), like(users.nickname, `%${keyword}%`))
+      : undefined;
+
     // 1. 查询总数
-    const [{ value: total }] = await db.select({ value: count() }).from(users);
+    const [{ value: total }] = await db
+      .select({ value: count() })
+      .from(users)
+      .where(whereCondition);
 
     // 2. 分页查询
     const userList = await db.select({
@@ -145,6 +154,7 @@ export async function getUsers(req: Request, res: Response) {
       createdAt: users.createdAt,
     })
     .from(users)
+    .where(whereCondition)
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset);

@@ -4,23 +4,26 @@ import { getAdminUsers, AdminUser, Pagination } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, User as UserIcon, Shield } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, User as UserIcon, Shield, Search } from "lucide-react";
 
 export default function AdminUserList() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState("");
+  const [searchTrigger, setSearchTrigger] = useState(0); // 用于触发搜索
 
   useEffect(() => {
     fetchUsers(page);
-  }, [page]);
+  }, [page, searchTrigger]);
 
   const fetchUsers = async (p: number) => {
     setLoading(true);
     try {
-      const res = await getAdminUsers(p);
+      const res = await getAdminUsers(p, 20, keyword);
       if (res.code === 0 && res.data) {
         setUsers(res.data.list);
         setPagination(res.data.pagination);
@@ -32,9 +35,35 @@ export default function AdminUserList() {
     }
   };
 
+  const handleSearch = () => {
+    setPage(1); // 重置到第一页
+    setSearchTrigger(prev => prev + 1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
     <AdminLayout title="用户管理">
       <div className="bg-white rounded-lg border shadow-sm flex flex-col h-full">
+        {/* 工具栏 */}
+        <div className="p-4 border-b flex items-center gap-4">
+          <div className="relative max-w-sm w-full">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="搜索手机号或昵称..."
+              className="pl-9"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
+          <Button onClick={handleSearch}>搜索</Button>
+        </div>
+
         <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex justify-center p-8">

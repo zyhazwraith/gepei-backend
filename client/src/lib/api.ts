@@ -275,8 +275,10 @@ export async function getAdminOrders(page: number = 1, pageSize: number = 20): P
 /**
  * 获取所有用户 (管理员)
  */
-export async function getAdminUsers(page: number = 1, pageSize: number = 20): Promise<ApiResponse<GetAdminUsersResponse>> {
-  return apiClient.get('/admin/users', { params: { page, limit: pageSize } });
+export async function getAdminUsers(page: number = 1, pageSize: number = 20, keyword?: string): Promise<ApiResponse<GetAdminUsersResponse>> {
+  const params: any = { page, limit: pageSize };
+  if (keyword) params.keyword = keyword;
+  return apiClient.get('/admin/users', { params });
 }
 
 /**
