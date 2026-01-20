@@ -5,15 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getOrderById, payOrder, OrderDetailResponse } from "@/lib/api";
+import { getOrderById, OrderDetailResponse } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
+import PaymentSheet from "@/components/PaymentSheet";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
   const [, setLocation] = useLocation();
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
     if (params?.id) {
@@ -37,24 +38,12 @@ export default function OrderDetail() {
     }
   };
 
-  const handlePayment = async () => {
-    if (!order) return;
-    
-    setPaying(true);
-    try {
-      const res = await payOrder(order.id, "wechat");
-      if (res.code === 0) {
-        toast.success("支付成功");
-        fetchOrder(order.id); // 刷新状态
-      } else {
-        toast.error(res.message || "支付失败");
-      }
-    } catch (error) {
-      toast.error("支付出错，请重试");
-    } finally {
-      setPaying(false);
+  const handlePaymentSuccess = () => {
+    if (order) {
+      fetchOrder(order.id); // 刷新状态
     }
   };
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -204,14 +193,21 @@ export default function OrderDetail() {
             <Button 
               className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
               size="lg"
-              onClick={handlePayment}
-              disabled={paying}
+              onClick={() => setShowPayment(true)}
             >
-              {paying ? "支付中..." : `微信支付 ¥${order.amount}`}
+              微信支付 ¥{order.amount}
             </Button>
           </div>
         )}
       </div>
+
+      <PaymentSheet 
+        orderId={order.id}
+        amount={order.amount}
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        onSuccess={handlePaymentSuccess}
+      />
 
       {order.status !== 'pending' && <BottomNav />}
     </div>
