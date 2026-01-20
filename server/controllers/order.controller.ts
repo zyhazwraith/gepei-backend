@@ -16,57 +16,121 @@ const createCustomOrderSchema = z.object({
   requirements: z.string().optional(),
 });
 
+// 普通订单 Schema
+const createNormalOrderSchema = z.object({
+  guide_id: z.number().int().positive(),
+  service_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
+  service_hours: z.number().int().min(1, '服务时长至少1小时'),
+  remark: z.string().optional(),
+});
+
 // 模拟支付 Schema
 const payOrderSchema = z.object({
   payment_method: z.enum(['wechat']),
 });
 
 /**
- * 创建定制订单
+ * 创建订单 (支持 custom 和 normal)
  */
 export async function createOrder(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
+  console.log('createOrder body:', req.body);
   
   try {
-    const validated = createCustomOrderSchema.parse(req.body);
+    // 1. 判断订单类型
+    const isCustom = !req.body.guide_id;
 
-    // 2. 事务处理
-    const result = await db.transaction(async (tx) => {
-      // 2.1 创建订单主记录
-      const [order] = await tx.insert(orders).values({
+    if (isCustom) {
+      // === 定制订单逻辑 ===
+      const validated = createCustomOrderSchema.parse(req.body);
+
+      // 事务处理
+      const result = await db.transaction(async (tx) => {
+        // 创建订单主记录
+        const [order] = await tx.insert(orders).values({
+          orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
+          userId,
+          orderType: 'custom',
+          status: 'pending', // 初始状态为待支付
+          serviceDate: validated.service_date,
+          serviceHours: 0, // 定制单按天或项目计价，初始设为0
+          amount: '150.00', // 固定订金
+          createdAt: new Date(),
+        }).$returningId();
+
+        // 创建定制需求详情
+        await tx.insert(customRequirements).values({
+          orderId: order.id,
+          destination: validated.city, // 映射 city 到 destination
+          startDate: validated.service_date,
+          endDate: validated.service_date, // 暂定一天
+          peopleCount: 1, // 默认为1人，后续可添加字段
+          budget: validated.budget.toString(),
+          specialRequirements: validated.content + (validated.requirements ? `\n备注: ${validated.requirements}` : ''),
+          createdAt: new Date(),
+        });
+
+        return order;
+      });
+
+      res.status(201).json({
+        code: 0,
+        message: '订单创建成功',
+        data: {
+          order_id: result.id,
+          amount: 150.00,
+        },
+      });
+
+    } else {
+      // === 普通订单逻辑 (FP-018) ===
+      const validated = createNormalOrderSchema.parse(req.body);
+
+      // 校验地陪有效性
+      const guide = await db.query.guides.findFirst({
+        where: eq(guides.id, validated.guide_id)
+      });
+
+      if (!guide) {
+        throw new ValidationError('地陪不存在');
+      }
+
+      if (guide.userId === userId) {
+        throw new ValidationError('不能预订自己的服务');
+      }
+
+      // 计算金额
+      if (!guide.hourlyPrice) {
+        throw new ValidationError('该地陪未设置价格，无法预订');
+      }
+      
+      const price = Number(guide.hourlyPrice);
+      const amount = (price * validated.service_hours).toFixed(2);
+
+      // 创建订单
+      const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
         userId,
-        orderType: 'custom',
-        status: 'pending', // 初始状态为待支付
+        guideId: validated.guide_id,
+        orderType: 'normal',
+        status: 'pending',
         serviceDate: validated.service_date,
-        serviceHours: 0, // 定制单按天或项目计价，初始设为0
-        amount: '150.00', // 固定订金
+        serviceHours: validated.service_hours,
+        amount: amount.toString(),
+        requirements: validated.remark,
         createdAt: new Date(),
       }).$returningId();
 
-      // 2.2 创建定制需求详情
-      await tx.insert(customRequirements).values({
-        orderId: order.id,
-        destination: validated.city, // 映射 city 到 destination
-        startDate: validated.service_date,
-        endDate: validated.service_date, // 暂定一天
-        peopleCount: 1, // 默认为1人，后续可添加字段
-        budget: validated.budget.toString(),
-        specialRequirements: validated.content + (validated.requirements ? `\n备注: ${validated.requirements}` : ''),
-        createdAt: new Date(),
+      res.status(201).json({
+        code: 0,
+        message: '订单创建成功',
+        data: {
+          order_id: order.id,
+          amount: Number(amount),
+        },
       });
+    }
 
-      return order;
-    });
-
-    res.status(201).json({
-      code: 0,
-      message: '订单创建成功',
-      data: {
-        order_id: result.id,
-        amount: 150.00,
-      },
-    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       // 捕获 Zod 错误并转换为 ValidationError，确保消息正确传递

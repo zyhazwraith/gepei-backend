@@ -16,6 +16,7 @@ import GuideEdit from "./pages/GuideEdit";
 import GuideDetail from "./pages/GuideDetail";
 import OrderDetail from "./pages/OrderDetail";
 import OrderList from "./pages/OrderList";
+import OrderCreate from "./pages/OrderCreate";
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminOrderList from "./pages/admin/OrderList";
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/messages"} component={Messages} />
       <Route path={"/custom"} component={Custom} />
       <Route path={"/orders"} component={OrderList} />
+      <Route path={"/orders/create"} component={OrderCreate} />
       <Route path={"/orders/:id"} component={OrderDetail} />
 
       {/* 后台管理路由 */}
