@@ -97,10 +97,11 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
 
     // 状态流转校验 (除非强制)
     if (!validated.force) {
-      const allowed = VALID_TRANSITIONS[order.status] || [];
+      const currentStatus = order.status || 'pending';
+      const allowed = VALID_TRANSITIONS[currentStatus] || [];
       if (!allowed.includes(validated.status)) {
         throw new ValidationError(
-          `非法状态流转: ${order.status} -> ${validated.status}。允许的目标状态: ${allowed.join(', ')}`
+          `非法状态流转: ${currentStatus} -> ${validated.status}。允许的目标状态: ${allowed.join(', ')}`
         );
       }
     }

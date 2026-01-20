@@ -116,8 +116,8 @@ export default function GuideDetail() {
               <MapPin className="w-4 h-4 mr-1" />
               {guide.city}
               <span className="mx-2">•</span>
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
-              4.9分 (暂无评价)
+              <Star className="w-4 h-4 text-gray-300 mr-1" />
+              新入驻
             </div>
           </div>
           <div className="text-right">
@@ -172,10 +172,10 @@ export default function GuideDetail() {
       {/* 底部悬浮按钮 */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg flex items-center gap-4 z-20">
         <div className="flex-1">
-          <p className="text-xs text-gray-500">总价预估</p>
+          <p className="text-xs text-gray-500">参考总价 (8小时)</p>
           <p className="text-xl font-bold text-orange-500">
             {guide.hourly_price ? `¥${guide.hourly_price * 8}` : "¥0"}
-            <span className="text-xs text-gray-400 font-normal">/天 (参考)</span>
+            <span className="text-xs text-gray-400 font-normal">/天</span>
           </p>
         </div>
         <Button 

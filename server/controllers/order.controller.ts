@@ -70,7 +70,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       // 捕获 Zod 错误并转换为 ValidationError，确保消息正确传递
-      const msg = error.errors?.[0]?.message || '参数校验失败';
+      const msg = (error as any).errors?.[0]?.message || '参数校验失败';
       return next(new ValidationError(msg));
     }
     next(error);
@@ -132,7 +132,8 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      const msg = error.errors?.[0]?.message || '参数校验失败';
+      // 捕获 Zod 错误并转换为 ValidationError，确保消息正确传递
+      const msg = (error as any).errors?.[0]?.message || '参数校验失败';
       return next(new ValidationError(msg));
     }
     next(error);
@@ -151,6 +152,7 @@ export async function getOrders(req: Request, res: Response) {
     
     // 如果有状态筛选
     if (status && typeof status === 'string' && status !== 'all') {
+      // @ts-ignore
       conditions.push(eq(orders.status, status));
     }
 
@@ -177,7 +179,11 @@ export async function getOrders(req: Request, res: Response) {
     }));
 
     // 按时间倒序排序 (内存排序，因为orderBy在orm里写起来可能有点繁琐，先这样)
-    enrichedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    enrichedOrders.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
 
     res.json({
       code: 0,

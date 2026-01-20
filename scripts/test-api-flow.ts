@@ -83,15 +83,38 @@ async function runTests() {
   }
 
   // 4.1 Get Guide Profile
+  let guideId = 0;
   try {
     const res = await axios.get(`${API_URL}/guides/profile`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.data.code === 0 && res.data.data.id_number === validId) {
       logPass('Guide Profile retrieval verified');
+      guideId = res.data.data.guide_id;
     } else {
       throw new Error('Guide Profile mismatch or failed');
     }
   } catch (e: any) {
     logFail('Get Guide Profile Failed', e.response?.data || e.message);
+  }
+
+  // 4.3 Guide Detail (Public API - FP09)
+  try {
+    if (!guideId) throw new Error('Skipping Guide Detail test: No guideId available');
+    
+    const res = await axios.get(`${API_URL}/guides/${guideId}`);
+    const detail = res.data.data;
+
+    if (
+      res.data.code === 0 && 
+      detail.id === guideId && 
+      detail.name === 'Real Name' &&
+      detail.id_number === undefined // Privacy check
+    ) {
+      logPass(`Guide Detail (Public) verified for ID: ${guideId}`);
+    } else {
+      throw new Error(`Guide Detail mismatch or privacy leak. ID=${detail.id}, Name=${detail.name}, HasIDNum=${detail.id_number !== undefined}`);
+    }
+  } catch (e: any) {
+    logFail('Get Guide Detail (Public) Failed', e.response?.data || e.message);
   }
 
   // 4.2 Guide List & Search (Public API)
