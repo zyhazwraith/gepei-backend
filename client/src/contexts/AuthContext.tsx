@@ -11,7 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (token: string) => Promise<void>;
+  login: (token: string, userInfo?: User) => Promise<User | null>;
   logout: () => void;
   refetchUser: () => Promise<void>;
 }
@@ -27,23 +27,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   // 获取用户信息
-  const fetchUser = async () => {
+  const fetchUser = async (): Promise<User | null> => {
     const token = getToken();
     if (!token) {
       setLoading(false);
-      return;
+      return null;
     }
 
     try {
       const response: ApiResponse<User> = await getCurrentUser();
       if (response.code === 0 && response.data) {
         setUser(response.data);
+        return response.data;
       } else {
         removeToken();
+        return null;
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
       removeToken();
+      return null;
     } finally {
       setLoading(false);
     }
@@ -55,9 +58,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // 登录 - 保存Token并获取用户信息
-  const login = async (token: string) => {
+  const login = async (token: string, userInfo?: User): Promise<User | null> => {
     saveToken(token);
-    await fetchUser();
+    
+    // 如果直接提供了用户信息（例如从登录响应中获取），则直接使用，减少一次请求
+    if (userInfo) {
+      setUser(userInfo);
+      return userInfo;
+    }
+    
+    // 否则重新获取
+    return await fetchUser();
   };
 
   // 登出 - 清除Token和用户信息

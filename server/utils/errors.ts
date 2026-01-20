@@ -41,6 +41,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class ForbiddenError extends AppError {
+  constructor(message: string, code: string = 'FORBIDDEN') {
+    super(message, 403, code);
+  }
+}
+
 export const ERROR_CODES = {
   PHONE_EXISTS: 'PHONE_EXISTS',
   INVALID_PHONE: 'INVALID_PHONE',

@@ -52,6 +52,7 @@ export interface AuthResponse {
   nickname: string;
   token: string;
   is_guide: boolean;
+  role: 'user' | 'admin';
 }
 
 /**

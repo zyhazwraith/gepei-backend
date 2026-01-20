@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, ERROR_CODES } from '../utils/errors.js';
+import { AuthenticationError, ForbiddenError, ERROR_CODES } from '../utils/errors.js';
 import { verifyToken, extractTokenFromHeader, TokenPayload } from '../utils/jwt.js';
 import { findUserById } from '../models/user.model.js';
 import { User } from '../types/index.js';
@@ -44,4 +44,23 @@ export async function authenticate(
   } catch (error) {
     next(error);
   }
+}
+
+// 管理员权限中间件
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    next(new AuthenticationError('未登录', ERROR_CODES.UNAUTHORIZED));
+    return;
+  }
+
+  if (req.user.role !== 'admin') {
+    next(new ForbiddenError('需要管理员权限'));
+    return;
+  }
+
+  next();
 }

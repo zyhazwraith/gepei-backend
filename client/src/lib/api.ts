@@ -85,6 +85,7 @@ export interface RegisterResponse {
   nickname: string;
   token: string;
   is_guide: number;
+  role: 'user' | 'admin';
 }
 
 export interface LoginRequest {
@@ -98,6 +99,7 @@ export interface LoginResponse {
   nickname: string;
   token: string;
   is_guide: number;
+  role: 'user' | 'admin';
 }
 
 export interface Guide {

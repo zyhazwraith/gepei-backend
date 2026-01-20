@@ -14,10 +14,13 @@ import Messages from "./pages/Messages";
 import Custom from "./pages/Custom";
 import GuideEdit from "./pages/GuideEdit";
 import OrderDetail from "./pages/OrderDetail";
+import AdminLogin from "./pages/admin/Login";
+import AdminDashboard from "./pages/admin/Dashboard";
 
 function Router() {
   return (
     <Switch>
+      {/* 客户端路由 */}
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
@@ -27,6 +30,12 @@ function Router() {
       <Route path={"/custom"} component={Custom} />
       <Route path={"/guide-edit"} component={GuideEdit} />
       <Route path={"/orders/:id"} component={OrderDetail} />
+
+      {/* 后台管理路由 */}
+      <Route path={"/admin/login"} component={AdminLogin} />
+      <Route path={"/admin/dashboard"} component={AdminDashboard} />
+      {/* 后续添加更多 admin 路由: /admin/orders, /admin/users 等 */}
+
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

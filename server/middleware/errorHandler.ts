@@ -80,7 +80,8 @@ export function errorHandler(
       'PHONE_EXISTS': ErrorCodes.PHONE_EXISTS,
       'INVALID_PHONE': ErrorCodes.INVALID_PARAMS,
       'INVALID_PASSWORD': ErrorCodes.INVALID_CREDENTIALS,
-      'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR, 
+      'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR,
+      'FORBIDDEN': ErrorCodes.PERMISSION_DENIED,
     };
 
     if (errorCodeMap[code]) {

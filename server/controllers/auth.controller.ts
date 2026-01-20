@@ -61,6 +61,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       nickname: newUser.nickname || '',
       token,
       is_guide: newUser.is_guide,
+      role: newUser.role,
     };
 
     successResponse(res, authResponse);
@@ -118,6 +119,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       nickname: user.nickname || '',
       token,
       is_guide: user.is_guide,
+      role: user.role,
     };
 
     successResponse(res, authResponse);
