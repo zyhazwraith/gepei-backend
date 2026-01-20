@@ -46,7 +46,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
   const navItems = [
     { label: "控制台", icon: LayoutDashboard, path: "/admin/dashboard" },
     { label: "订单管理", icon: ShoppingBag, path: "/admin/orders" },
-    { label: "人员管理", icon: Users, path: "/admin/users" },
+    { label: "用户管理", icon: Users, path: "/admin/users" },
     { label: "系统设置", icon: Settings, path: "/admin/settings" },
   ];
 

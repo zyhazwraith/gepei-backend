@@ -14,4 +14,7 @@ router.get('/orders', asyncHandler(adminController.getOrders));
 // PUT /api/v1/admin/orders/:id/status - 更新订单状态
 router.put('/orders/:id/status', asyncHandler(adminController.updateOrderStatus));
 
+// GET /api/v1/admin/users - 获取所有用户
+router.get('/users', asyncHandler(adminController.getUsers));
+
 export default router;

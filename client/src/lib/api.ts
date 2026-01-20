@@ -250,11 +250,33 @@ export interface GetAdminOrdersResponse {
   pagination: Pagination;
 }
 
+export interface AdminUser {
+  id: number;
+  phone: string;
+  nickname: string;
+  role: 'user' | 'admin';
+  isGuide: number;
+  balance: string;
+  createdAt: string;
+}
+
+export interface GetAdminUsersResponse {
+  list: AdminUser[];
+  pagination: Pagination;
+}
+
 /**
  * 获取所有订单 (管理员)
  */
 export async function getAdminOrders(page: number = 1, pageSize: number = 20): Promise<ApiResponse<GetAdminOrdersResponse>> {
   return apiClient.get('/admin/orders', { params: { page, limit: pageSize } });
+}
+
+/**
+ * 获取所有用户 (管理员)
+ */
+export async function getAdminUsers(page: number = 1, pageSize: number = 20): Promise<ApiResponse<GetAdminUsersResponse>> {
+  return apiClient.get('/admin/users', { params: { page, limit: pageSize } });
 }
 
 /**

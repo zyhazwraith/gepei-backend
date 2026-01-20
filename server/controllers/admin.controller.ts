@@ -121,3 +121,48 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
     next(error);
   }
 }
+
+/**
+ * 获取所有用户列表 (管理员)
+ */
+export async function getUsers(req: Request, res: Response) {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const offset = (page - 1) * limit;
+
+  try {
+    // 1. 查询总数
+    const [{ value: total }] = await db.select({ value: count() }).from(users);
+
+    // 2. 分页查询
+    const userList = await db.select({
+      id: users.id,
+      phone: users.phone,
+      nickname: users.nickname,
+      role: users.role,
+      isGuide: users.isGuide,
+      balance: users.balance,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+    res.json({
+      code: 0,
+      message: '获取成功',
+      data: {
+        list: userList,
+        pagination: {
+          total,
+          page,
+          page_size: limit,
+          total_pages: Math.ceil(total / limit)
+        }
+      },
+    });
+  } catch (error) {
+    throw error;
+  }
+}

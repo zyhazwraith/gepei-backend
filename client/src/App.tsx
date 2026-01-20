@@ -18,6 +18,7 @@ import OrderList from "./pages/OrderList";
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminOrderList from "./pages/admin/OrderList";
+import AdminUserList from "./pages/admin/UserList";
 
 function Router() {
   return (
@@ -38,7 +39,7 @@ function Router() {
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin/orders"} component={AdminOrderList} />
-      {/* 后续添加更多 admin 路由: /admin/users 等 */}
+      <Route path={"/admin/users"} component={AdminUserList} />
 
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
