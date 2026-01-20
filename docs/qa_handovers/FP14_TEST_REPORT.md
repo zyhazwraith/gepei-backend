@@ -26,7 +26,7 @@
 执行脚本: `scripts/test-api-flow.ts`
 
 ```text
-[Test 6.1] Order List (FP14)
+[Test 6.6] Order List (FP14)
 ✅ [PASS] Order List Retrieval (Count: 1)
 ```
 
@@ -54,6 +54,25 @@
 
 ---
 
-## 4. 结论 (Conclusion)
+## 4. 优化建议与决策 (Optimization & Decision)
 
-FP14 功能开发完成并通过基础验证，满足转测标准。
+经过代码审查与性能分析，提出以下改进建议。鉴于当前项目处于 MVP 阶段，且用户量级较小，决定**暂不修改**以下内容，留待后续迭代优化。
+
+### 4.1 后端性能 (Backend Performance) - [后续迭代]
+*   **解决 N+1 查询问题**: 当前 `getOrders` 接口在遍历订单列表时循环查询 `custom_requirements` 表。
+    *   *决策*: MVP 阶段数据量小，性能影响可忽略。
+*   **数据库排序**: 当前排序是在 Node.js 内存中进行的 (`enrichedOrders.sort`)。
+    *   *决策*: 暂维持现状，后续改为 SQL `ORDER BY`。
+*   **分页支持**: 接口目前未实现分页逻辑。
+    *   *决策*: MVP 阶段订单少，全量返回即可。
+
+### 4.2 前端体验 (Frontend UX) - [后续迭代]
+*   **分页/无限加载**: 配合后端分页，前端应实现“滚动加载更多”或分页器。
+*   **下拉刷新**: 增加下拉刷新功能。
+*   **骨架屏优化**: 建议使用 Skeleton 组件提升视觉体验。
+
+---
+
+## 5. 结论 (Conclusion)
+
+FP14 功能开发完成并通过基础验证，**满足 MVP 转测标准**。所有代码已合并至主分支。
