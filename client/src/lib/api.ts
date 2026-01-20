@@ -245,11 +245,16 @@ export async function getCurrentUser(): Promise<ApiResponse<User>> {
   return apiClient.get('/auth/me');
 }
 
+export interface GetAdminOrdersResponse {
+  list: AdminOrder[];
+  pagination: Pagination;
+}
+
 /**
  * 获取所有订单 (管理员)
  */
-export async function getAdminOrders(): Promise<ApiResponse<AdminOrder[]>> {
-  return apiClient.get('/admin/orders');
+export async function getAdminOrders(page: number = 1, pageSize: number = 20): Promise<ApiResponse<GetAdminOrdersResponse>> {
+  return apiClient.get('/admin/orders', { params: { page, limit: pageSize } });
 }
 
 /**
