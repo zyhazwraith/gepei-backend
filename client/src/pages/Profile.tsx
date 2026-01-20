@@ -35,7 +35,7 @@ export default function Profile() {
       return;
     }
     // 跳转到地陪资料编辑页面
-    setLocation("/guide-edit");
+    setLocation("/guides/profile");
   };
 
   // 格式化手机号（隐藏中间4位）

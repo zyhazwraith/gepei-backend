@@ -88,31 +88,31 @@ export default function AdminUserList() {
                     <TableCell className="font-mono text-gray-500">#{user.id}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium">{user.nickname}</span>
-                        <span className="text-xs text-gray-400">{user.phone}</span>
+                        <span className="font-medium text-gray-900">{user.nickname}</span>
+                        <span className="text-xs text-gray-500">{user.phone}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       {user.role === 'admin' ? (
-                        <Badge variant="default" className="bg-purple-600 hover:bg-purple-700 flex w-fit items-center gap-1">
+                        <Badge variant="default" className="bg-purple-600 hover:bg-purple-700 text-white flex w-fit items-center gap-1">
                           <Shield className="w-3 h-3" /> 管理员
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="flex w-fit items-center gap-1">
+                        <Badge variant="secondary" className="flex w-fit items-center gap-1 bg-gray-100 text-gray-800">
                           <UserIcon className="w-3 h-3" /> 普通用户
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell>
                       {user.isGuide === 1 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
                           认证地陪
                         </Badge>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">¥{user.balance}</TableCell>
+                    <TableCell className="font-medium text-gray-900">¥{user.balance}</TableCell>
                     <TableCell className="text-gray-500 text-sm">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>

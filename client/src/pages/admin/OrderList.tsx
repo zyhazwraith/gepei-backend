@@ -12,12 +12,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // 状态映射
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending: { label: "待支付", color: "bg-orange-500" },
-  paid: { label: "待服务", color: "bg-blue-500" },
-  in_progress: { label: "进行中", color: "bg-purple-500" },
-  completed: { label: "已完成", color: "bg-green-500" },
-  cancelled: { label: "已取消", color: "bg-gray-500" },
+const STATUS_MAP: Record<string, { label: string; color: string; textColor: string }> = {
+  pending: { label: "待支付", color: "bg-orange-100 border-orange-200", textColor: "text-orange-800" },
+  paid: { label: "待服务", color: "bg-blue-100 border-blue-200", textColor: "text-blue-800" },
+  in_progress: { label: "进行中", color: "bg-purple-100 border-purple-200", textColor: "text-purple-800" },
+  completed: { label: "已完成", color: "bg-green-100 border-green-200", textColor: "text-green-800" },
+  cancelled: { label: "已取消", color: "bg-gray-100 border-gray-200", textColor: "text-gray-800" },
 };
 
 export default function AdminOrderList() {
@@ -133,26 +133,28 @@ export default function AdminOrderList() {
               </TableHeader>
               <TableBody>
                 {orders.map((order) => {
-                  const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-gray-500" };
+                  const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-gray-100", textColor: "text-gray-800" };
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                      <TableCell className="font-medium text-gray-900">{order.orderNumber}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{order.userNickname}</span>
-                          <span className="text-xs text-gray-400">{order.userPhone}</span>
+                          <span className="text-gray-900">{order.userNickname}</span>
+                          <span className="text-xs text-gray-500">{order.userPhone}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-900">
                         {order.orderType === 'custom' ? '定制单' : '普通单'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-900">
                         {order.custom_requirements?.destination || '-'}
                       </TableCell>
-                      <TableCell>¥{order.amount}</TableCell>
-                      <TableCell>{order.serviceDate}</TableCell>
+                      <TableCell className="text-gray-900">¥{order.amount}</TableCell>
+                      <TableCell className="text-gray-900">{order.serviceDate}</TableCell>
                       <TableCell>
-                        <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+                        <Badge variant="outline" className={`${statusInfo.color} ${statusInfo.textColor} border`}>
+                          {statusInfo.label}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

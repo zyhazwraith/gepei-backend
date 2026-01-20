@@ -10,6 +10,8 @@ import { getOrders, OrderDetailResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+import EmptyState from "@/components/EmptyState";
+
 // 订单状态映射
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "待支付", color: "text-orange-600 bg-orange-50 border-orange-200", icon: Clock },

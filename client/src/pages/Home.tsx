@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { getGuides, Guide } from "@/lib/api";
 import {
   MapPin,
   Star,
@@ -16,35 +18,26 @@ import {
 import { useLocation } from "wouter";
 import BottomNav from "@/components/BottomNav";
 
-// 模拟推荐地陪数据
-const recommendedGuides = [
-  {
-    id: 1,
-    name: "小雨",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=xiayu",
-    rating: 4.9,
-    city: "未知",
-    price: 200,
-    verified: true,
-    recentOrder: true,
-  },
-  {
-    id: 2,
-    name: "晓晓",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=xiaoxiao",
-    rating: 4.8,
-    city: "未知",
-    price: 180,
-    verified: true,
-    recentOrder: true,
-  },
-];
-
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const [recommendedGuides, setRecommendedGuides] = useState<Guide[]>([]);
 
-  const quickActions = [
+  useEffect(() => {
+    fetchRecommendedGuides();
+  }, []);
+
+  const fetchRecommendedGuides = async () => {
+    try {
+      // 获取第一页数据作为推荐
+      const res = await getGuides(1, 4);
+      if (res.code === 0 && res.data) {
+        setRecommendedGuides(res.data.list);
+      }
+    } catch (error) {
+      console.error("Failed to fetch guides:", error);
+    }
+  };
     {
       icon: Users,
       title: "找地陪",
@@ -164,39 +157,35 @@ export default function Home() {
               onClick={() => setLocation(`/guides/${guide.id}`)}
             >
               <Avatar className="w-15 h-15">
-                <AvatarImage src={guide.avatar} alt={guide.name} />
+                <AvatarImage src={guide.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.id}`} alt={guide.name} />
                 <AvatarFallback>{guide.name[0]}</AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-semibold text-foreground">{guide.name}</span>
-                  {guide.verified && (
-                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
-                      认证
-                    </Badge>
-                  )}
-                  {guide.recentOrder && (
-                    <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-0">
-                      最近接单
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                    认证
+                  </Badge>
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
                   <span className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    {guide.rating}
+                    4.9
                   </span>
                   <span>{guide.city}</span>
                 </div>
 
                 <p className="text-sm font-semibold text-primary">
-                  ¥{guide.price}/小时
+                  ¥{guide.hourly_price}/小时
                 </p>
               </div>
             </Card>
           ))}
+          {recommendedGuides.length === 0 && (
+            <div className="text-center py-8 text-gray-500 text-sm">暂无推荐数据</div>
+          )}
         </div>
       </div>
 
