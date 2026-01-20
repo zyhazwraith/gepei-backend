@@ -233,11 +233,30 @@ export async function login(data: LoginRequest): Promise<ApiResponse<LoginRespon
   return apiClient.post('/auth/login', data);
 }
 
+export interface AdminOrder extends OrderDetailResponse {
+  userPhone?: string;
+  userNickname?: string;
+}
+
 /**
  * 获取当前用户信息
  */
 export async function getCurrentUser(): Promise<ApiResponse<User>> {
   return apiClient.get('/auth/me');
+}
+
+/**
+ * 获取所有订单 (管理员)
+ */
+export async function getAdminOrders(): Promise<ApiResponse<AdminOrder[]>> {
+  return apiClient.get('/admin/orders');
+}
+
+/**
+ * 更新订单状态 (管理员)
+ */
+export async function updateOrderStatus(id: number, status: string): Promise<ApiResponse<any>> {
+  return apiClient.put(`/admin/orders/${id}/status`, { status });
 }
 
 export default apiClient;

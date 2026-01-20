@@ -11,6 +11,7 @@ import guideRoutes from './routes/guide.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 // 创建 Express 应用
 export function createApp(): Application {
@@ -39,6 +40,7 @@ export function createApp(): Application {
   app.use('/api/v1/upload', uploadRoutes);
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
+  app.use('/api/v1/admin', adminRoutes);
 
   // 404 处理
   app.use(notFoundHandler);

@@ -64,3 +64,20 @@ export function requireAdmin(
 
   next();
 }
+
+// 角色授权中间件
+export function authorize(roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      next(new AuthenticationError('未登录', ERROR_CODES.UNAUTHORIZED));
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      next(new ForbiddenError('权限不足'));
+      return;
+    }
+
+    next();
+  };
+}
