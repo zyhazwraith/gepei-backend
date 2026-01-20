@@ -215,6 +215,8 @@ export default function GuideEdit() {
 
       if (response.data.code === 0) {
         toast.success('地陪资料保存成功');
+        // 更新用户状态（如 is_guide 字段）
+        await refetchUser();
         // 立即跳转到个人中心，提升反馈感知
         setLocation('/profile');
       }

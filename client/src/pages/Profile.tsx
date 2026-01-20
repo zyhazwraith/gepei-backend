@@ -66,11 +66,6 @@ export default function Profile() {
         onClick: () => toast.info("功能开发中"),
       },
       {
-        icon: Edit,
-        label: "地陪资料编辑",
-        onClick: () => setLocation("/guide-edit"),
-      },
-      {
         icon: Settings,
         label: "设置",
         onClick: () => toast.info("功能开发中"),
