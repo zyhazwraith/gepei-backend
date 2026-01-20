@@ -27,9 +27,14 @@ const ALL_CITIES = [
   '呼和浩特', '乌鲁木齐', '拉萨',
 ];
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function GuideEdit() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
+  // 初始加载状态
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // 表单状态
   const [idNumber, setIdNumber] = useState('');
@@ -210,10 +215,8 @@ export default function GuideEdit() {
 
       if (response.data.code === 0) {
         toast.success('地陪资料保存成功');
-        // 跳转到个人中心
-        setTimeout(() => {
-          setLocation('/profile');
-        }, 1000);
+        // 立即跳转到个人中心，提升反馈感知
+        setLocation('/profile');
       }
     } catch (error: any) {
       console.error('保存失败:', error);

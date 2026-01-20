@@ -173,10 +173,19 @@ export default function Guides() {
             </Card>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <Search className="w-12 h-12 mb-2 opacity-20" />
-            <p>暂无符合条件的地陪</p>
-          </div>
+          <EmptyState 
+            icon={Search} 
+            title="暂无符合条件的地陪" 
+            description="换个关键词或城市试试看？"
+            action={
+              <Button variant="outline" onClick={() => {
+                setKeyword("");
+                setSelectedCity("");
+              }}>
+                清除筛选
+              </Button>
+            }
+          />
         )}
       </div>
 

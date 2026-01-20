@@ -154,7 +154,7 @@ export default function Profile() {
             onClick={handleBecomeGuide}
             className="border-2 border-primary-foreground/80 text-primary-foreground px-8 py-2 rounded-full hover:bg-primary-foreground/10 transition-colors font-medium"
           >
-            认证为地陪
+            {user?.is_guide ? "管理地陪资料" : "认证为地陪"}
           </button>
         </div>
       </div>

@@ -134,10 +134,12 @@ export default function OrderList() {
         ) : orders.length > 0 ? (
           orders.map(renderOrderCard)
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <Package className="w-12 h-12 mb-2 opacity-20" />
-            <p className="text-sm">暂无订单</p>
-          </div>
+          <EmptyState 
+            icon={Package} 
+            title="暂无订单" 
+            description="您还没有相关的订单记录"
+            action={<Button onClick={() => setLocation("/guides")}>去逛逛</Button>}
+          />
         )}
       </div>
 
