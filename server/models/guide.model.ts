@@ -44,6 +44,28 @@ export async function findGuideByUserId(userId: number): Promise<Guide | null> {
 }
 
 /**
+ * 根据ID查找地陪信息
+ */
+export async function findGuideById(id: number): Promise<Guide | null> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM guides WHERE id = ? AND deleted_at IS NULL',
+    [id]
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const guide = rows[0];
+  
+  return {
+    ...guide,
+    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
+    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
+  } as Guide;
+}
+
+/**
  * 根据身份证号查找地陪信息
  */
 export async function findGuideByIdNumber(idNumber: string): Promise<Guide | null> {

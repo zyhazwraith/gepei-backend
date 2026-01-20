@@ -14,4 +14,7 @@ router.post('/profile', asyncHandler(authenticate), asyncHandler(guideController
 // GET /api/v1/guides/profile - 获取当前用户的地陪资料
 router.get('/profile', asyncHandler(authenticate), asyncHandler(guideController.getGuideProfile));
 
+// GET /api/v1/guides/:id - 获取地陪详情（公开）
+router.get('/:id', asyncHandler(guideController.getGuideDetail));
+
 export default router;

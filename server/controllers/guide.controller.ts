@@ -5,6 +5,7 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import {
   findGuideByUserId,
   findGuideByIdNumber,
+  findGuideById,
   findAllGuides,
   createGuide,
   updateGuide,
@@ -49,6 +50,45 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
     });
   } catch (error) {
     console.error('获取地陪列表失败:', error);
+    errorResponse(res, ErrorCodes.INTERNAL_ERROR);
+  }
+}
+
+/**
+ * 获取地陪详情（公开接口）
+ * GET /api/v1/guides/:id
+ */
+export async function getGuideDetail(req: Request, res: Response): Promise<void> {
+  try {
+    const guideId = parseInt(req.params.id);
+    if (isNaN(guideId)) {
+      errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的地陪ID');
+      return;
+    }
+
+    const guide = await findGuideById(guideId);
+
+    if (!guide) {
+      errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
+      return;
+    }
+
+    // 转换为前端友好的格式（隐藏敏感信息）
+    const response = {
+      id: guide.id,
+      user_id: guide.user_id,
+      name: guide.name,
+      city: guide.city,
+      intro: guide.intro,
+      hourly_price: guide.hourly_price,
+      tags: guide.tags,
+      photos: guide.photos,
+      created_at: guide.created_at,
+    };
+
+    successResponse(res, response);
+  } catch (error) {
+    console.error('获取地陪详情失败:', error);
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
 }

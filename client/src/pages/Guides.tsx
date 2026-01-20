@@ -9,10 +9,13 @@ import { getGuides, Guide } from "@/lib/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { useLocation } from "wouter";
+
 // 热门城市
 const HOT_CITIES = ["北京", "上海", "广州", "成都", "西安", "杭州"];
 
 export default function Guides() {
+  const [, setLocation] = useLocation();
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
@@ -121,7 +124,11 @@ export default function Guides() {
           ))
         ) : guides.length > 0 ? (
           guides.map((guide) => (
-            <Card key={guide.id} className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
+            <Card 
+              key={guide.id} 
+              className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setLocation(`/guides/${guide.id}`)}
+            >
               <CardContent className="p-0 flex">
                 {/* 左侧头像/封面 */}
                 <div className="w-32 h-32 relative bg-gray-200 shrink-0">

@@ -206,21 +206,22 @@ export async function payOrder(orderId: number, paymentMethod: 'wechat' | 'alipa
 /**
  * 获取地陪列表
  */
-export async function getGuides(
-  page: number = 1,
-  pageSize: number = 20,
-  city?: string,
-  keyword?: string
-): Promise<ApiResponse<GetGuidesResponse>> {
+export async function getGuides(page: number = 1, pageSize: number = 20, city?: string, keyword?: string): Promise<ApiResponse<GetGuidesResponse>> {
   const params: any = { page, page_size: pageSize };
   if (city) params.city = city;
   if (keyword) params.keyword = keyword;
-  
   return apiClient.get('/guides', { params });
 }
 
 /**
- * 用户注册
+ * 获取地陪详情
+ */
+export async function getGuideDetail(id: number): Promise<ApiResponse<Guide>> {
+  return apiClient.get(`/guides/${id}`);
+}
+
+/**
+ * 更新地陪资料
  */
 export async function register(data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
   return apiClient.post('/auth/register', data);
