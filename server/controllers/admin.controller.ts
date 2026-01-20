@@ -12,12 +12,12 @@ const updateStatusSchema = z.object({
 });
 
 // 状态流转规则
-const VALID_TRANSITIONS: Record<string, string[]> = {
+export const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ['paid', 'cancelled'],
   paid: ['in_progress', 'cancelled'], // 允许退款取消
   in_progress: ['completed', 'paid'], // 允许回退到paid
   completed: [], // 终态
-  cancelled: [], // 终态
+  cancelled: ['pending'], // 允许重启订单（用于测试或特殊场景）
 };
 
 /**

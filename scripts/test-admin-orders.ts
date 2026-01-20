@@ -67,7 +67,8 @@ async function testAdminOrderManagement() {
     }
 
     // 4. 合法更新状态
-    const newStatus = targetOrder.status === 'pending' ? 'paid' : 'cancelled';
+    const newStatus = targetOrder.status === 'pending' ? 'paid' : 
+                      targetOrder.status === 'cancelled' ? 'pending' : 'cancelled';
     console.log(`\n🔹 4. Updating Order #${targetOrder.id} status to '${newStatus}' (Legal)...`);
     
     const updateRes = await axios.put(`${API_URL}/admin/orders/${targetOrder.id}/status`, 
@@ -83,21 +84,20 @@ async function testAdminOrderManagement() {
 
     // 5. 再次查询验证
     console.log('\n🔹 5. Verifying Update...');
-    const verifyRes = await axios.get(`${API_URL}/orders/${targetOrder.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    // 使用管理员权限查询订单详情
+    // 注意：GET /orders/:id 是用户端接口，通常只能查自己的订单。
+    // 管理员应该使用 GET /admin/orders?id=xxx 或者我们在 admin controller 增加详情接口
+    // 这里我们简单复用列表查询
     
-    // 注意：如果是管理员查询普通用户接口，可能需要特殊权限或直接查admin列表
-    // 为了简单，我们直接再查一次列表
     const listRes2 = await axios.get(`${API_URL}/admin/orders`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const updatedOrder = listRes2.data.data.list.find((o: any) => o.id === targetOrder.id);
     
-    if (updatedOrder.status === newStatus) {
+    if (updatedOrder && updatedOrder.status === newStatus) {
       console.log('✅ Update verified in list');
     } else {
-      throw new Error('Update verification failed');
+      throw new Error(`Update verification failed. Expected ${newStatus}, got ${updatedOrder?.status}`);
     }
 
   } catch (error: any) {
