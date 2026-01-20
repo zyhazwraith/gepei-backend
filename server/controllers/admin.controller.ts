@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, users, customRequirements } from '../db/schema';
+import { orders, users, customRequirements, guides } from '../db/schema';
 import { eq, desc, count, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors';
@@ -118,6 +118,71 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
   } catch (error) {
     if (error instanceof z.ZodError) {
       return next(new ValidationError('参数错误'));
+    }
+    next(error);
+  }
+}
+
+// 指派地陪 Schema
+const assignGuideSchema = z.object({
+  guideId: z.number().int().positive(),
+});
+
+/**
+ * 指派地陪 (管理员)
+ */
+export async function assignGuide(req: Request, res: Response, next: NextFunction) {
+  const orderId = parseInt(req.params.id);
+
+  try {
+    const { guideId } = assignGuideSchema.parse(req.body);
+
+    // 1. 检查订单是否存在
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+
+    // 2. 检查订单状态是否允许指派
+    // 允许的状态: waiting_for_guide (定制单初始态), paid (普通单支付后), pending (特殊情况)
+    const allowedStatuses = ['waiting_for_guide', 'paid', 'pending'];
+    if (!order.status || !allowedStatuses.includes(order.status)) {
+      throw new ValidationError(`当前订单状态 (${order.status}) 不允许指派地陪`);
+    }
+
+    // 3. 检查地陪是否存在
+    const [guide] = await db.select().from(guides).where(eq(guides.id, guideId));
+    if (!guide) {
+      throw new NotFoundError('地陪不存在');
+    }
+
+    // 4. 更新订单
+    // 将订单状态更新为 'booked' (已接单/待服务)，并关联 guideId
+    await db.update(orders)
+      .set({ 
+        guideId: guideId,
+        status: 'in_progress', // 对应 "booked" / "待服务" 状态，此处使用 in_progress 或项目约定的状态
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
+
+    // 5. 记录操作日志
+    // TODO: 记录 admin_logs
+
+    res.json({
+      code: 0,
+      message: '指派成功',
+      data: {
+        orderId,
+        guideId,
+        status: 'in_progress',
+        guideName: guide.name
+      }
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return next(new ValidationError('参数错误: guideId 必须为正整数'));
     }
     next(error);
   }

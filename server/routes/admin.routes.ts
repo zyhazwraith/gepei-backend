@@ -14,6 +14,9 @@ router.get('/orders', asyncHandler(adminController.getOrders));
 // PUT /api/v1/admin/orders/:id/status - 更新订单状态
 router.put('/orders/:id/status', asyncHandler(adminController.updateOrderStatus));
 
+// POST /api/v1/admin/orders/:id/assign - 指派地陪
+router.post('/orders/:id/assign', asyncHandler(adminController.assignGuide));
+
 // GET /api/v1/admin/users - 获取所有用户
 router.get('/users', asyncHandler(adminController.getUsers));
 

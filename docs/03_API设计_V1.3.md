@@ -717,6 +717,47 @@ Authorization: Bearer {token}
 }
 ```
 
+### 17. 指派地陪 (管理员)
+
+**端点**: `POST /admin/orders/{order_id}/assign`
+
+**权限**: 需要认证，且用户必须是管理员
+
+**路径参数**:
+- order_id: 订单ID
+
+**请求体**:
+```json
+{
+  "guide_id": 456
+}
+```
+
+**验证规则**:
+- guide_id: 必须是有效的地陪ID
+- 订单状态必须是 "waiting_for_guide" (待接单) 或 "paid" (已支付/待服务)
+
+**业务逻辑**:
+1. 验证订单是否存在且状态正确
+2. 验证地陪是否存在
+3. 更新订单的 `guide_id` 字段
+4. 将订单状态变更为 `booked` (已预订/待服务) [注: MVP简化流程，跳过用户确认]
+5. (可选) 发送通知给地陪和用户
+
+**成功响应** (200):
+```json
+{
+  "code": 0,
+  "message": "指派成功",
+  "data": {
+    "order_id": 789,
+    "guide_id": 456,
+    "status": "booked",
+    "updated_at": "2026-01-18T12:00:00Z"
+  }
+}
+```
+
 ---
 
 ## 关键说明

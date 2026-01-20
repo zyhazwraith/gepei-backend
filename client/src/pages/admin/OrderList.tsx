@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { getAdminOrders, updateOrderStatus, AdminOrder, Pagination } from "@/lib/api";
+import { getAdminOrders, updateOrderStatus, assignGuide, getGuides, AdminOrder, Pagination, Guide } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // 状态映射
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -23,6 +26,14 @@ export default function AdminOrderList() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+
+  // 指派相关状态
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [guideList, setGuideList] = useState<Guide[]>([]);
+  const [loadingGuides, setLoadingGuides] = useState(false);
+  const [selectedGuideId, setSelectedGuideId] = useState<number | null>(null);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     fetchOrders(page);
@@ -58,6 +69,43 @@ export default function AdminOrderList() {
       toast.error("网络错误，更新失败");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleAssignClick = async (order: AdminOrder) => {
+    setSelectedOrder(order);
+    setAssignDialogOpen(true);
+    setLoadingGuides(true);
+    try {
+      const res = await getGuides();
+      if (res.code === 0 && res.data) {
+        setGuideList(res.data.list);
+      }
+    } catch (error) {
+      toast.error("获取地陪列表失败");
+    } finally {
+      setLoadingGuides(false);
+    }
+  };
+
+  const handleAssignConfirm = async () => {
+    if (!selectedOrder || !selectedGuideId) return;
+    
+    setAssigning(true);
+    try {
+      const res = await assignGuide(selectedOrder.id, selectedGuideId);
+      if (res.code === 0) {
+        toast.success("指派成功");
+        setAssignDialogOpen(false);
+        // 更新列表状态
+        setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: 'in_progress' } : o));
+      } else {
+        toast.error(res.message || "指派失败");
+      }
+    } catch (error) {
+      toast.error("操作失败，请重试");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -107,22 +155,36 @@ export default function AdminOrderList() {
                         <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Select
-                          disabled={updatingId === order.id}
-                          onValueChange={(val) => handleStatusChange(order.id, val)}
-                          value={order.status}
-                        >
-                          <SelectTrigger className="w-[120px] h-8">
-                            <SelectValue placeholder="修改状态" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">待支付</SelectItem>
-                            <SelectItem value="paid">待服务</SelectItem>
-                            <SelectItem value="in_progress">进行中</SelectItem>
-                            <SelectItem value="completed">已完成</SelectItem>
-                            <SelectItem value="cancelled">已取消</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          {/* 只有定制单且状态允许时显示指派按钮 */}
+                          {order.orderType === 'custom' && ['pending', 'paid'].includes(order.status) && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleAssignClick(order)}
+                            >
+                              <UserPlus className="w-4 h-4 mr-1" />
+                              指派
+                            </Button>
+                          )}
+                          
+                          <Select
+                            disabled={updatingId === order.id}
+                            onValueChange={(val) => handleStatusChange(order.id, val)}
+                            value={order.status}
+                          >
+                            <SelectTrigger className="w-[120px] h-8">
+                              <SelectValue placeholder="修改状态" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">待支付</SelectItem>
+                              <SelectItem value="paid">待服务</SelectItem>
+                              <SelectItem value="in_progress">进行中</SelectItem>
+                              <SelectItem value="completed">已完成</SelectItem>
+                              <SelectItem value="cancelled">已取消</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -165,6 +227,71 @@ export default function AdminOrderList() {
             </div>
           </div>
         )}
+        {/* 指派地陪弹窗 */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>指派地陪</DialogTitle>
+              <DialogDescription>
+                为订单 {selectedOrder?.orderNumber} 选择一位地陪。
+                指派后，订单状态将变为"进行中/待服务"。
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              {loadingGuides ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ScrollArea className="h-[300px] border rounded-md p-2">
+                  <div className="space-y-1">
+                    {guideList.map(guide => (
+                      <div 
+                        key={guide.id}
+                        onClick={() => setSelectedGuideId(guide.id)}
+                        className={`flex items-center p-3 rounded-md cursor-pointer transition-colors ${
+                          selectedGuideId === guide.id ? 'bg-primary/10 border-primary/20 border' : 'hover:bg-gray-50 border border-transparent'
+                        }`}
+                      >
+                        <Avatar className="w-10 h-10 mr-3">
+                          <AvatarFallback>{guide.name.slice(0, 1)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium flex items-center">
+                            {guide.name}
+                            {selectedGuideId === guide.id && <Check className="w-4 h-4 ml-2 text-primary" />}
+                          </div>
+                          <div className="text-xs text-gray-500">{guide.city} · ¥{guide.hourly_price}/小时</div>
+                        </div>
+                      </div>
+                    ))}
+                    {guideList.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">暂无地陪数据</div>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>取消</Button>
+              <Button 
+                onClick={handleAssignConfirm} 
+                disabled={!selectedGuideId || assigning}
+              >
+                {assigning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    处理中...
+                  </>
+                ) : (
+                  "确认指派"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

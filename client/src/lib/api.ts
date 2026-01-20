@@ -289,4 +289,11 @@ export async function updateOrderStatus(id: number, status: string): Promise<Api
   return apiClient.put(`/admin/orders/${id}/status`, { status });
 }
 
+/**
+ * 指派地陪 (管理员)
+ */
+export async function assignGuide(orderId: number, guideId: number): Promise<ApiResponse<any>> {
+  return apiClient.post(`/admin/orders/${orderId}/assign`, { guideId });
+}
+
 export default apiClient;
