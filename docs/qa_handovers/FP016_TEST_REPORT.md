@@ -9,7 +9,7 @@
 
 ### 前端
 - **新增组件**: `client/src/components/PaymentSheet.tsx`
-  - 使用 `Drawer` 组件实现。
+  - 使用 `Drawer` 组件实现，符合移动端交互规范。
   - 包含金额展示、支付方式选择 (目前仅微信)、支付按钮。
 - **页面集成**: `client/src/pages/OrderDetail.tsx`
   - 引入 `PaymentSheet`。
@@ -23,7 +23,7 @@
 ## 3. 测试结果
 
 ### 3.1 自动化测试
-使用脚本 `scripts/test-payment-flow.ts` 验证全链路。
+使用脚本 `npm run test:api` (即 `scripts/test-api-flow.ts`) 验证全链路。
 
 **测试用例**:
 1. **创建环境**: 注册地陪、注册用户。
@@ -31,30 +31,38 @@
 3. **执行支付**: 调用支付接口，返回 `success`。
 4. **状态验证**: 确认订单状态变更为 `paid`。
 
-**测试日志**:
-```
-🚀 Starting FP-016 Payment Flow Tests...
-
-✅ [PASS] Setup Users and Guide completed
-✅ [PASS] Order Created. ID: 246, Amount: 600
-✅ [PASS] Initial Order Status is Pending
-Testing Payment API...
-✅ [PASS] Payment API Successful
-✅ [PASS] Final Order Status is Paid
-
-✨ FP-016 Payment Flow Tests Completed.
+**测试日志 (Latest)**:
+```bash
+✅ [PASS] Order Payment Successful
+✅ [PASS] Order Status Updated to Paid
+✅ [PASS] Duplicate Payment correctly rejected
 ```
 
 ### 3.2 前端功能验证 (代码审查)
 - **入口**: 订单详情页 (OrderDetail)。
 - **交互**: 
-  - 点击底部“微信支付”按钮 -> 底部弹出抽屉。
-  - 显示正确金额。
-  - 点击“立即支付” -> Loading 状态 -> 提示成功 -> 抽屉关闭 -> 页面刷新 -> 状态变为“待接单”。
+  - ✅ 点击底部“微信支付”按钮 -> 底部弹出抽屉。
+  - ✅ 显示正确金额 (格式化为2位小数)。
+  - ✅ 点击“立即支付” -> Loading 状态 (防止重复提交) -> 提示成功 -> 抽屉关闭 -> 页面刷新 -> 状态变为“待接单”。
 
-## 4. 部署说明
-- 无需数据库变更。
-- 需合并前端代码。
+## 4. 优化建议 (Optimization Suggestions)
 
-## 5. 遗留问题
-- 目前仅支持“微信支付”一种模拟方式，后续可扩展支付宝等。
+### 4.1 支付成功反馈 (UX)
+- **现状**: 支付成功后仅显示 Toast 并直接关闭抽屉。
+- **建议**: 在抽屉内增加一个"支付成功"的状态页（显示大大的绿色对勾），停留 1-2 秒后再自动关闭。这能给用户更强的确认感和仪式感。
+
+### 4.2 支付方式图标 (UI)
+- **现状**: 微信图标使用 CSS 色块 (`bg-[#07C160]`) 模拟。
+- **建议**: 引入微信支付的官方 SVG 图标，提升专业度。
+
+### 4.3 支付倒计时 (Logic)
+- **现状**: 仅有文字提示 "30分钟内支付"。
+- **建议**: 在收银台 (PaymentSheet) 或订单详情页增加倒计时组件。若超时，后端应拒绝支付，前端应禁用支付按钮。
+
+### 4.4 支付方式扩展性 (Scalability)
+- **现状**: 代码中硬编码了 `wechat`。
+- **建议**: 将支付方式列表配置化，便于未来低成本接入支付宝或余额支付。
+
+## 5. 结论
+FP016 功能**已完成**，测试通过。前端采用了体验较好的 Drawer 组件，代码结构清晰。
+**可以交付 (Ready for Release)**。
