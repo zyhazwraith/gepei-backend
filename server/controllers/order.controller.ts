@@ -140,6 +140,56 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
 }
 
 /**
+ * 获取订单列表
+ */
+export async function getOrders(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { status } = req.query;
+
+  try {
+    const conditions = [eq(orders.userId, userId)];
+    
+    // 如果有状态筛选
+    if (status && typeof status === 'string' && status !== 'all') {
+      conditions.push(eq(orders.status, status));
+    }
+
+    const result = await db.select().from(orders)
+      .where(and(...conditions))
+      .orderBy(orders.createdAt); // 按创建时间倒序（这里假设schema里没写desc，后续确认）
+      
+    // 补充：为了前端展示方便，可能需要关联一些信息，比如customRequirements
+    // 简单起见，先返回主表数据，前端根据 orderType 判断展示逻辑
+    // 或者我们这里做一个简单的聚合查询
+    
+    // 既然是 MVP，我们先直接返回订单列表，前端在详情页再查详细信息
+    // 或者如果列表页需要展示目的地，我们需要查出来
+    
+    const enrichedOrders = await Promise.all(result.map(async (order) => {
+      let extra = {};
+      if (order.orderType === 'custom') {
+        const [req] = await db.select().from(customRequirements).where(eq(customRequirements.orderId, order.id));
+        if (req) {
+          extra = { destination: req.destination, startDate: req.startDate };
+        }
+      }
+      return { ...order, ...extra };
+    }));
+
+    // 按时间倒序排序 (内存排序，因为orderBy在orm里写起来可能有点繁琐，先这样)
+    enrichedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({
+      code: 0,
+      message: '获取成功',
+      data: enrichedOrders,
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
  * 获取订单详情
  */
 export async function getOrderById(req: Request, res: Response) {

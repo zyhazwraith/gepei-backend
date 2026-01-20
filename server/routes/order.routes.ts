@@ -8,6 +8,9 @@ const router = Router();
 // POST /api/v1/orders - 创建订单
 router.post('/', asyncHandler(authenticate), asyncHandler(orderController.createOrder));
 
+// GET /api/v1/orders - 获取订单列表
+router.get('/', asyncHandler(authenticate), asyncHandler(orderController.getOrders));
+
 // POST /api/v1/orders/:id/payment - 支付订单
 router.post('/:id/payment', asyncHandler(authenticate), asyncHandler(orderController.payOrder));
 

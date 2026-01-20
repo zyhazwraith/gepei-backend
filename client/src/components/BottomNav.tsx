@@ -10,8 +10,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: "首页", path: "/" },
   { icon: Users, label: "地陪", path: "/guides" },
-  { icon: MessageCircle, label: "消息", path: "/messages" },
-  { icon: Sparkles, label: "高端定制", path: "/custom" },
+  { icon: Sparkles, label: "定制", path: "/custom" },
+  { icon: MessageCircle, label: "订单", path: "/orders" }, // 暂时替换消息入口
   { icon: User, label: "我的", path: "/profile" },
 ];
 

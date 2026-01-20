@@ -172,6 +172,17 @@ export interface OrderDetailResponse {
 // ==================== API方法 ====================
 
 /**
+ * 获取订单列表
+ */
+export async function getOrders(status?: string): Promise<ApiResponse<OrderDetailResponse[]>> {
+  const params: any = {};
+  if (status && status !== 'all') {
+    params.status = status;
+  }
+  return apiClient.get('/orders', { params });
+}
+
+/**
  * 创建定制订单
  */
 export async function createOrder(data: CreateOrderRequest): Promise<ApiResponse<CreateOrderResponse>> {

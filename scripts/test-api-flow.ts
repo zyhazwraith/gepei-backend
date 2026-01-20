@@ -183,6 +183,21 @@ async function runTests() {
     logFail('Custom Order Flow Failed', e.response?.data || e.message);
   }
 
+  // 6.6 Order List (FP14)
+  try {
+    const listRes = await axios.get(`${API_URL}/orders`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (listRes.data.code === 0 && Array.isArray(listRes.data.data)) {
+      logPass(`Order List Retrieval (Count: ${listRes.data.data.length})`);
+    } else {
+      throw new Error(JSON.stringify(listRes.data));
+    }
+  } catch (e: any) {
+    logFail('Order List Request failed', e.response?.data || e.message);
+  }
+
   // 7. Guide Verification (Boundary: Invalid ID)
   try {
     await axios.post(`${API_URL}/guides/profile`, {
