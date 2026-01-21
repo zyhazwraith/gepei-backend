@@ -16,7 +16,8 @@ import EmptyState from "@/components/EmptyState";
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "待支付", color: "text-orange-600 bg-orange-50 border-orange-200", icon: Clock },
   paid: { label: "待服务", color: "text-blue-600 bg-blue-50 border-blue-200", icon: Package },
-  in_progress: { label: "进行中", color: "text-purple-600 bg-purple-50 border-purple-200", icon: Package },
+  waiting_for_user: { label: "待确认", color: "text-purple-600 bg-purple-50 border-purple-200", icon: CheckCircle },
+  in_progress: { label: "进行中", color: "text-indigo-600 bg-indigo-50 border-indigo-200", icon: Package },
   completed: { label: "已完成", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle },
   cancelled: { label: "已取消", color: "text-gray-600 bg-gray-50 border-gray-200", icon: XCircle },
 };
@@ -120,10 +121,11 @@ export default function OrderList() {
       {/* 状态筛选 Tabs */}
       <div className="sticky top-[53px] z-10 bg-gray-50 px-4 pt-2 pb-2">
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-white border">
+          <TabsList className="w-full grid grid-cols-5 bg-white border">
             <TabsTrigger value="all">全部</TabsTrigger>
             <TabsTrigger value="pending">待支付</TabsTrigger>
             <TabsTrigger value="paid">待服务</TabsTrigger>
+            <TabsTrigger value="waiting_for_user">待确认</TabsTrigger>
             <TabsTrigger value="completed">已完成</TabsTrigger>
           </TabsList>
         </Tabs>
