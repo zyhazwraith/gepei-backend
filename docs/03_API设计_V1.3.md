@@ -287,19 +287,32 @@
 
 ## 订单接口
 
-### 9. 创建定制订单
+### 9. 创建订单
 
 **端点**: `POST /orders`
 
-**请求体**:
+**说明**: 支持创建"普通订单"和"定制订单"，通过 `type` 字段区分。
+
+**请求体 (定制订单 type="custom")**:
 ```json
 {
   "type": "custom",
   "serviceDate": "2026-02-01",
-  "serviceLocation": "北京市朝阳区",
-  "serviceContent": "游览故宫和颐和园",
+  "city": "北京",
+  "content": "游览故宫和颐和园",
   "budget": 1000,
-  "specialRequirements": "需要讲解历史"
+  "requirements": "需要讲解历史 (可选)"
+}
+```
+
+**请求体 (普通订单 type="normal")**:
+```json
+{
+  "type": "normal",
+  "serviceDate": "2026-02-01",
+  "guideId": 456,
+  "serviceHours": 8,
+  "remark": "希望早上9点出发 (可选)"
 }
 ```
 

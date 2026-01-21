@@ -36,32 +36,32 @@ export default function AdminOrderList() {
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
-    fetchOrders(page);
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const res = await getAdminOrders(page);
+        if (res.code === 0 && res.data) {
+          setOrders(res.data.list);
+          setPagination(res.data.pagination);
+        }
+      } catch (error) {
+        toast.error("获取订单列表失败");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOrders();
   }, [page]);
 
-  const fetchOrders = async (p: number) => {
-    setLoading(true);
-    try {
-      const res = await getAdminOrders(p);
-      if (res.code === 0 && res.data) {
-        setOrders(res.data.list);
-        setPagination(res.data.pagination);
-      }
-    } catch (error) {
-      toast.error("获取订单列表失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (orderId: number, newStatus: string) => {
+  const handleStatusChange = async (orderId: number, newStatus: AdminOrder['status']) => {
     setUpdatingId(orderId);
     try {
       const res = await updateOrderStatus(orderId, newStatus);
       if (res.code === 0) {
         toast.success("状态更新成功");
         // 更新本地列表
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       } else {
         toast.error(res.message || "更新失败");
       }

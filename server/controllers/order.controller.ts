@@ -37,8 +37,16 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
   console.log('createOrder body:', req.body);
   
   try {
-    // 1. 判断订单类型
-    const isCustom = !req.body.guideId;
+    // 1. 判断订单类型 (显式检查 type 字段)
+    const { type } = req.body;
+    
+    // 兼容旧逻辑：如果没有传 type，则根据 guideId 判断（但在新版前端发布后应强制要求 type）
+    const isCustom = type === 'custom' || (!type && !req.body.guideId);
+    const isNormal = type === 'normal' || (!type && req.body.guideId);
+
+    if (!isCustom && !isNormal) {
+        throw new ValidationError('无效的订单类型');
+    }
 
     if (isCustom) {
       // === 定制订单逻辑 ===
@@ -83,7 +91,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       });
 
     } else {
-      // === 普通订单逻辑 (FP-018) ===
+      // === 普通订单逻辑 ===
       const validated = createNormalOrderSchema.parse(req.body);
 
       // 校验地陪有效性

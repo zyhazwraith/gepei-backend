@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { createOrder, getGuideDetail, Guide } from "@/lib/api";
+import { createOrder, getGuideDetail, Guide, CreateOrderRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -90,18 +90,25 @@ export default function OrderCreate() {
 
     setSubmitting(true);
     try {
-      const payload: any = {
-        serviceDate: formData.serviceDate,
-        remark: formData.remark,
-      };
+      let payload: CreateOrderRequest;
 
       if (isCustom) {
-        payload.city = formData.city;
-        payload.content = formData.content;
-        payload.budget = Number(formData.budget);
+        payload = {
+          type: 'custom',
+          serviceDate: formData.serviceDate,
+          city: formData.city,
+          content: formData.content,
+          budget: Number(formData.budget),
+          requirements: formData.remark, // Map remark to requirements for Custom Order
+        };
       } else {
-        payload.guideId = parseInt(guideId!);
-        payload.serviceHours = Number(formData.serviceHours);
+        payload = {
+          type: 'normal',
+          serviceDate: formData.serviceDate,
+          guideId: parseInt(guideId!),
+          serviceHours: Number(formData.serviceHours),
+          remark: formData.remark, // Use remark for Normal Order
+        };
       }
 
       const res = await createOrder(payload);

@@ -35,6 +35,10 @@ apiClient.interceptors.request.use(
 // 响应拦截器 - 统一处理响应和错误
 apiClient.interceptors.response.use(
   (response) => {
+    // 防御性检查：确保返回的是JSON对象
+    if (response.data && typeof response.data !== 'object') {
+      return Promise.reject({ code: 500, message: '服务器响应格式错误' });
+    }
     // 这里已经直接返回了 response.data
     // 所以业务层拿到的是 { code: 0, data: {...}, message: "..." }
     // 而不是 axios 的 response 对象
@@ -54,7 +58,7 @@ apiClient.interceptors.response.use(
 
 // ==================== 类型定义 ====================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data?: T;
@@ -132,11 +136,17 @@ export interface GetGuidesResponse {
 }
 
 export interface CreateOrderRequest {
+  type: 'normal' | 'custom';
   serviceDate: string;
-  city: string;
-  content: string;
-  budget: number;
+  // Custom Order Fields
+  city?: string;
+  content?: string;
+  budget?: number;
   requirements?: string;
+  // Normal Order Fields
+  guideId?: number;
+  serviceHours?: number;
+  remark?: string;
 }
 
 export interface CreateOrderResponse {
@@ -180,7 +190,7 @@ export interface OrderDetailResponse {
  * 获取订单列表
  */
 export async function getOrders(status?: string): Promise<ApiResponse<OrderDetailResponse[]>> {
-  const params: any = {};
+  const params: { status?: string } = {};
   if (status && status !== 'all') {
     params.status = status;
   }
