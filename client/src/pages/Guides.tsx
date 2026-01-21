@@ -133,8 +133,8 @@ export default function Guides() {
                 {/* 左侧头像/封面 */}
                 <div className="w-32 h-32 relative bg-gray-200 shrink-0">
                   <img
-                    src={guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.user_id}`}
-                    alt={guide.name}
+                    src={guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`}
+                    alt={guide.nickName}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
@@ -149,9 +149,9 @@ export default function Guides() {
                 <div className="flex-1 p-3 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 line-clamp-1">{guide.name}</h3>
+                      <h3 className="font-bold text-gray-900 line-clamp-1">{guide.nickName}</h3>
                       <span className="text-orange-500 font-bold text-sm">
-                        {guide.hourly_price ? `¥${guide.hourly_price}/h` : "面议"}
+                        {guide.hourlyPrice ? `¥${guide.hourlyPrice}/h` : "面议"}
                       </span>
                     </div>
                     

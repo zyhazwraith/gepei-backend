@@ -107,13 +107,14 @@ export interface LoginResponse {
 export interface Guide {
   id: number;
   userId: number;
-  name: string;
+  nickName: string;
   idNumber: string;
   city: string;
   intro: string | null;
   hourlyPrice: number | null;
   tags: string[] | null;
   photos: string[] | null;
+  avatarUrl: string; // Ensure this is present
   idVerifiedAt: string;
   createdAt: string;
 }

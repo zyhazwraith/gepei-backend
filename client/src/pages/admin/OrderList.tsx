@@ -257,11 +257,11 @@ export default function AdminOrderList() {
                         }`}
                       >
                         <Avatar className="w-10 h-10 mr-3">
-                          <AvatarFallback>{guide.name.slice(0, 1)}</AvatarFallback>
+                          <AvatarFallback>{guide.nickName?.slice(0, 1) || 'G'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="font-medium flex items-center">
-                            {guide.name}
+                            {guide.nickName}
                             {selectedGuideId === guide.id && <Check className="w-4 h-4 ml-2 text-primary" />}
                           </div>
                           <div className="text-xs text-gray-500">{guide.city} · ¥{guide.hourlyPrice}/小时</div>

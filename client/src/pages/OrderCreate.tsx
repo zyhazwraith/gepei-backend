@@ -147,7 +147,7 @@ export default function OrderCreate() {
                 className="w-24 h-24 object-cover" 
               />
               <div className="p-3 flex flex-col justify-center">
-                <h3 className="font-bold text-gray-900">{guide.name}</h3>
+                <h3 className="font-bold text-gray-900">{guide.nickName}</h3>
                 <p className="text-sm text-gray-500">{guide.city}</p>
                 <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
               </div>

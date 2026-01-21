@@ -158,13 +158,13 @@ export default function Home() {
               onClick={() => setLocation(`/guides/${guide.id}`)}
             >
               <Avatar className="w-15 h-15">
-                <AvatarImage src={guide.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.id}`} alt={guide.name} />
-                <AvatarFallback>{guide.name[0]}</AvatarFallback>
+                <AvatarImage src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} alt={guide.nickName} />
+                <AvatarFallback>{guide.nickName?.[0] || 'G'}</AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-foreground">{guide.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{guide.nickName}</span>
                   <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
                     认证
                   </Badge>
@@ -179,7 +179,7 @@ export default function Home() {
                 </div>
 
                 <p className="text-sm font-semibold text-primary">
-                  ¥{guide.hourly_price}/小时
+                  ¥{guide.hourlyPrice}/小时
                 </p>
               </div>
             </Card>

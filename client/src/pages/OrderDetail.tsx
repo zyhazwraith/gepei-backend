@@ -76,7 +76,7 @@ export default function OrderDetail() {
   }
 
   const isCustom = order.orderType === 'custom';
-  const customReq = order.custom_requirements;
+  const customReq = order.customRequirements;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

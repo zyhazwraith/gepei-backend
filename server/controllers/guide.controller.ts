@@ -29,7 +29,7 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
     const list = guides.map(g => ({
       guideId: g.id,
       userId: g.user_id,
-      nickName: g.name, // 假设 name 是昵称
+      nickName: g.name, // 对应 Guide 表的 name 字段 (用户设置的昵称/显示名称)
       // 隐藏身份证号
       city: g.city,
       intro: g.intro,

@@ -49,7 +49,7 @@ export default function Profile() {
       {
         icon: FileText,
         label: "我的订单",
-        onClick: () => toast.info("功能开发中"),
+        onClick: () => setLocation("/orders"),
       },
     ],
     [

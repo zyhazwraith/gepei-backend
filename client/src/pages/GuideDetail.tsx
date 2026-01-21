@@ -107,7 +107,7 @@ export default function GuideDetail() {
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              {guide.name}
+              {guide.nickName}
               <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
                 <ShieldCheck className="w-3 h-3 mr-1" /> 已认证
               </Badge>

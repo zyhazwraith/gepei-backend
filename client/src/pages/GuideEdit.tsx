@@ -135,7 +135,9 @@ export default function GuideEdit() {
           },
         });
 
-        return response.data.data.url;
+        // 响应已经被拦截器处理过，直接返回 data 字段
+        // 结构为: { code: 0, data: { url: "..." }, ... }
+        return response.data.url;
       });
 
       const urls = await Promise.all(uploadPromises);
