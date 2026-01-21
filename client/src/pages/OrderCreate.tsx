@@ -20,23 +20,25 @@ export default function OrderCreate() {
   const { user } = useAuth();
 
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [loadingGuide, setLoadingGuide] = useState(true);
+  const [loadingGuide, setLoadingGuide] = useState(!!guideId);
   const [submitting, setSubmitting] = useState(false);
 
   // Form Data
   const [formData, setFormData] = useState({
     serviceDate: "",
-    serviceHours: 8, // default 8 hours
-    remark: "",
+    serviceHours: 8, // default 8 hours (普通单)
+    city: "", // 定制单
+    content: "", // 定制单
+    budget: "", // 定制单
+    remark: "", // 通用
   });
 
+  const isCustom = !guideId;
+
   useEffect(() => {
-    if (!guideId) {
-      toast.error("无效的地陪ID");
-      setLocation("/guides");
-      return;
+    if (guideId) {
+      fetchGuide(parseInt(guideId));
     }
-    fetchGuide(parseInt(guideId));
   }, [guideId]);
 
   const fetchGuide = async (id: number) => {
@@ -70,15 +72,39 @@ export default function OrderCreate() {
       return;
     }
 
+    if (isCustom) {
+      // 验证定制单必填项
+      if (!formData.city) {
+        toast.error("请输入目的地城市");
+        return;
+      }
+      if (!formData.budget) {
+        toast.error("请输入预算");
+        return;
+      }
+      if (!formData.content) {
+        toast.error("请输入服务内容");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      const res = await createOrder({
-        // @ts-ignore
-        guideId: parseInt(guideId!),
+      const payload: any = {
         serviceDate: formData.serviceDate,
-        serviceHours: Number(formData.serviceHours),
         remark: formData.remark,
-      });
+      };
+
+      if (isCustom) {
+        payload.city = formData.city;
+        payload.content = formData.content;
+        payload.budget = Number(formData.budget);
+      } else {
+        payload.guideId = parseInt(guideId!);
+        payload.serviceHours = Number(formData.serviceHours);
+      }
+
+      const res = await createOrder(payload);
 
       if (res.code === 0) {
         toast.success("预订成功！");
@@ -98,7 +124,8 @@ export default function OrderCreate() {
     return <div className="p-4"><Skeleton className="h-64 w-full" /></div>;
   }
 
-  if (!guide) return null;
+  // 如果是普通单但没加载到地陪信息，返回空
+  if (!isCustom && !guide) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -107,27 +134,42 @@ export default function OrderCreate() {
         <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => window.history.back()}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-bold">预订下单</h1>
+        <h1 className="text-lg font-bold">{isCustom ? "定制行程" : "预订下单"}</h1>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Guide Card */}
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardContent className="p-0 flex h-24">
-            <img 
-              src={guide.photos?.[0] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.user_id}`} 
-              className="w-24 h-24 object-cover" 
-            />
-            <div className="p-3 flex flex-col justify-center">
-              <h3 className="font-bold text-gray-900">{guide.name}</h3>
-              <p className="text-sm text-gray-500">{guide.city}</p>
-              <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Guide Card (Only for Normal Order) */}
+        {!isCustom && guide && (
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardContent className="p-0 flex h-24">
+              <img 
+                src={guide.photos?.[0] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 
+                className="w-24 h-24 object-cover" 
+              />
+              <div className="p-3 flex flex-col justify-center">
+                <h3 className="font-bold text-gray-900">{guide.name}</h3>
+                <p className="text-sm text-gray-500">{guide.city}</p>
+                <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Form */}
         <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
+          
+          {/* 定制单特有字段：城市 */}
+          {isCustom && (
+            <div className="space-y-2">
+              <Label>目的地城市</Label>
+              <Input
+                placeholder="例如：北京、上海"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>服务日期</Label>
             <div className="relative">
@@ -142,27 +184,55 @@ export default function OrderCreate() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>服务时长 (小时)</Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="number"
-                min={1}
-                max={24}
-                className="pl-9"
-                value={formData.serviceHours}
-                onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
-              />
+          {/* 普通单特有字段：时长 */}
+          {!isCustom && (
+            <div className="space-y-2">
+              <Label>服务时长 (小时)</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  className="pl-9"
+                  value={formData.serviceHours}
+                  onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* 定制单特有字段：预算和服务内容 */}
+          {isCustom && (
+            <>
+              <div className="space-y-2">
+                <Label>预估预算 (元)</Label>
+                <Input
+                  type="number"
+                  placeholder="请输入您的预算"
+                  min={0}
+                  value={formData.budget}
+                  onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>服务内容需求</Label>
+                <Textarea
+                  placeholder="例如：想去故宫、长城，需要导游讲解，包车服务..."
+                  className="min-h-[100px]"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
-            <Label>备注需求 (可选)</Label>
+            <Label>备注 (可选)</Label>
             <div className="relative">
               <Info className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <Textarea
-                placeholder="例如：想去故宫，需要讲解..."
+                placeholder="其他特殊要求..."
                 className="pl-9 min-h-[80px]"
                 value={formData.remark}
                 onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
@@ -175,7 +245,9 @@ export default function OrderCreate() {
         <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex items-center gap-4 z-20">
           <div className="flex-1">
             <p className="text-xs text-gray-500">总计</p>
-            <p className="text-2xl font-bold text-orange-600">¥{totalPrice}</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {isCustom ? (formData.budget ? `¥${formData.budget}` : "待定") : `¥${totalPrice}`}
+            </p>
           </div>
           <Button 
             size="lg" 
@@ -183,7 +255,7 @@ export default function OrderCreate() {
             onClick={handleSubmit}
             disabled={submitting}
           >
-            {submitting ? "提交中..." : "提交订单"}
+            {submitting ? "提交中..." : (isCustom ? "发布需求" : "提交订单")}
           </Button>
         </div>
       </div>

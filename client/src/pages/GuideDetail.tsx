@@ -94,7 +94,7 @@ export default function GuideDetail() {
           </Carousel>
         ) : (
           <img 
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.user_id}`} 
+            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 
             className="w-full h-full object-cover"
             alt="Default Avatar" 
           />
@@ -122,7 +122,7 @@ export default function GuideDetail() {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-orange-500">
-              {guide.hourly_price ? `¥${guide.hourly_price}` : "面议"}
+              {guide.hourlyPrice ? `¥${guide.hourlyPrice}` : "面议"}
               <span className="text-sm text-gray-400 font-normal">/小时</span>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function GuideDetail() {
         <div className="flex-1">
           <p className="text-xs text-gray-500">参考总价 (8小时)</p>
           <p className="text-xl font-bold text-orange-500">
-            {guide.hourly_price ? `¥${guide.hourly_price * 8}` : "¥0"}
+            {guide.hourlyPrice ? `¥${guide.hourlyPrice * 8}` : "¥0"}
             <span className="text-xs text-gray-400 font-normal">/天</span>
           </p>
         </div>
