@@ -9,7 +9,7 @@ import { ErrorCodes } from '../../shared/errorCodes.js';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
-  service_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
+  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
   city: z.string().min(1, '城市不能为空'),
   content: z.string().min(10, '服务内容至少10个字'),
   budget: z.number().min(0, '预算必须大于等于0'),
@@ -18,15 +18,15 @@ const createCustomOrderSchema = z.object({
 
 // 普通订单 Schema
 const createNormalOrderSchema = z.object({
-  guide_id: z.number().int().positive(),
-  service_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
-  service_hours: z.number().int().min(1, '服务时长至少1小时'),
+  guideId: z.number().int().positive(),
+  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
+  serviceHours: z.number().int().min(1, '服务时长至少1小时'),
   remark: z.string().optional(),
 });
 
 // 模拟支付 Schema
 const payOrderSchema = z.object({
-  payment_method: z.enum(['wechat']),
+  paymentMethod: z.enum(['wechat']),
 });
 
 /**
@@ -38,7 +38,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
   
   try {
     // 1. 判断订单类型
-    const isCustom = !req.body.guide_id;
+    const isCustom = !req.body.guideId;
 
     if (isCustom) {
       // === 定制订单逻辑 ===
@@ -52,7 +52,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           userId,
           orderType: 'custom',
           status: 'pending', // 初始状态为待支付
-          serviceDate: validated.service_date,
+          serviceDate: validated.serviceDate,
           serviceHours: 0, // 定制单按天或项目计价，初始设为0
           amount: '150.00', // 固定订金
           createdAt: new Date(),
@@ -62,8 +62,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         await tx.insert(customRequirements).values({
           orderId: order.id,
           destination: validated.city, // 映射 city 到 destination
-          startDate: validated.service_date,
-          endDate: validated.service_date, // 暂定一天
+          startDate: validated.serviceDate,
+          endDate: validated.serviceDate, // 暂定一天
           peopleCount: 1, // 默认为1人，后续可添加字段
           budget: validated.budget.toString(),
           specialRequirements: validated.content + (validated.requirements ? `\n备注: ${validated.requirements}` : ''),
@@ -77,7 +77,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         code: 0,
         message: '订单创建成功',
         data: {
-          order_id: result.id,
+          orderId: result.id,
           amount: 150.00,
         },
       });
@@ -88,7 +88,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
 
       // 校验地陪有效性
       const guide = await db.query.guides.findFirst({
-        where: eq(guides.id, validated.guide_id)
+        where: eq(guides.id, validated.guideId)
       });
 
       if (!guide) {
@@ -105,17 +105,17 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       }
       
       const price = Number(guide.hourlyPrice);
-      const amount = (price * validated.service_hours).toFixed(2);
+      const amount = (price * validated.serviceHours).toFixed(2);
 
       // 创建订单
       const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
         userId,
-        guideId: validated.guide_id,
+        guideId: validated.guideId,
         orderType: 'normal',
         status: 'pending',
-        serviceDate: validated.service_date,
-        serviceHours: validated.service_hours,
+        serviceDate: validated.serviceDate,
+        serviceHours: validated.serviceHours,
         amount: amount.toString(),
         requirements: validated.remark,
         createdAt: new Date(),
@@ -125,7 +125,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         code: 0,
         message: '订单创建成功',
         data: {
-          order_id: order.id,
+          orderId: order.id,
           amount: Number(amount),
         },
       });
@@ -173,7 +173,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       // 3.1 创建支付流水
       await tx.insert(payments).values({
         orderId,
-        paymentMethod: validated.payment_method,
+        paymentMethod: validated.paymentMethod,
         transactionId: `TXN${Date.now()}${nanoid(6)}`.toUpperCase(),
         amount: order.amount,
         status: 'success',
@@ -190,7 +190,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       code: 0,
       message: '支付成功',
       data: {
-        order_id: orderId,
+        orderId,
         status: 'paid',
       },
     });
@@ -239,6 +239,7 @@ export async function getOrders(req: Request, res: Response) {
           extra = { destination: req.destination, startDate: req.startDate };
         }
       }
+      // Drizzle returns camelCase by default, so we are good.
       return { ...order, ...extra };
     }));
 
@@ -289,7 +290,8 @@ export async function getOrderById(req: Request, res: Response) {
       const [requirements] = await db.select().from(customRequirements).where(
         eq(customRequirements.orderId, orderId)
       );
-      result.custom_requirements = requirements || null;
+      // Change custom_requirements to customRequirements (Camel Case)
+      result.customRequirements = requirements || null;
     }
 
     res.json({

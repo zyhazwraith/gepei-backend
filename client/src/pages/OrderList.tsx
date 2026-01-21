@@ -54,8 +54,8 @@ export default function OrderList() {
     const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "text-gray-500", icon: Package };
     const StatusIcon = statusInfo.icon;
     
-    // 目的地显示逻辑：优先显示 custom_requirements.destination，否则显示 "常规订单"
-    const destination = order.custom_requirements?.destination || "标准服务";
+    // 目的地显示逻辑：优先显示 customRequirements.destination，否则显示 "标准服务"
+    const destination = order.customRequirements?.destination || "标准服务";
 
     return (
       <Card 

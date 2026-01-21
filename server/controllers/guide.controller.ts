@@ -27,20 +27,25 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
 
     // 转换为前端友好的格式（隐藏敏感信息）
     const list = guides.map(g => ({
-      id: g.id,
-      user_id: g.user_id,
-      name: g.name,
+      guideId: g.id,
+      userId: g.user_id,
+      nickName: g.name, // 假设 name 是昵称
       // 隐藏身份证号
       city: g.city,
       intro: g.intro,
-      hourly_price: g.hourly_price,
+      hourlyPrice: g.hourly_price,
       tags: g.tags,
-      photos: g.photos,
-      created_at: g.created_at,
+      // photos: g.photos, // 列表页可能只需要第一张图
+      avatarUrl: g.photos && Array.isArray(g.photos) && g.photos.length > 0 ? g.photos[0] : '', // 模拟头像
+      rating: 4.8, // Mock
+      reviewCount: 50, // Mock
+      // tags: g.tags,
+      // photos: g.photos,
+      // created_at: g.created_at,
     }));
 
     successResponse(res, {
-      list,
+      list, // or items
       pagination: {
         total,
         page,
@@ -75,15 +80,18 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
 
     // 转换为前端友好的格式（隐藏敏感信息）
     const response = {
-      id: guide.id,
-      user_id: guide.user_id,
-      name: guide.name,
+      guideId: guide.id,
+      userId: guide.user_id,
+      nickName: guide.name,
       city: guide.city,
       intro: guide.intro,
-      hourly_price: guide.hourly_price,
+      hourlyPrice: guide.hourly_price,
       tags: guide.tags,
       photos: guide.photos,
-      created_at: guide.created_at,
+      avatarUrl: guide.photos && Array.isArray(guide.photos) && guide.photos.length > 0 ? guide.photos[0] : '',
+      rating: 4.8,
+      reviewCount: 50,
+      createdAt: guide.created_at,
     };
 
     successResponse(res, response);
@@ -108,30 +116,30 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     }
 
     const {
-      id_number,
+      idNumber,
       name,
       city,
       photos,
-      hourly_price,
+      hourlyPrice,
       intro,
       tags,
     } = req.body;
 
     // 验证必填字段
-    if (!id_number || !name || !city) {
+    if (!idNumber || !name || !city) {
       errorResponse(res, ErrorCodes.INVALID_PARAMS, '身份证号、真实姓名和城市为必填项');
       return;
     }
 
     // 验证身份证号格式
-    if (!validateIdNumber(id_number)) {
+    if (!validateIdNumber(idNumber)) {
       errorResponse(res, ErrorCodes.INVALID_PARAMS, '身份证号格式不正确');
       return;
     }
 
     // 验证小时价格
-    if (hourly_price !== undefined && hourly_price !== null) {
-      const price = Number(hourly_price);
+    if (hourlyPrice !== undefined && hourlyPrice !== null) {
+      const price = Number(hourlyPrice);
       if (isNaN(price) || price < 0) {
         errorResponse(res, ErrorCodes.INVALID_PARAMS, '小时价格必须为非负数');
         return;
@@ -149,8 +157,8 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
 
     // 检查身份证号是否已被其他用户使用
     // 如果是更新操作且身份证号未改变，则跳过检查
-    if (!currentGuide || currentGuide.id_number !== id_number) {
-      const existingGuide = await findGuideByIdNumber(id_number);
+    if (!currentGuide || currentGuide.id_number !== idNumber) {
+      const existingGuide = await findGuideByIdNumber(idNumber);
       if (existingGuide && existingGuide.user_id !== user.id) {
         errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
         return;
@@ -164,10 +172,10 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       await updateGuide(
         user.id,
         name,
-        id_number,
+        idNumber,
         city,
         intro || null,
-        hourly_price || null,
+        hourlyPrice || null,
         tags || null,
         photos || null
       );
@@ -177,10 +185,10 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       guideId = await createGuide(
         user.id,
         name,
-        id_number,
+        idNumber,
         city,
         intro || null,
-        hourly_price || null,
+        hourlyPrice || null,
         tags || null,
         photos || null
       );
@@ -199,16 +207,16 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
 
     // 返回响应
     const response = {
-      guide_id: updatedGuide.id,
-      user_id: updatedGuide.user_id,
+      guideId: updatedGuide.id,
+      userId: updatedGuide.user_id,
       name: updatedGuide.name,
-      id_number: updatedGuide.id_number,
+      idNumber: updatedGuide.id_number,
       city: updatedGuide.city,
       intro: updatedGuide.intro,
-      hourly_price: updatedGuide.hourly_price,
+      hourlyPrice: updatedGuide.hourly_price,
       tags: updatedGuide.tags,
       photos: updatedGuide.photos,
-      id_verified_at: updatedGuide.id_verified_at,
+      idVerifiedAt: updatedGuide.id_verified_at,
     };
 
     successResponse(res, response);
@@ -249,22 +257,24 @@ export async function getGuideProfile(req: Request, res: Response): Promise<void
     const guide = await findGuideByUserId(user.id);
 
     if (!guide) {
+      // 这里的 1003 是 USER_NOT_FOUND，但我们不需要给前端返回错误
+      // 而是返回一个空对象，表示"尚未认证"
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪信息不存在');
       return;
     }
 
     // 返回响应
     const response = {
-      guide_id: guide.id,
-      user_id: guide.user_id,
+      guideId: guide.id,
+      userId: guide.user_id,
       name: guide.name,
-      id_number: guide.id_number,
+      idNumber: guide.id_number,
       city: guide.city,
       intro: guide.intro,
-      hourly_price: guide.hourly_price,
+      hourlyPrice: guide.hourly_price,
       tags: guide.tags,
       photos: guide.photos,
-      id_verified_at: guide.id_verified_at,
+      idVerifiedAt: guide.id_verified_at,
     };
 
     successResponse(res, response);

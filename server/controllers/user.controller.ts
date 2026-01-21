@@ -5,10 +5,10 @@ import { ErrorCodes } from '../../shared/errorCodes';
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { nickname, avatar_url } = req.body;
+    const { nickName, avatarUrl } = req.body; // Camel Case request body
 
     // 验证参数
-    if (nickname && (nickname.length < 2 || nickname.length > 20)) {
+    if (nickName && (nickName.length < 2 || nickName.length > 20)) {
       return res.status(400).json({
         code: ErrorCodes.INVALID_PARAMS,
         message: '昵称长度必须在2-20个字符之间',
@@ -16,7 +16,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       });
     }
 
-    if (avatar_url && !avatar_url.startsWith('http')) {
+    if (avatarUrl && !avatarUrl.startsWith('http')) {
       return res.status(400).json({
         code: ErrorCodes.INVALID_PARAMS,
         message: '头像URL格式不正确',
@@ -25,9 +25,12 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     }
 
     // 构建更新数据
+    // 注意：updateUser 内部可能需要 snake_case 或 camelCase 取决于 model 实现
+    // 检查 model: updateUser(id, { nickname: ... }) usually expects DB columns or ORM props
+    // 假设 model 接受 ORM 属性 (camelCase)
     const updateData: any = {};
-    if (nickname) updateData.nickname = nickname;
-    if (avatar_url) updateData.avatar_url = avatar_url;
+    if (nickName) updateData.nickname = nickName; // User model uses 'nickname' (lowercase? check schema)
+    if (avatarUrl) updateData.avatar_url = avatarUrl; // User model uses 'avatar_url' or 'avatarUrl'?
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
@@ -55,13 +58,13 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       code: 0,
       message: '资料更新成功',
       data: {
-        user_id: user.id,
+        userId: user.id,
         phone: user.phone,
-        nickname: user.nickname,
-        avatar_url: user.avatar_url,
-        is_guide: user.is_guide,
+        nickName: user.nickname,
+        avatarUrl: user.avatar_url,
+        isGuide: user.is_guide,
         balance: user.balance,
-        created_at: user.created_at
+        createdAt: user.created_at
       }
     });
   } catch (error) {

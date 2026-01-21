@@ -31,8 +31,8 @@ function Router() {
       <Route path={"/register"} component={Register} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/guides"} component={Guides} />
-      <Route path={"/guides/:id"} component={GuideDetail} />
       <Route path={"/guides/profile"} component={GuideEdit} />
+      <Route path={"/guides/:id"} component={GuideDetail} />
       <Route path={"/messages"} component={Messages} />
       <Route path={"/custom"} component={Custom} />
       <Route path={"/orders"} component={OrderList} />

@@ -35,7 +35,9 @@ apiClient.interceptors.request.use(
 // 响应拦截器 - 统一处理响应和错误
 apiClient.interceptors.response.use(
   (response) => {
-    // 返回data字段
+    // 这里已经直接返回了 response.data
+    // 所以业务层拿到的是 { code: 0, data: {...}, message: "..." }
+    // 而不是 axios 的 response 对象
     return response.data;
   },
   (error: AxiosError<ApiErrorResponse>) => {
@@ -64,27 +66,27 @@ export interface ApiErrorResponse {
 }
 
 export interface User {
-  user_id: number;
+  userId: number;
   phone: string;
-  nickname: string;
-  avatar_url: string;
+  nickName: string;
+  avatarUrl: string;
   role: 'user' | 'admin';
-  is_guide: number;
+  isGuide: number;
   balance: string;
 }
 
 export interface RegisterRequest {
   phone: string;
   password: string;
-  nickname: string;
+  nickName: string;
 }
 
 export interface RegisterResponse {
-  user_id: number;
+  userId: number;
   phone: string;
-  nickname: string;
+  nickName: string;
   token: string;
-  is_guide: number;
+  isGuide: number;
   role: 'user' | 'admin';
 }
 
@@ -94,31 +96,33 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  user_id: number;
+  userId: number;
   phone: string;
-  nickname: string;
+  nickName: string;
   token: string;
-  is_guide: number;
+  isGuide: number;
   role: 'user' | 'admin';
 }
 
 export interface Guide {
   id: number;
-  user_id: number;
+  userId: number;
   name: string;
+  idNumber: string;
   city: string;
   intro: string | null;
-  hourly_price: number | null;
+  hourlyPrice: number | null;
   tags: string[] | null;
   photos: string[] | null;
-  created_at: string;
+  idVerifiedAt: string;
+  createdAt: string;
 }
 
 export interface Pagination {
   total: number;
   page: number;
-  page_size: number;
-  total_pages: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface GetGuidesResponse {
@@ -127,7 +131,7 @@ export interface GetGuidesResponse {
 }
 
 export interface CreateOrderRequest {
-  service_date: string;
+  serviceDate: string;
   city: string;
   content: string;
   budget: number;
@@ -135,12 +139,12 @@ export interface CreateOrderRequest {
 }
 
 export interface CreateOrderResponse {
-  order_id: number;
+  orderId: number;
   amount: number;
 }
 
 export interface PayOrderResponse {
-  order_id: number;
+  orderId: number;
   status: string;
 }
 
@@ -166,7 +170,7 @@ export interface OrderDetailResponse {
   deposit: string;
   requirements: string | null;
   createdAt: string;
-  custom_requirements?: CustomRequirements | null;
+  customRequirements?: CustomRequirements | null;
 }
 
 // ==================== API方法 ====================
@@ -200,7 +204,7 @@ export async function getOrderById(id: number): Promise<ApiResponse<OrderDetailR
  * 支付订单
  */
 export async function payOrder(orderId: number, paymentMethod: 'wechat' | 'alipay'): Promise<ApiResponse<PayOrderResponse>> {
-  return apiClient.post(`/orders/${orderId}/payment`, { payment_method: paymentMethod });
+  return apiClient.post(`/orders/${orderId}/payment`, { paymentMethod });
 }
 
 /**
@@ -254,7 +258,7 @@ export interface GetAdminOrdersResponse {
 export interface AdminUser {
   id: number;
   phone: string;
-  nickname: string;
+  nickName: string;
   role: 'user' | 'admin';
   isGuide: number;
   balance: string;

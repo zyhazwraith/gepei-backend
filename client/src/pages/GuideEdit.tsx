@@ -31,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GuideEdit() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
 
   // 初始加载状态
   const [initialLoading, setInitialLoading] = useState(true);
@@ -54,28 +54,39 @@ export default function GuideEdit() {
 
   // 加载现有地陪信息
   useEffect(() => {
+    // 强制每次进入时重新获取
     loadGuideProfile();
-  }, []);
+  }, [location.pathname]); // 依赖路径变化
 
   const loadGuideProfile = async () => {
+    setInitialLoading(true);
     try {
       const response = await apiClient.get('/guides/profile');
-      if (response.data.code === 0) {
-        const data = response.data.data;
-        setIdNumber(data.id_number || '');
-        setName(data.name || '');
-        setCity(data.city || '');
-        setCitySearch(data.city || '');
-        setPhotos(data.photos || []);
-        setHourlyPrice(data.hourly_price ? String(data.hourly_price) : '');
-        setIntro(data.intro || '');
-        setSelectedTags(data.tags || []);
+      if (response.code === 0) {
+        const data = response.data;
+        
+        // 确保字段被正确设置
+        // 后端返回的字段名 (Camel Case)：guideId, userId, name, idNumber, city, intro, hourlyPrice, tags, photos
+        if (data.idNumber) setIdNumber(data.idNumber);
+        if (data.name) setName(data.name);
+        if (data.city) {
+          setCity(data.city);
+          setCitySearch(data.city);
+        }
+        if (data.photos && Array.isArray(data.photos)) setPhotos(data.photos);
+        if (data.hourlyPrice) setHourlyPrice(String(data.hourlyPrice));
+        if (data.intro) setIntro(data.intro);
+        if (data.tags && Array.isArray(data.tags)) setSelectedTags(data.tags);
       }
     } catch (error: any) {
-      // 如果是404错误，说明还没有地陪信息，使用默认值
+      // 如果是 1003 (USER_NOT_FOUND) 错误，说明还没有地陪信息，这在"新增"场景下是正常的
+      // 只有非 1003 错误才需要报错
       if (error.response?.data?.code !== 1003) {
         console.error('加载地陪信息失败:', error);
+        toast.error('加载信息失败，请重试');
       }
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -204,19 +215,17 @@ export default function GuideEdit() {
     setIsSaving(true);
     try {
       const response = await apiClient.post('/guides/profile', {
-        id_number: idNumber,
+        idNumber: idNumber,
         name: name.trim(),
         city,
         photos: photos.length > 0 ? photos : undefined,
-        hourly_price: hourlyPrice ? Number(hourlyPrice) : undefined,
+        hourlyPrice: hourlyPrice ? Number(hourlyPrice) : undefined,
         intro: intro.trim() || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       });
 
-      if (response.data.code === 0) {
+      if (response.code === 0) {
         toast.success('地陪资料保存成功');
-        // 更新用户状态（如 is_guide 字段）
-        await refetchUser();
         // 立即跳转到个人中心，提升反馈感知
         setLocation('/profile');
       }

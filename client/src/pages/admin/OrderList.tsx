@@ -147,7 +147,7 @@ export default function AdminOrderList() {
                         {order.orderType === 'custom' ? '定制单' : '普通单'}
                       </TableCell>
                       <TableCell className="text-gray-900">
-                        {order.custom_requirements?.destination || '-'}
+                        {order.customRequirements?.destination || '-'}
                       </TableCell>
                       <TableCell className="text-gray-900">¥{order.amount}</TableCell>
                       <TableCell className="text-gray-900">{order.serviceDate}</TableCell>
@@ -264,7 +264,7 @@ export default function AdminOrderList() {
                             {guide.name}
                             {selectedGuideId === guide.id && <Check className="w-4 h-4 ml-2 text-primary" />}
                           </div>
-                          <div className="text-xs text-gray-500">{guide.city} · ¥{guide.hourly_price}/小时</div>
+                          <div className="text-xs text-gray-500">{guide.city} · ¥{guide.hourlyPrice}/小时</div>
                         </div>
                       </div>
                     ))}

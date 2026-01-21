@@ -65,7 +65,7 @@ export default function Register() {
       const response = await register({
         phone: formData.phone,
         password: formData.password,
-        nickname: formData.nickname,
+        nickName: formData.nickname,
       });
 
       if (response.code === 0 && response.data) {

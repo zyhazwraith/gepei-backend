@@ -38,6 +38,7 @@ export default function Home() {
       console.error("Failed to fetch guides:", error);
     }
   };
+  const quickActions = [
     {
       icon: Users,
       title: "找地陪",

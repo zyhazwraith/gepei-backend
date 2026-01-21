@@ -131,17 +131,17 @@ export default function Profile() {
       <div className="bg-primary pt-10 pb-32 px-4">
         <div className="flex flex-col items-center">
           <Avatar className="w-20 h-20 border-2 border-primary-foreground/20 mb-3">
-            <AvatarImage src={user?.email || ""} />
+            <AvatarImage src={user?.avatarUrl || ""} />
             <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-2xl">
-              {user?.name?.[0] || "U"}
+              {user?.nickName?.[0] || "U"}
             </AvatarFallback>
           </Avatar>
           
           <h2 className="text-primary-foreground text-xl font-semibold mb-1">
-            {user?.name || "用户"}
+            {user?.nickName || "用户"}
           </h2>
           <p className="text-primary-foreground/80 text-sm mb-4">
-            {formatPhone(user?.email || "")}
+            {formatPhone(user?.phone || "")}
           </p>
 
           {/* 认证为地陪按钮 */}
@@ -149,7 +149,7 @@ export default function Profile() {
             onClick={handleBecomeGuide}
             className="border-2 border-primary-foreground/80 text-primary-foreground px-8 py-2 rounded-full hover:bg-primary-foreground/10 transition-colors font-medium"
           >
-            {user?.is_guide ? "管理地陪资料" : "认证为地陪"}
+            {user?.isGuide ? "管理地陪资料" : "认证为地陪"}
           </button>
         </div>
       </div>

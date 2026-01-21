@@ -55,12 +55,13 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
 
     // 返回响应（符合API设计文档）
-    const authResponse: AuthResponse = {
-      user_id: newUser.id,
+    // Camel Case
+    const authResponse: any = {
+      userId: newUser.id,
       phone: newUser.phone,
-      nickname: newUser.nickname || '',
+      nickName: newUser.nickname || '',
       token,
-      is_guide: newUser.is_guide,
+      isGuide: newUser.is_guide,
       role: newUser.role,
     };
 
@@ -113,12 +114,13 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
 
     // 返回响应（符合API设计文档）
-    const authResponse: AuthResponse = {
-      user_id: user.id,
+    // Camel Case
+    const authResponse: any = {
+      userId: user.id,
       phone: user.phone,
-      nickname: user.nickname || '',
+      nickName: user.nickname || '',
       token,
-      is_guide: user.is_guide,
+      isGuide: user.is_guide,
       role: user.role,
     };
 
@@ -145,13 +147,14 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
 
     // 返回用户信息
     const userInfo = {
-      user_id: user.id,
+      userId: user.id,
       phone: user.phone,
-      nickname: user.nickname || '',
-      avatar_url: user.avatar_url || '',
+      nickName: user.nickname || '',
+      avatarUrl: user.avatar_url || '',
       role: user.role,
-      is_guide: user.is_guide,
+      isGuide: user.is_guide,
       balance: user.balance,
+      createdAt: user.created_at, // assuming user object has created_at mapped
     };
 
     successResponse(res, userInfo);

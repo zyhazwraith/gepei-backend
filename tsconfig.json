@@ -17,5 +17,5 @@
     "types": ["node", "jest"]
   },
   "include": ["server/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "client"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "client", "scripts"]
 }

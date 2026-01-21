@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ErrorCodes } from '../../shared/errorCodes';
+import { ErrorCodes } from '../../shared/errorCodes.js';
 
 export const uploadFile = async (req: Request, res: Response) => {
   try {

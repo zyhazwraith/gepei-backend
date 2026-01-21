@@ -3,18 +3,25 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { authenticate } from '../middleware/auth.middleware';
-import { uploadFile } from '../controllers/upload.controller';
+import { authenticate } from '../middleware/auth.middleware.js';
+import { uploadFile } from '../controllers/upload.controller.js';
 
 const router = Router();
+
+// 确保 uploads 目录存在
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // 配置multer存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();

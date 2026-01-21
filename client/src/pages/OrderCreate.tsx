@@ -25,8 +25,8 @@ export default function OrderCreate() {
 
   // Form Data
   const [formData, setFormData] = useState({
-    service_date: "",
-    service_hours: 8, // default 8 hours
+    serviceDate: "",
+    serviceHours: 8, // default 8 hours
     remark: "",
   });
 
@@ -55,8 +55,8 @@ export default function OrderCreate() {
     }
   };
 
-  const totalPrice = guide && guide.hourly_price 
-    ? (guide.hourly_price * formData.service_hours).toFixed(2) 
+  const totalPrice = guide && guide.hourlyPrice 
+    ? (guide.hourlyPrice * formData.serviceHours).toFixed(2) 
     : "0.00";
 
   const handleSubmit = async () => {
@@ -65,7 +65,7 @@ export default function OrderCreate() {
       return;
     }
 
-    if (!formData.service_date) {
+    if (!formData.serviceDate) {
       toast.error("请选择服务日期");
       return;
     }
@@ -73,16 +73,17 @@ export default function OrderCreate() {
     setSubmitting(true);
     try {
       const res = await createOrder({
-        guide_id: parseInt(guideId!),
-        service_date: formData.service_date,
-        service_hours: Number(formData.service_hours),
+        // @ts-ignore
+        guideId: parseInt(guideId!),
+        serviceDate: formData.serviceDate,
+        serviceHours: Number(formData.serviceHours),
         remark: formData.remark,
       });
 
       if (res.code === 0) {
         toast.success("预订成功！");
         // 跳转到订单详情页 (或列表页如果详情页未开发)
-        setLocation(`/orders/${res.data.order_id}`);
+        setLocation(`/orders/${res.data.orderId}`);
       } else {
         toast.error(res.message || "预订失败");
       }
@@ -120,7 +121,7 @@ export default function OrderCreate() {
             <div className="p-3 flex flex-col justify-center">
               <h3 className="font-bold text-gray-900">{guide.name}</h3>
               <p className="text-sm text-gray-500">{guide.city}</p>
-              <p className="text-orange-500 font-bold mt-1">¥{guide.hourly_price}/小时</p>
+              <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
             </div>
           </CardContent>
         </Card>
@@ -135,8 +136,8 @@ export default function OrderCreate() {
                 type="date"
                 className="pl-9"
                 min={new Date().toISOString().split("T")[0]}
-                value={formData.service_date}
-                onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
+                value={formData.serviceDate}
+                onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
               />
             </div>
           </div>
@@ -150,8 +151,8 @@ export default function OrderCreate() {
                 min={1}
                 max={24}
                 className="pl-9"
-                value={formData.service_hours}
-                onChange={(e) => setFormData({ ...formData, service_hours: parseInt(e.target.value) || 1 })}
+                value={formData.serviceHours}
+                onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
               />
             </div>
           </div>
