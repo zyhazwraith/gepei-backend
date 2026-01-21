@@ -65,7 +65,7 @@ export const orders = mysqlTable('orders', {
   userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   guideId: int('guide_id').references(() => guides.id, { onDelete: 'set null' }),
   orderType: mysqlEnum('order_type', ['normal', 'custom']).notNull(),
-  status: mysqlEnum('status', ['pending', 'paid', 'in_progress', 'completed', 'cancelled']).default('pending'),
+  status: mysqlEnum('status', ['pending', 'paid', 'waiting_for_user', 'in_progress', 'completed', 'cancelled']).default('pending'),
   serviceDate: date('service_date', { mode: 'string' }),
   serviceHours: int('service_hours'),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),

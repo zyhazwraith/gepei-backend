@@ -109,7 +109,7 @@ export interface LoginResponse {
 }
 
 export interface Guide {
-  id: number;
+  guideId: number;
   userId: number;
   nickName: string;
   idNumber: string;
@@ -174,7 +174,7 @@ export interface OrderDetailResponse {
   userId: number;
   guideId: number | null;
   orderType: 'normal' | 'custom';
-  status: 'pending' | 'paid' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'paid' | 'waiting_for_user' | 'in_progress' | 'completed' | 'cancelled';
   serviceDate: string;
   serviceHours: number;
   amount: string;
@@ -307,8 +307,8 @@ export async function updateOrderStatus(id: number, status: string): Promise<Api
 /**
  * 指派地陪 (管理员)
  */
-export async function assignGuide(orderId: number, guideId: number): Promise<ApiResponse<any>> {
-  return apiClient.post(`/admin/orders/${orderId}/assign`, { guideId });
+export async function assignGuide(orderId: number, guideIds: number[]): Promise<ApiResponse<any>> {
+  return apiClient.post(`/admin/orders/${orderId}/assign`, { guideIds });
 }
 
 export default apiClient;

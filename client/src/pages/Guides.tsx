@@ -125,9 +125,9 @@ export default function Guides() {
         ) : guides.length > 0 ? (
           guides.map((guide) => (
             <Card 
-              key={guide.id} 
+              key={guide.guideId} 
               className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setLocation(`/guides/${guide.id}`)}
+              onClick={() => setLocation(`/guides/${guide.guideId}`)}
             >
               <CardContent className="p-0 flex">
                 {/* 左侧头像/封面 */}

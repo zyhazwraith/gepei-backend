@@ -22,7 +22,7 @@ export default function Custom() {
   
   // 表单数据
   const [formData, setFormData] = useState({
-    service_date: "",
+    serviceDate: "",
     city: "",
     content: "",
     budget: "",
@@ -35,7 +35,7 @@ export default function Custom() {
   // 1. 提交需求 -> 创建订单
   const handleCreateOrder = async () => {
     // 简单校验
-    if (!formData.service_date || !formData.city || !formData.content || !formData.budget) {
+    if (!formData.serviceDate || !formData.city || !formData.content || !formData.budget) {
       toast.error("请填写完整信息");
       return;
     }
@@ -43,12 +43,13 @@ export default function Custom() {
     setLoading(true);
     try {
       const res = await createOrder({
+        type: 'custom',
         ...formData,
         budget: Number(formData.budget),
       });
       
       if (res.code === 0 && res.data) {
-        setOrderId(res.data.order_id);
+        setOrderId(res.data.orderId);
         setStep(2); // 进入确认页
       } else {
         toast.error(res.message || "创建订单失败");
@@ -120,8 +121,8 @@ export default function Custom() {
             type="date"
             className="pl-9"
             min={new Date().toISOString().split("T")[0]}
-            value={formData.service_date}
-            onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
+            value={formData.serviceDate}
+            onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
           />
         </div>
       </div>
@@ -193,7 +194,7 @@ export default function Custom() {
         <CardContent className="p-4 space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-500">日期</span>
-            <span className="font-medium">{formData.service_date}</span>
+            <span className="font-medium">{formData.serviceDate}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">城市</span>

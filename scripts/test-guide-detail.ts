@@ -20,7 +20,7 @@ async function runTest() {
       console.error('❌ 无法获取地陪列表或列表为空，无法继续测试');
       process.exit(1);
     }
-    const guideId = listRes.data.data.list[0].id;
+    const guideId = listRes.data.data.list[0].guideId;
     console.log(`✅ 获取到有效地陪ID: ${guideId}`);
 
     // 2. 测试获取详情 (存在的ID)
@@ -32,14 +32,14 @@ async function runTest() {
       console.log('✅ 获取详情成功');
       
       // 验证字段
-      const requiredFields = ['id', 'user_id', 'name', 'city', 'intro', 'hourly_price', 'tags', 'photos'];
+      const requiredFields = ['guideId', 'userId', 'nickName', 'city', 'intro', 'hourlyPrice', 'tags', 'photos'];
       const missingFields = requiredFields.filter(f => !(f in guide));
       
       if (missingFields.length > 0) {
         console.error(`❌ 缺少必要字段: ${missingFields.join(', ')}`);
       } else {
         console.log('✅ 数据结构验证通过');
-        console.log(`   Name: ${guide.name}`);
+        console.log(`   Name: ${guide.nickName}`);
         console.log(`   City: ${guide.city}`);
         console.log(`   Tags: ${guide.tags}`);
       }

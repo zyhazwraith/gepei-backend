@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const STATUS_MAP: Record<string, { label: string; color: string; textColor: string }> = {
   pending: { label: "待支付", color: "bg-orange-100 border-orange-200", textColor: "text-orange-800" },
   paid: { label: "待服务", color: "bg-blue-100 border-blue-200", textColor: "text-blue-800" },
+  waiting_for_user: { label: "待确认", color: "bg-yellow-100 border-yellow-200", textColor: "text-yellow-800" },
   in_progress: { label: "进行中", color: "bg-purple-100 border-purple-200", textColor: "text-purple-800" },
   completed: { label: "已完成", color: "bg-green-100 border-green-200", textColor: "text-green-800" },
   cancelled: { label: "已取消", color: "bg-gray-100 border-gray-200", textColor: "text-gray-800" },
@@ -32,36 +33,36 @@ export default function AdminOrderList() {
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [guideList, setGuideList] = useState<Guide[]>([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
-  const [selectedGuideId, setSelectedGuideId] = useState<number | null>(null);
+  const [selectedGuideIds, setSelectedGuideIds] = useState<number[]>([]);
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      setLoading(true);
-      try {
-        const res = await getAdminOrders(page);
-        if (res.code === 0 && res.data) {
-          setOrders(res.data.list);
-          setPagination(res.data.pagination);
-        }
-      } catch (error) {
-        toast.error("获取订单列表失败");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchOrders();
+    fetchOrders(page);
   }, [page]);
 
-  const handleStatusChange = async (orderId: number, newStatus: AdminOrder['status']) => {
+  const fetchOrders = async (p: number) => {
+    setLoading(true);
+    try {
+      const res = await getAdminOrders(p);
+      if (res.code === 0 && res.data) {
+        setOrders(res.data.list);
+        setPagination(res.data.pagination);
+      }
+    } catch (error) {
+      toast.error("获取订单列表失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (orderId: number, newStatus: string) => {
     setUpdatingId(orderId);
     try {
       const res = await updateOrderStatus(orderId, newStatus);
       if (res.code === 0) {
         toast.success("状态更新成功");
         // 更新本地列表
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
       } else {
         toast.error(res.message || "更新失败");
       }
@@ -88,17 +89,26 @@ export default function AdminOrderList() {
     }
   };
 
+  const toggleGuideSelection = (guideId: number) => {
+    setSelectedGuideIds(prev => 
+      prev.includes(guideId) 
+        ? prev.filter(id => id !== guideId) 
+        : [...prev, guideId]
+    );
+  };
+
   const handleAssignConfirm = async () => {
-    if (!selectedOrder || !selectedGuideId) return;
+    if (!selectedOrder || selectedGuideIds.length === 0) return;
     
     setAssigning(true);
     try {
-      const res = await assignGuide(selectedOrder.id, selectedGuideId);
+      const res = await assignGuide(selectedOrder.id, selectedGuideIds);
       if (res.code === 0) {
         toast.success("指派成功");
         setAssignDialogOpen(false);
         // 更新列表状态
-        setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: 'in_progress' } : o));
+        const newStatus = selectedOrder.orderType === 'custom' ? 'waiting_for_user' : 'in_progress';
+        setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: newStatus as any } : o));
       } else {
         toast.error(res.message || "指派失败");
       }
@@ -172,7 +182,7 @@ export default function AdminOrderList() {
                           
                           <Select
                             disabled={updatingId === order.id}
-                            onValueChange={(val) => handleStatusChange(order.id, val)}
+                            onValueChange={(val) => handleStatusChange(order.id, val as AdminOrder['status'])}
                             value={order.status}
                           >
                             <SelectTrigger className="w-[120px] h-8">
@@ -181,6 +191,7 @@ export default function AdminOrderList() {
                             <SelectContent>
                               <SelectItem value="pending">待支付</SelectItem>
                               <SelectItem value="paid">待服务</SelectItem>
+                              <SelectItem value="waiting_for_user">待确认</SelectItem>
                               <SelectItem value="in_progress">进行中</SelectItem>
                               <SelectItem value="completed">已完成</SelectItem>
                               <SelectItem value="cancelled">已取消</SelectItem>
@@ -235,8 +246,10 @@ export default function AdminOrderList() {
             <DialogHeader>
               <DialogTitle>指派地陪</DialogTitle>
               <DialogDescription>
-                为订单 {selectedOrder?.orderNumber} 选择一位地陪。
-                指派后，订单状态将变为"进行中/待服务"。
+                为订单 {selectedOrder?.orderNumber} 选择地陪。
+                {selectedOrder?.orderType === 'custom' 
+                  ? '定制单：指派候选人后，订单状态变为"待确认"，需等待客户选择。' 
+                  : '普通单：指派后，订单状态将变为"进行中/待服务"。'}
               </DialogDescription>
             </DialogHeader>
             
@@ -250,10 +263,10 @@ export default function AdminOrderList() {
                   <div className="space-y-1">
                     {guideList.map(guide => (
                       <div 
-                        key={guide.id}
-                        onClick={() => setSelectedGuideId(guide.id)}
+                        key={guide.guideId}
+                        onClick={() => toggleGuideSelection(guide.guideId)}
                         className={`flex items-center p-3 rounded-md cursor-pointer transition-colors ${
-                          selectedGuideId === guide.id ? 'bg-primary/10 border-primary/20 border' : 'hover:bg-gray-50 border border-transparent'
+                          selectedGuideIds.includes(guide.guideId) ? 'bg-primary/10 border-primary/20 border' : 'hover:bg-gray-50 border border-transparent'
                         }`}
                       >
                         <Avatar className="w-10 h-10 mr-3">
@@ -262,7 +275,7 @@ export default function AdminOrderList() {
                         <div className="flex-1">
                           <div className="font-medium flex items-center">
                             {guide.nickName}
-                            {selectedGuideId === guide.id && <Check className="w-4 h-4 ml-2 text-primary" />}
+                            {selectedGuideIds.includes(guide.guideId) && <Check className="w-4 h-4 ml-2 text-primary" />}
                           </div>
                           <div className="text-xs text-gray-500">{guide.city} · ¥{guide.hourlyPrice}/小时</div>
                         </div>
@@ -280,7 +293,7 @@ export default function AdminOrderList() {
               <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>取消</Button>
               <Button 
                 onClick={handleAssignConfirm} 
-                disabled={!selectedGuideId || assigning}
+                disabled={selectedGuideIds.length === 0 || assigning}
               >
                 {assigning ? (
                   <>
@@ -288,7 +301,7 @@ export default function AdminOrderList() {
                     处理中...
                   </>
                 ) : (
-                  "确认指派"
+                  `确认指派 (${selectedGuideIds.length})`
                 )}
               </Button>
             </DialogFooter>

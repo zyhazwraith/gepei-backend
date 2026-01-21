@@ -1,19 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, users, customRequirements, guides } from '../db/schema';
-import { eq, desc, count, like, or } from 'drizzle-orm';
+import { orders, users, customRequirements, guides, customOrderCandidates } from '../db/schema';
+import { eq, desc, count, like, or, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors';
+import { MAX_GUIDE_SELECTION } from '../../shared/constants';
 
 // 更新状态 Schema
 const updateStatusSchema = z.object({
-  status: z.enum(['pending', 'paid', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'paid', 'waiting_for_user', 'in_progress', 'completed', 'cancelled']),
   force: z.boolean().optional(),
 });
 
 // 状态流转规则
 export const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ['paid', 'cancelled'],
+  pending: ['paid', 'waiting_for_user', 'cancelled'],
+  waiting_for_user: ['in_progress', 'cancelled'],
   paid: ['in_progress', 'cancelled'], // 允许退款取消
   in_progress: ['completed', 'paid'], // 允许回退到paid
   completed: [], // 终态
@@ -125,7 +127,7 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
 
 // 指派地陪 Schema
 const assignGuideSchema = z.object({
-  guideId: z.number().int().positive(),
+  guideIds: z.array(z.number().int().positive()),
 });
 
 /**
@@ -135,7 +137,11 @@ export async function assignGuide(req: Request, res: Response, next: NextFunctio
   const orderId = parseInt(req.params.id);
 
   try {
-    const { guideId } = assignGuideSchema.parse(req.body);
+    const { guideIds } = assignGuideSchema.parse(req.body);
+
+    if (guideIds.length === 0) {
+        throw new ValidationError('请至少选择一个地陪');
+    }
 
     // 1. 检查订单是否存在
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
@@ -144,45 +150,87 @@ export async function assignGuide(req: Request, res: Response, next: NextFunctio
     }
 
     // 2. 检查订单状态是否允许指派
-    // 允许的状态: waiting_for_guide (定制单初始态), paid (普通单支付后), pending (特殊情况)
-    const allowedStatuses = ['waiting_for_guide', 'paid', 'pending'];
+    // 允许的状态: waiting_for_guide (定制单初始态), paid (普通单支付后), pending (特殊情况), waiting_for_user (允许重新指派)
+    const allowedStatuses = ['waiting_for_guide', 'paid', 'pending', 'waiting_for_user'];
     if (!order.status || !allowedStatuses.includes(order.status)) {
       throw new ValidationError(`当前订单状态 (${order.status}) 不允许指派地陪`);
     }
 
     // 3. 检查地陪是否存在
-    const [guide] = await db.select().from(guides).where(eq(guides.id, guideId));
-    if (!guide) {
-      throw new NotFoundError('地陪不存在');
+    const validGuides = await db.select().from(guides).where(inArray(guides.id, guideIds));
+    if (validGuides.length !== guideIds.length) {
+        throw new NotFoundError('部分地陪不存在');
     }
 
-    // 4. 更新订单
-    // 将订单状态更新为 'booked' (已接单/待服务)，并关联 guideId
-    await db.update(orders)
-      .set({ 
-        guideId: guideId,
-        status: 'in_progress', // 对应 "booked" / "待服务" 状态，此处使用 in_progress 或项目约定的状态
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, orderId));
+    // 4. 根据订单类型处理
+    if (order.orderType === 'custom') {
+        // 定制单：指派候选人
+        if (guideIds.length > MAX_GUIDE_SELECTION) {
+            throw new ValidationError(`最多只能选择${MAX_GUIDE_SELECTION}个候选地陪`);
+        }
 
-    // 5. 记录操作日志
-    // TODO: 记录 admin_logs
+        // 清除旧候选人
+        await db.delete(customOrderCandidates).where(eq(customOrderCandidates.orderId, orderId));
 
-    res.json({
-      code: 0,
-      message: '指派成功',
-      data: {
-        orderId,
-        guideId,
-        status: 'in_progress',
-        guideName: guide.name
-      }
-    });
+        // 插入新候选人
+        await db.insert(customOrderCandidates).values(
+            guideIds.map((gid, index) => ({
+                orderId,
+                guideId: gid,
+                sortOrder: index,
+                isSelected: false // default false
+            }))
+        );
+
+        // 更新状态
+        await db.update(orders)
+            .set({ 
+                status: 'waiting_for_user',
+                updatedAt: new Date(),
+            })
+            .where(eq(orders.id, orderId));
+            
+        res.json({
+            code: 0,
+            message: '指派成功',
+            data: {
+                orderId,
+                guideIds,
+                status: 'waiting_for_user'
+            }
+        });
+
+    } else {
+        // 普通单：直接指派
+        if (guideIds.length !== 1) {
+            throw new ValidationError('普通订单只能指派一个地陪');
+        }
+        
+        const guideId = guideIds[0];
+        
+        await db.update(orders)
+            .set({ 
+                guideId: guideId,
+                status: 'in_progress', // 对应 "booked" / "待服务"
+                updatedAt: new Date(),
+            })
+            .where(eq(orders.id, orderId));
+
+        res.json({
+            code: 0,
+            message: '指派成功',
+            data: {
+                orderId,
+                guideIds,
+                status: 'in_progress'
+            }
+        });
+    }
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return next(new ValidationError('参数错误: guideId 必须为正整数'));
+      const msg = error.errors.map(e => e.message).join(', ');
+      return next(new ValidationError(`参数错误: ${msg}`));
     }
     next(error);
   }

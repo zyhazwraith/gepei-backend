@@ -17,4 +17,10 @@ router.post('/:id/payment', asyncHandler(authenticate), asyncHandler(orderContro
 // GET /api/v1/orders/:id - 获取订单详情
 router.get('/:id', asyncHandler(authenticate), asyncHandler(orderController.getOrderById));
 
+// GET /api/v1/orders/:id/candidates - 获取候选地陪
+router.get('/:id/candidates', asyncHandler(authenticate), asyncHandler(orderController.getCandidates));
+
+// POST /api/v1/orders/:id/select-guide - 用户选择地陪
+router.post('/:id/select-guide', asyncHandler(authenticate), asyncHandler(orderController.selectGuide));
+
 export default router;

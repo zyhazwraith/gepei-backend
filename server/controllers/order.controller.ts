@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, customRequirements, payments, users, guides } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { orders, customRequirements, payments, users, guides, customOrderCandidates } from '../db/schema';
+import { eq, and, ne } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { AppError, NotFoundError, ValidationError } from '../utils/errors.js';
@@ -27,6 +27,11 @@ const createNormalOrderSchema = z.object({
 // 模拟支付 Schema
 const payOrderSchema = z.object({
   paymentMethod: z.enum(['wechat']),
+});
+
+// 选择地陪 Schema
+const selectGuideSchema = z.object({
+  guideId: z.number().int().positive(),
 });
 
 /**
@@ -309,5 +314,104 @@ export async function getOrderById(req: Request, res: Response) {
     });
   } catch (error) {
     throw error;
+  }
+}
+
+/**
+ * 获取候选地陪列表
+ */
+export async function getCandidates(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const orderId = parseInt(req.params.id);
+
+  try {
+    const [order] = await db.select().from(orders).where(
+      and(eq(orders.id, orderId), eq(orders.userId, userId))
+    );
+    if (!order) throw new NotFoundError('订单不存在');
+
+    const candidates = await db.select({
+      guideId: guides.id,
+      nickName: users.nickname,
+      avatarUrl: users.avatarUrl,
+      hourlyPrice: guides.hourlyPrice,
+      city: guides.city,
+      isSelected: customOrderCandidates.isSelected,
+    })
+    .from(customOrderCandidates)
+    .innerJoin(guides, eq(customOrderCandidates.guideId, guides.id))
+    .innerJoin(users, eq(guides.userId, users.id))
+    .where(eq(customOrderCandidates.orderId, orderId));
+
+    res.json({
+      code: 0,
+      message: '获取成功',
+      data: { list: candidates }
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * 用户选择地陪
+ */
+export async function selectGuide(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const orderId = parseInt(req.params.id);
+
+  try {
+    const { guideId } = selectGuideSchema.parse(req.body);
+
+    const [order] = await db.select().from(orders).where(
+      and(eq(orders.id, orderId), eq(orders.userId, userId))
+    );
+    if (!order) throw new NotFoundError('订单不存在');
+    
+    // 允许的状态: waiting_for_user (正常流程), paid (如果流程是先付后选), pending (如果允许未支付选择)
+    // 根据 Admin Controller 设置，指派后状态为 waiting_for_user
+    if (order.status !== 'waiting_for_user') {
+        throw new ValidationError('当前订单状态不允许选择地陪');
+    }
+
+    // Check if candidate exists
+    const [candidate] = await db.select().from(customOrderCandidates).where(
+        and(
+            eq(customOrderCandidates.orderId, orderId),
+            eq(customOrderCandidates.guideId, guideId)
+        )
+    );
+    if (!candidate) throw new ValidationError('该地陪不在候选名单中');
+
+    await db.transaction(async (tx) => {
+        // Update order
+        await tx.update(orders)
+            .set({ 
+                guideId, 
+                status: 'in_progress',
+                updatedAt: new Date() 
+            })
+            .where(eq(orders.id, orderId));
+            
+        // Update candidates status
+        await tx.update(customOrderCandidates)
+            .set({ isSelected: true })
+            .where(and(eq(customOrderCandidates.orderId, orderId), eq(customOrderCandidates.guideId, guideId)));
+            
+        await tx.update(customOrderCandidates)
+            .set({ isSelected: false })
+            .where(and(eq(customOrderCandidates.orderId, orderId), ne(customOrderCandidates.guideId, guideId)));
+    });
+
+    res.json({
+        code: 0,
+        message: '选择成功',
+        data: { orderId, guideId, status: 'in_progress' }
+    });
+  } catch (error) {
+     if (error instanceof z.ZodError) {
+      return next(new ValidationError('参数错误'));
+    }
+    next(error);
   }
 }

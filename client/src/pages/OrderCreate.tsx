@@ -86,6 +86,10 @@ export default function OrderCreate() {
         toast.error("请输入服务内容");
         return;
       }
+      if (formData.content.length < 10) {
+        toast.error("服务内容描述至少需要10个字");
+        return;
+      }
     }
 
     setSubmitting(true);

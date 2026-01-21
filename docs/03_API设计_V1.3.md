@@ -493,14 +493,18 @@
 }
 ```
 
-### 16. 推荐地陪
+### 17. 指派地陪 (管理员)
 
-**端点**: `POST /admin/orders/{order_id}/recommend-guides`
+**端点**: `POST /admin/orders/{order_id}/assign`
+
+**说明**: 该接口用于为**定制订单**指派候选地陪（推荐）。
+- 每次指派会**覆盖**之前的候选人列表。
+- 指派后，订单状态流转为 `waiting_for_user` (待用户确认)。
 
 **请求体**:
 ```json
 {
-  "guideIds": [456, 457, 458, 459, 460, 461]
+  "guideIds": [456, 457, 458] // 最多5个
 }
 ```
 
@@ -508,24 +512,21 @@
 ```json
 {
   "code": 0,
-  "message": "推荐成功",
+  "message": "指派成功",
   "data": {
     "orderId": 789,
-    "recommendedGuides": [
-      {
-        "guideId": 456,
-        "nickName": "张三",
-        "avatarUrl": "https://...",
-        "hourlyPrice": 300
-      }
-    ]
+    "guideIds": [456, 457, 458],
+    "status": "waiting_for_user",
+    "updatedAt": "2026-01-18T12:00:00Z"
   }
 }
 ```
 
-### 17. 指派地陪 (管理员)
+### 18. 客户选择地陪
 
-**端点**: `POST /admin/orders/{order_id}/assign`
+**端点**: `POST /orders/{order_id}/select-guide`
+
+**说明**: 用户从候选列表中确认选择一位地陪。
 
 **请求体**:
 ```json
@@ -538,12 +539,35 @@
 ```json
 {
   "code": 0,
-  "message": "指派成功",
+  "message": "选择成功",
   "data": {
     "orderId": 789,
     "guideId": 456,
-    "status": "booked",
-    "updatedAt": "2026-01-18T12:00:00Z"
+    "status": "in_progress",
+    "updatedAt": "2026-01-18T12:10:00Z"
+  }
+}
+```
+
+### 19. 获取候选地陪列表
+
+**端点**: `GET /orders/{order_id}/candidates`
+
+**成功响应** (200):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "list": [
+      {
+        "guideId": 456,
+        "nickName": "张三",
+        "avatarUrl": "https://...",
+        "hourlyPrice": 300,
+        "score": 4.8
+      }
+    ]
   }
 }
 ```
