@@ -95,12 +95,6 @@ async function runTests() {
     let manyIds = guideIds.slice(0, 6);
     if (manyIds.length < 6) {
         console.warn(`Warning: Only have ${manyIds.length} guides, cannot test >5 limit fully with valid IDs.`);
-        // Just use what we have plus some fake ones to trigger "Not Found" or "Exceed" depending on which check comes first.
-        // Controller checks existence (step 3) BEFORE limit (step 4 for custom).
-        // So if we provide fake IDs, it fails "Not Found" first.
-        // We need it to pass existence check to reach limit check.
-        // If we don't have 6 guides, we can't test limit check with valid IDs.
-        // But the requirements say "Found 10 guides" in previous run, so we are good.
     }
     
     try {
@@ -111,6 +105,36 @@ async function runTests() {
     } catch (e: any) {
       if (e.response?.status === 400 && e.response?.data?.message?.includes('最多只能选择5个')) {
         logPass('Caught expected validation error: Exceed limit');
+      } else {
+        logFail('Unexpected error response', e);
+      }
+    }
+
+    // 5.1 Test: Empty List (Boundary Case)
+    console.log('\n🔹 5.1. Test: Empty List Assignment...');
+    try {
+      await axios.post(`${API_URL}/admin/orders/${customOrderId}/assign`, {
+        guideIds: []
+      }, { headers: { Authorization: `Bearer ${adminToken}` } });
+      logFail('Should have failed with validation error', {});
+    } catch (e: any) {
+      if (e.response?.status === 400 && e.response?.data?.message?.includes('请至少选择一个地陪')) {
+        logPass('Caught expected validation error: Empty list');
+      } else {
+        logFail('Unexpected error response', e);
+      }
+    }
+
+    // 5.2 Test: Non-existent Guide IDs (Boundary Case)
+    console.log('\n🔹 5.2. Test: Non-existent Guide IDs...');
+    try {
+      await axios.post(`${API_URL}/admin/orders/${customOrderId}/assign`, {
+        guideIds: [999999]
+      }, { headers: { Authorization: `Bearer ${adminToken}` } });
+      logFail('Should have failed with Not Found error', {});
+    } catch (e: any) {
+      if (e.response?.status === 400 && e.response?.data?.message?.includes('部分地陪不存在')) {
+        logPass('Caught expected error: Non-existent guides');
       } else {
         logFail('Unexpected error response', e);
       }
@@ -129,12 +153,47 @@ async function runTests() {
 
     // 7. Test: User Select Guide
     console.log('\n🔹 7. Test: User Select Guide...');
+
+    // 7.1 Test: Select Invalid Guide (Not in candidates)
+    console.log('\n🔹 7.1. Test: Select Invalid Guide (Not in candidates)...');
+    try {
+        const nonCandidateId = guideIds.find(id => !assignIds.includes(id)) || 999999;
+        await axios.post(`${API_URL}/orders/${customOrderId}/select-guide`, {
+            guideId: nonCandidateId
+        }, { headers: { Authorization: `Bearer ${userToken}` } });
+        logFail('Should have failed with Validation Error (Not in candidates)', {});
+    } catch (e: any) {
+        if (e.response?.status === 400 && e.response?.data?.message?.includes('该地陪不在候选名单中')) {
+            logPass('Caught expected error: Not in candidates');
+        } else {
+            // Note: If guide ID 999999 is used, it might fail "Not in candidates" check (which queries DB) or foreign key check if schema enforced it. 
+            // Our controller checks "select from custom_order_candidates where guideId = ?". If empty -> "Not in candidates". 
+            // So 999999 works fine for this test.
+            logFail('Unexpected error response', e);
+        }
+    }
+
     const selectRes = await axios.post(`${API_URL}/orders/${customOrderId}/select-guide`, {
         guideId: guideIds[0]
     }, { headers: { Authorization: `Bearer ${userToken}` } });
 
     if (selectRes.data.code === 0) {
         logPass('User selection successful');
+    }
+
+    // 7.2 Test: Select Again (Invalid Status)
+    console.log('\n🔹 7.2. Test: Select Again (Invalid Status)...');
+    try {
+        await axios.post(`${API_URL}/orders/${customOrderId}/select-guide`, {
+            guideId: guideIds[0]
+        }, { headers: { Authorization: `Bearer ${userToken}` } });
+        logFail('Should have failed with Validation Error (Invalid Status)', {});
+    } catch (e: any) {
+         if (e.response?.status === 400 && e.response?.data?.message?.includes('当前订单状态不允许选择地陪')) {
+            logPass('Caught expected error: Invalid Status');
+        } else {
+            logFail('Unexpected error response', e);
+        }
     }
 
     // Verify status updated to in_progress

@@ -311,4 +311,31 @@ export async function assignGuide(orderId: number, guideIds: number[]): Promise<
   return apiClient.post(`/admin/orders/${orderId}/assign`, { guideIds });
 }
 
+export interface Candidate {
+  guideId: number;
+  nickName: string;
+  avatarUrl: string;
+  hourlyPrice: number | null;
+  city: string;
+  isSelected: boolean;
+}
+
+export interface GetCandidatesResponse {
+  list: Candidate[];
+}
+
+/**
+ * 获取候选地陪列表
+ */
+export async function getCandidates(orderId: number): Promise<ApiResponse<GetCandidatesResponse>> {
+  return apiClient.get(`/orders/${orderId}/candidates`);
+}
+
+/**
+ * 用户选择地陪
+ */
+export async function selectGuide(orderId: number, guideId: number): Promise<ApiResponse<any>> {
+  return apiClient.post(`/orders/${orderId}/select-guide`, { guideId });
+}
+
 export default apiClient;

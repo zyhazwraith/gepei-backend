@@ -159,7 +159,7 @@ export async function assignGuide(req: Request, res: Response, next: NextFunctio
     // 3. 检查地陪是否存在
     const validGuides = await db.select().from(guides).where(inArray(guides.id, guideIds));
     if (validGuides.length !== guideIds.length) {
-        throw new NotFoundError('部分地陪不存在');
+        throw new ValidationError('部分地陪不存在');
     }
 
     // 4. 根据订单类型处理
