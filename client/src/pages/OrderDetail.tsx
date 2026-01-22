@@ -177,7 +177,7 @@ export default function OrderDetail() {
                                 <div className="flex items-center gap-3">
                                     <Avatar className="w-10 h-10">
                                         <AvatarImage src={candidate.avatarUrl} />
-                                        <AvatarFallback>{candidate.nickName.slice(0, 1)}</AvatarFallback>
+                                        <AvatarFallback>{candidate.nickName?.slice(0, 1) || 'G'}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <div className="font-medium text-gray-900">{candidate.nickName}</div>

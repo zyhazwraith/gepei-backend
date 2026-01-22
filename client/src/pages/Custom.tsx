@@ -181,7 +181,7 @@ export default function Custom() {
         />
       </div>
 
-      <Button className="w-full mt-6" size="lg" onClick={handleCreateOrder} disabled={loading}>
+      <Button className="w-full mt-6" size="lg" onClick={handleCreateOrder} disabled={loading} data-testid="submit-custom-order-btn">
         {loading ? "提交中..." : "下一步：确认信息"}
       </Button>
     </div>
@@ -223,7 +223,7 @@ export default function Custom() {
       </div>
 
       <div className="space-y-3">
-        <Button className="w-full bg-[#07C160] hover:bg-[#06AD56]" size="lg" onClick={handlePayment} disabled={loading}>
+        <Button className="w-full bg-[#07C160] hover:bg-[#06AD56]" size="lg" onClick={handlePayment} disabled={loading} data-testid="pay-deposit-btn">
           {loading ? "支付处理中..." : "微信支付 ¥150.00"}
         </Button>
         <Button variant="ghost" className="w-full" onClick={() => setStep(1)} disabled={loading}>

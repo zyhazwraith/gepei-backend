@@ -46,6 +46,9 @@ export const guides = mysqlTable('guides', {
   hourlyPrice: decimal('hourly_price', { precision: 10, scale: 2 }),
   tags: json('tags'),
   photos: json('photos'),
+  // LBS Fields
+  latitude: decimal('latitude', { precision: 10, scale: 6 }),
+  longitude: decimal('longitude', { precision: 10, scale: 6 }),
   idVerifiedAt: timestamp('id_verified_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),

@@ -18,16 +18,8 @@ const SKILL_TAGS = [
   '翻译服务',
 ];
 
-// 中国主要城市列表（支持搜索）
-const ALL_CITIES = [
-  '北京', '上海', '广州', '深圳', '杭州', '成都', '西安', '重庆', '南京', '武汉',
-  '天津', '苏州', '郑州', '长沙', '东莞', '沈阳', '青岛', '合肥', '佛山', '济南',
-  '哈尔滨', '福州', '长春', '石家庄', '常州', '泉州', '南宁', '贵阳', '南昌', '昆明',
-  '温州', '无锡', '厦门', '大连', '宁波', '太原', '兰州', '海口', '银川', '西宁',
-  '呼和浩特', '乌鲁木齐', '拉萨',
-];
-
-import { Skeleton } from "@/components/ui/skeleton";
+import CitySelector from '@/components/common/CitySelector';
+import LocationButton from '@/components/common/LocationButton';
 
 export default function GuideEdit() {
   const [, setLocation] = useLocation();
@@ -41,12 +33,13 @@ export default function GuideEdit() {
   const [name, setName] = useState(''); // 真实姓名
   const [idError, setIdError] = useState('');
   const [city, setCity] = useState('');
-  const [citySearch, setCitySearch] = useState('');
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  // 移除旧的 citySearch 和 showCityDropdown
   const [photos, setPhotos] = useState<string[]>([]);
   const [hourlyPrice, setHourlyPrice] = useState('');
   const [intro, setIntro] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [latitude, setLatitude] = useState<number | undefined>();
+  const [longitude, setLongitude] = useState<number | undefined>();
 
   // 上传状态
   const [isUploading, setIsUploading] = useState(false);
@@ -69,14 +62,13 @@ export default function GuideEdit() {
         // 后端返回的字段名 (Camel Case)：guideId, userId, name, idNumber, city, intro, hourlyPrice, tags, photos
         if (data.idNumber) setIdNumber(data.idNumber);
         if (data.name) setName(data.name);
-        if (data.city) {
-          setCity(data.city);
-          setCitySearch(data.city);
-        }
+        if (data.city) setCity(data.city);
         if (data.photos && Array.isArray(data.photos)) setPhotos(data.photos);
         if (data.hourlyPrice) setHourlyPrice(String(data.hourlyPrice));
         if (data.intro) setIntro(data.intro);
         if (data.tags && Array.isArray(data.tags)) setSelectedTags(data.tags);
+        if (data.latitude) setLatitude(data.latitude);
+        if (data.longitude) setLongitude(data.longitude);
       }
     } catch (error: any) {
       // 如果是 1003 (USER_NOT_FOUND) 错误，说明还没有地陪信息，这在"新增"场景下是正常的
@@ -90,16 +82,17 @@ export default function GuideEdit() {
     }
   };
 
-  // 城市搜索过滤
-  const filteredCities = ALL_CITIES.filter((c) =>
-    c.toLowerCase().includes(citySearch.toLowerCase())
-  );
+  // 城市搜索过滤已移除，使用 CitySelector 组件
 
   // 选择城市
   const handleCitySelect = (selectedCity: string) => {
     setCity(selectedCity);
-    setCitySearch(selectedCity);
-    setShowCityDropdown(false);
+  };
+
+  // 处理坐标更新
+  const handleLocationUpdate = (lat: number, lng: number) => {
+    setLatitude(lat);
+    setLongitude(lng);
   };
 
   // 照片上传
@@ -224,10 +217,14 @@ export default function GuideEdit() {
         hourlyPrice: hourlyPrice ? Number(hourlyPrice) : undefined,
         intro: intro.trim() || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
+        latitude,
+        longitude,
       });
 
       if (response.code === 0) {
         toast.success('地陪资料保存成功');
+        // 刷新用户信息，确保 Profile 页面状态更新
+        await refetchUser();
         // 立即跳转到个人中心，提升反馈感知
         setLocation('/profile');
       }
@@ -274,6 +271,7 @@ export default function GuideEdit() {
           <Input
             type="text"
             value={idNumber}
+            data-testid="guide-id-number"
             onChange={(e) => {
               setIdNumber(e.target.value);
               if (idError) setIdError(''); // 输入时清除错误
@@ -294,6 +292,7 @@ export default function GuideEdit() {
           <Input
             type="text"
             value={name}
+            data-testid="guide-real-name"
             onChange={(e) => setName(e.target.value)}
             placeholder="请输入真实姓名"
             maxLength={20}
@@ -306,32 +305,25 @@ export default function GuideEdit() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             所在城市 <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <Input
-              type="text"
-              value={citySearch}
-              onChange={(e) => {
-                setCitySearch(e.target.value);
-                setShowCityDropdown(true);
-              }}
-              onFocus={() => setShowCityDropdown(true)}
-              placeholder="搜索城市"
-            />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          </div>
-          {showCityDropdown && filteredCities.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {filteredCities.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => handleCitySelect(c)}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors"
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
+          <CitySelector 
+            value={city} 
+            onChange={handleCitySelect} 
+            data-testid="city-selector"
+            placeholder="请选择您提供服务的城市"
+          />
+        </div>
+
+        {/* 当前位置 (LBS) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            当前位置 (用于距离计算)
+          </label>
+          <LocationButton 
+            onLocationUpdate={handleLocationUpdate}
+            initialLat={latitude}
+            initialLng={longitude}
+          />
+          <p className="text-xs text-gray-500 mt-1">获取精准位置后，您将出现在“附近的地陪”列表中，增加曝光率</p>
         </div>
 
         {/* 我的照片 */}
@@ -386,6 +378,7 @@ export default function GuideEdit() {
           <Input
             type="number"
             value={hourlyPrice}
+            data-testid="guide-price"
             onChange={(e) => setHourlyPrice(e.target.value)}
             placeholder="请输入小时价格"
             min="0"
@@ -399,6 +392,7 @@ export default function GuideEdit() {
           </label>
           <Textarea
             value={intro}
+            data-testid="guide-intro"
             onChange={(e) => setIntro(e.target.value)}
             placeholder="介绍一下自己，让游客更了解你"
             maxLength={200}
@@ -437,6 +431,7 @@ export default function GuideEdit() {
         <Button
           onClick={handleSave}
           disabled={isSaving}
+          data-testid="save-guide-profile-btn"
           className="w-full bg-orange-500 hover:bg-orange-600 text-white h-12 text-base"
         >
           {isSaving ? '保存中...' : '保存修改'}

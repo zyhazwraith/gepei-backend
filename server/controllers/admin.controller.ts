@@ -229,7 +229,7 @@ export async function assignGuide(req: Request, res: Response, next: NextFunctio
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const msg = error.errors.map(e => e.message).join(', ');
+      const msg = (error as any).errors.map((e: any) => e.message).join(', ');
       return next(new ValidationError(`参数错误: ${msg}`));
     }
     next(error);

@@ -13,12 +13,14 @@
     "start": "node dist/server/server.js",
     "test": "jest",
     "test:api": "tsx scripts/test-api-flow.ts",
-    "test:e2e": "concurrently \"npm run test:e2e:core\" \"npm run test:e2e:admin\" \"npm run test:e2e:guide\" \"npm run test:e2e:booking\" \"npm run test:e2e:payment\"",
+    "test:e2e": "concurrently \"npm run test:e2e:core\" \"npm run test:e2e:admin\" \"npm run test:e2e:guide\" \"npm run test:e2e:booking\" \"npm run test:e2e:payment\" \"npm run test:e2e:lbs\"",
     "test:e2e:core": "tsx tests/integration/test-core-api.ts",
     "test:e2e:admin": "tsx tests/integration/test-admin-flow.ts",
     "test:e2e:guide": "tsx tests/integration/test-guide-assignment.ts",
     "test:e2e:booking": "tsx tests/integration/test-booking-flow.ts",
-    "test:e2e:payment": "tsx tests/integration/test-payment-flow.ts"
+    "test:e2e:payment": "tsx tests/integration/test-payment-flow.ts",
+    "test:e2e:lbs": "tsx tests/integration/test-lbs-flow.ts",
+    "test:e2e:ui": "playwright test"
   },
   "keywords": [
     "gepei",

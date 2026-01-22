@@ -21,17 +21,18 @@ async function runTests() {
     logPass(`Created Normal User: ${userReg.user.phone}`);
 
     // 1.3 Verify Guide Profile
-    const idNumber = `1${Math.floor(Math.random() * 100000000000000000).toString().padStart(17, '0')}`;
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const idNumber = `11010119900101${randomSuffix}`;
     const resProfile = await axios.post(`${API_URL}/guides/profile`, {
-      id_number: idNumber,
+      idNumber: idNumber,
       name: 'Test Guide',
       city: 'Shanghai',
-      hourly_price: 200,
+      hourlyPrice: 200,
       intro: 'Professional Guide'
     }, { headers: { Authorization: `Bearer ${guideToken}` } });
     
     if (resProfile.data.code === 0) {
-      guideId = resProfile.data.data.guide_id;
+      guideId = resProfile.data.data.guideId;
       logPass(`Guide Profile Verified. Guide ID: ${guideId}, Hourly Price: 200`);
     } else {
       throw new Error('Guide verification failed');
@@ -39,9 +40,9 @@ async function runTests() {
 
     // 2. Test Normal Booking (Success Case)
     const orderData = {
-      guide_id: guideId,
-      service_date: '2026-10-01',
-      service_hours: 4,
+      guideId: guideId,
+      serviceDate: '2026-10-01',
+      serviceHours: 4,
       remark: 'Looking forward to the trip'
     };
 
@@ -80,9 +81,9 @@ async function runTests() {
     // 4. Test Invalid Guide ID (Should Fail)
     try {
       await axios.post(`${API_URL}/orders`, {
-        guide_id: 999999,
-        service_date: '2026-10-02',
-        service_hours: 2
+        guideId: 999999,
+        serviceDate: '2026-10-02',
+        serviceHours: 2
       }, {
         headers: { Authorization: `Bearer ${userToken}` }
       });

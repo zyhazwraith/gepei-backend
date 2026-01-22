@@ -173,6 +173,7 @@ export default function AdminOrderList() {
                             <Button 
                               size="sm" 
                               variant="outline"
+                              data-testid={`assign-btn-${order.id}`}
                               onClick={() => handleAssignClick(order)}
                             >
                               <UserPlus className="w-4 h-4 mr-1" />
@@ -264,6 +265,7 @@ export default function AdminOrderList() {
                     {guideList.map(guide => (
                       <div 
                         key={guide.guideId}
+                        data-testid={`guide-item-${guide.guideId}`}
                         onClick={() => toggleGuideSelection(guide.guideId)}
                         className={`flex items-center p-3 rounded-md cursor-pointer transition-colors ${
                           selectedGuideIds.includes(guide.guideId) ? 'bg-primary/10 border-primary/20 border' : 'hover:bg-gray-50 border border-transparent'
@@ -293,6 +295,7 @@ export default function AdminOrderList() {
               <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>取消</Button>
               <Button 
                 onClick={handleAssignConfirm} 
+                data-testid="confirm-assign-btn"
                 disabled={selectedGuideIds.length === 0 || assigning}
               >
                 {assigning ? (

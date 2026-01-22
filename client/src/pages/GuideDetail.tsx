@@ -15,11 +15,49 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
+// 工具函数：计算距离 (Haversine Formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // 地球半径 (km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function formatDistance(distance: number): string {
+  if (distance < 1) {
+    return `${Math.round(distance * 1000)}m`;
+  }
+  return `${distance.toFixed(1)}km`;
+}
+
 export default function GuideDetail() {
   const [, params] = useRoute("/guides/:id");
   const [, setLocation] = useLocation();
   const [guide, setGuide] = useState<Guide | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    // 获取用户位置用于计算距离
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log("无法获取位置信息", error);
+        }
+      );
+    }
+  }, []);
 
   useEffect(() => {
     if (params?.id) {
@@ -62,6 +100,19 @@ export default function GuideDetail() {
         <p className="text-gray-500 mb-4">未找到该地陪信息</p>
         <Button onClick={() => setLocation("/guides")}>返回列表</Button>
       </div>
+    );
+  }
+
+  // 计算显示距离
+  let displayDistance: number | undefined = guide.distance;
+  
+  // 如果后端没返回 distance（详情接口目前没返回），但我们有坐标，则前端计算
+  if (displayDistance === undefined && guide.latitude && guide.longitude && userLocation) {
+    displayDistance = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      guide.latitude,
+      guide.longitude
     );
   }
 
@@ -115,6 +166,12 @@ export default function GuideDetail() {
             <div className="flex items-center text-gray-500 mt-1 text-sm">
               <MapPin className="w-4 h-4 mr-1" />
               {guide.city}
+              {displayDistance !== undefined && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span className="text-orange-500">距您 {formatDistance(displayDistance)}</span>
+                </>
+              )}
               <span className="mx-2">•</span>
               <Star className="w-4 h-4 text-gray-300 mr-1" />
               新入驻

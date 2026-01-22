@@ -16,15 +16,16 @@ async function runTests() {
     guideToken = guideReg.token;
     
     // 1.2 Verify Guide
-    const idNumber = `1${Math.floor(Math.random() * 100000000000000000).toString().padStart(17, '0')}`;
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const idNumber = `11010119900101${randomSuffix}`;
     const resProfile = await axios.post(`${API_URL}/guides/profile`, {
-      id_number: idNumber,
+      idNumber: idNumber,
       name: 'Test Guide',
       city: 'Shenzhen',
-      hourly_price: 300,
+      hourlyPrice: 300,
       intro: 'Tech Guide'
     }, { headers: { Authorization: `Bearer ${guideToken}` } });
-    guideId = resProfile.data.data.guide_id;
+    guideId = resProfile.data.data.guideId;
 
     // 1.3 Create User
     const userReg = await registerUser();
@@ -34,14 +35,14 @@ async function runTests() {
 
     // 2. Create Order
     const res = await axios.post(`${API_URL}/orders`, {
-      guide_id: guideId,
-      service_date: '2026-11-11',
-      service_hours: 2,
+      guideId: guideId,
+      serviceDate: '2026-11-11',
+      serviceHours: 2,
       remark: 'Test Payment'
     }, { headers: { Authorization: `Bearer ${userToken}` } });
 
     if (res.data.code === 0) {
-      orderId = res.data.data.order_id;
+      orderId = res.data.data.orderId || res.data.data.order_id;
       logPass(`Order Created. ID: ${orderId}, Amount: ${res.data.data.amount}`);
     }
 
@@ -58,7 +59,7 @@ async function runTests() {
     // 4. Pay Order
     console.log('Testing Payment API...');
     const payRes = await axios.post(`${API_URL}/orders/${orderId}/payment`, {
-      payment_method: 'wechat'
+      paymentMethod: 'wechat'
     }, { headers: { Authorization: `Bearer ${userToken}` } });
 
     if (payRes.data.code === 0 && payRes.data.data.status === 'paid') {

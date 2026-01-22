@@ -9,7 +9,7 @@ export const logFail = (msg: string, err: any) => console.error(`❌ [FAIL] ${ms
 
 // Generate random user data
 export const generateUser = () => ({
-  phone: `1${Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')}`,
+  phone: `13${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}`,
   password: 'Password123',
   nickname: `User_${Math.floor(Math.random() * 1000)}`
 });
@@ -31,6 +31,14 @@ export async function registerUser(user = generateUser()) {
   }
 }
 
+export async function loginUser(phone: string, password: string = 'Password123') {
+  const res = await axios.post(`${API_URL}/auth/login`, { phone, password });
+  if (res.data.code === 0) {
+    return res.data.data.token;
+  }
+  throw new Error('Login failed: ' + (res.data.message || 'Unknown error'));
+}
+
 export async function loginAdmin() {
   try {
     const res = await axios.post(`${API_URL}/auth/login`, {
@@ -44,4 +52,33 @@ export async function loginAdmin() {
   } catch (error) {
     throw error;
   }
+}
+
+export const createTestUser = async () => {
+  const { user } = await registerUser();
+  return user;
+};
+
+export const getAuthHeader = (token: string) => ({
+  headers: { Authorization: `Bearer ${token}` }
+});
+
+export async function createTestGuide(token: string, overrides: any = {}) {
+  const randomIdSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  const defaultProfile = {
+    name: 'Test Guide',
+    idNumber: `11010119900101${randomIdSuffix}`,
+    city: 'Beijing',
+    intro: 'I am a test guide',
+    hourlyPrice: 100,
+    tags: ['history', 'food']
+  };
+  
+  const res = await axios.post(
+    `${API_URL}/guides/profile`, 
+    { ...defaultProfile, ...overrides }, 
+    getAuthHeader(token)
+  );
+  
+  return res.data;
 }

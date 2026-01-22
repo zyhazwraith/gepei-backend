@@ -121,6 +121,9 @@ export interface Guide {
   avatarUrl: string; // Ensure this is present
   idVerifiedAt: string;
   createdAt: string;
+  latitude?: number;
+  longitude?: number;
+  distance?: number;
 }
 
 export interface Pagination {
@@ -221,10 +224,12 @@ export async function payOrder(orderId: number, paymentMethod: 'wechat' | 'alipa
 /**
  * 获取地陪列表
  */
-export async function getGuides(page: number = 1, pageSize: number = 20, city?: string, keyword?: string): Promise<ApiResponse<GetGuidesResponse>> {
+export async function getGuides(page: number = 1, pageSize: number = 20, city?: string, keyword?: string, lat?: number, lng?: number): Promise<ApiResponse<GetGuidesResponse>> {
   const params: any = { page, page_size: pageSize };
   if (city) params.city = city;
   if (keyword) params.keyword = keyword;
+  if (lat) params.lat = lat;
+  if (lng) params.lng = lng;
   return apiClient.get('/guides', { params });
 }
 

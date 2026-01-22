@@ -22,8 +22,12 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
     const pageSize = parseInt(req.query.page_size as string) || 20;
     const city = req.query.city as string;
     const keyword = req.query.keyword as string;
+    
+    // LBS Params
+    const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
+    const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    const { guides, total } = await findAllGuides(page, pageSize, city, keyword);
+    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng);
 
     // 转换为前端友好的格式（隐藏敏感信息）
     const list = guides.map(g => ({
@@ -39,6 +43,9 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
       avatarUrl: g.photos && Array.isArray(g.photos) && g.photos.length > 0 ? g.photos[0] : '', // 模拟头像
       rating: 4.8, // Mock
       reviewCount: 50, // Mock
+      distance: g.distance !== undefined ? Number(g.distance.toFixed(2)) : undefined, // 保留2位小数
+      latitude: g.latitude ? Number(g.latitude) : undefined,
+      longitude: g.longitude ? Number(g.longitude) : undefined,
       // tags: g.tags,
       // photos: g.photos,
       // created_at: g.created_at,
@@ -92,6 +99,8 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
       rating: 4.8,
       reviewCount: 50,
       createdAt: guide.created_at,
+      latitude: guide.latitude ? Number(guide.latitude) : undefined,
+      longitude: guide.longitude ? Number(guide.longitude) : undefined,
     };
 
     successResponse(res, response);
@@ -123,12 +132,26 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       hourlyPrice,
       intro,
       tags,
+      latitude,
+      longitude,
     } = req.body;
+
+    console.log('Update Guide Profile:', { userId: user.id, latitude, longitude });
 
     // 验证必填字段
     if (!idNumber || !name || !city) {
       errorResponse(res, ErrorCodes.INVALID_PARAMS, '身份证号、真实姓名和城市为必填项');
       return;
+    }
+
+    // 验证经纬度
+    if (latitude !== undefined && (isNaN(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90)) {
+       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的纬度');
+       return;
+    }
+    if (longitude !== undefined && (isNaN(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
+       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的经度');
+       return;
     }
 
     // 验证身份证号格式
@@ -177,7 +200,9 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
         intro || null,
         hourlyPrice || null,
         tags || null,
-        photos || null
+        photos || null,
+        latitude || null,
+        longitude || null
       );
       guideId = currentGuide.id;
     } else {
@@ -190,7 +215,9 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
         intro || null,
         hourlyPrice || null,
         tags || null,
-        photos || null
+        photos || null,
+        latitude || null,
+        longitude || null
       );
     }
 
@@ -217,6 +244,8 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       tags: updatedGuide.tags,
       photos: updatedGuide.photos,
       idVerifiedAt: updatedGuide.id_verified_at,
+      latitude: updatedGuide.latitude ? Number(updatedGuide.latitude) : undefined,
+      longitude: updatedGuide.longitude ? Number(updatedGuide.longitude) : undefined,
     };
 
     successResponse(res, response);
@@ -275,6 +304,8 @@ export async function getGuideProfile(req: Request, res: Response): Promise<void
       tags: guide.tags,
       photos: guide.photos,
       idVerifiedAt: guide.id_verified_at,
+      latitude: guide.latitude ? Number(guide.latitude) : undefined,
+      longitude: guide.longitude ? Number(guide.longitude) : undefined,
     };
 
     successResponse(res, response);

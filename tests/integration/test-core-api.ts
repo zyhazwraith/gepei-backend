@@ -50,11 +50,11 @@ async function runTests() {
   
   try {
     const res = await axios.post(`${API_URL}/guides/profile`, {
-      id_number: validId,
+      idNumber: validId,
       name: 'Real Name',
       city: 'Beijing',
       intro: 'Test Intro',
-      hourly_price: 200,
+      hourlyPrice: 200,
       tags: ['History', 'Food']
     }, { headers: { Authorization: `Bearer ${token}` } });
     

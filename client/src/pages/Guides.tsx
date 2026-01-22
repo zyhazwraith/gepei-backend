@@ -21,12 +21,27 @@ export default function Guides() {
   const [keyword, setKeyword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [showCityFilter, setShowCityFilter] = useState(false);
+  const [userLat, setUserLat] = useState<number>();
+  const [userLng, setUserLng] = useState<number>();
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLat(pos.coords.latitude);
+          setUserLng(pos.coords.longitude);
+        },
+        undefined,
+        { timeout: 5000 }
+      );
+    }
+  }, []);
 
   // 加载数据
   const fetchGuides = async () => {
     setLoading(true);
     try {
-      const res = await getGuides(1, 20, selectedCity, keyword);
+      const res = await getGuides(1, 20, selectedCity, keyword, userLat, userLng);
       if (res.code === 0 && res.data) {
         setGuides(res.data.list);
       }
@@ -41,7 +56,7 @@ export default function Guides() {
   // 初始加载和筛选条件变化时加载
   useEffect(() => {
     fetchGuides();
-  }, [selectedCity]);
+  }, [selectedCity, userLat, userLng]); // 坐标变化时也重新加载以更新距离
 
   // 处理搜索
   const handleSearch = (e: React.FormEvent) => {
@@ -141,6 +156,11 @@ export default function Guides() {
                     <div className="flex items-center text-white text-xs">
                       <MapPin className="w-3 h-3 mr-0.5" />
                       {guide.city}
+                      {guide.distance !== undefined && (
+                        <span className="ml-1">
+                          • {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
