@@ -8,8 +8,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'line',
   use: {
-    baseURL: 'http://localhost:5174', // 前端地址
+    baseURL: 'https://localhost:5173', // 前端地址 (Vite uses 5173 by default)
     trace: 'on-first-retry',
+    ignoreHTTPSErrors: true, // Ignore SSL errors for local dev
   },
   projects: [
     {

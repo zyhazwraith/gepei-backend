@@ -2,17 +2,14 @@ import { useState, useEffect } from "react";
 import { Search, MapPin, Filter } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"; // Re-added Button import
 import { getGuides, Guide } from "@/lib/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { useLocation } from "wouter";
-
-// 热门城市
-const HOT_CITIES = ["北京", "上海", "广州", "成都", "西安", "杭州"];
+import CitySelector from "@/components/common/CitySelector";
+import EmptyState from "@/components/EmptyState";
 
 export default function Guides() {
   const [, setLocation] = useLocation();
@@ -20,7 +17,7 @@ export default function Guides() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
-  const [showCityFilter, setShowCityFilter] = useState(false);
+  const [showCitySelector, setShowCitySelector] = useState(false);
   const [userLat, setUserLat] = useState<number>();
   const [userLng, setUserLng] = useState<number>();
 
@@ -67,58 +64,29 @@ export default function Guides() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 顶部搜索栏 */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-3 shadow-sm">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索地陪名字/简介"
-              className="pl-9 bg-gray-100 border-none h-10"
-            />
-          </div>
-          <Button
-            type="button"
-            variant={selectedCity ? "default" : "outline"}
-            onClick={() => setShowCityFilter(!showCityFilter)}
-            className="h-10 px-3"
-          >
-            <Filter className="w-4 h-4 mr-1" />
-            {selectedCity || "城市"}
-          </Button>
-        </form>
+      <div className="bg-white sticky top-0 z-10 px-4 py-3 shadow-sm flex gap-2">
+        {/* 城市选择器 */}
+        <CitySelector
+          value={selectedCity}
+          onChange={(city) => {
+            setSelectedCity(city);
+          }}
+          placeholder="城市"
+          data-testid="city-selector-trigger"
+          className="w-auto px-2 border-none shadow-none bg-transparent hover:bg-gray-100 min-w-[80px]"
+        />
 
-        {/* 城市筛选区 */}
-        {showCityFilter && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                variant={!selectedCity ? "default" : "outline"}
-                className="cursor-pointer py-1.5 px-3"
-                onClick={() => {
-                  setSelectedCity("");
-                  setShowCityFilter(false);
-                }}
-              >
-                全部
-              </Badge>
-              {HOT_CITIES.map((city) => (
-                <Badge
-                  key={city}
-                  variant={selectedCity === city ? "default" : "outline"}
-                  className="cursor-pointer py-1.5 px-3"
-                  onClick={() => {
-                    setSelectedCity(city);
-                    setShowCityFilter(false);
-                  }}
-                >
-                  {city}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* 搜索框 */}
+        <form onSubmit={handleSearch} className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            value={keyword}
+            data-testid="search-input"
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="搜索地陪名字/简介"
+            className="pl-9 bg-gray-100 border-none h-10"
+          />
+        </form>
       </div>
 
       {/* 列表内容 */}

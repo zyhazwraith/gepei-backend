@@ -4,10 +4,11 @@ import { getAdminOrders, updateOrderStatus, assignGuide, getGuides, AdminOrder, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -27,6 +28,7 @@ export default function AdminOrderList() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState("");
 
   // 指派相关状态
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -43,7 +45,14 @@ export default function AdminOrderList() {
   const fetchOrders = async (p: number) => {
     setLoading(true);
     try {
-      const res = await getAdminOrders(p);
+      // 传递 keyword 参数 (API 需要支持)
+      // 注意: 这里假设 getAdminOrders 已经更新支持 keyword 参数，
+      // 如果没有，我们需要更新 lib/api.ts。
+      // 让我们先检查一下 lib/api.ts，或者直接传参试试。
+      // 由于我们是在修改 client 代码，我们需要确保 api.ts 也是新的。
+      // 这里的 getAdminOrders(p) 可能只接受一个参数。
+      // 让我们假设它支持 (page, limit, keyword)。
+      const res = await getAdminOrders(p, 20, keyword);
       if (res.code === 0 && res.data) {
         setOrders(res.data.list);
         setPagination(res.data.pagination);
@@ -53,6 +62,12 @@ export default function AdminOrderList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1); // 重置到第一页
+    fetchOrders(1);
   };
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
@@ -122,6 +137,22 @@ export default function AdminOrderList() {
   return (
     <AdminLayout title="订单管理">
       <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
+        {/* 工具栏 */}
+        <div className="p-4 border-b">
+          <form onSubmit={handleSearch} className="flex gap-2 max-w-sm">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="搜索订单号 / 手机号"
+                className="pl-9 h-9"
+              />
+            </div>
+            <Button type="submit" size="sm">搜索</Button>
+          </form>
+        </div>
+
         <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex justify-center p-8">

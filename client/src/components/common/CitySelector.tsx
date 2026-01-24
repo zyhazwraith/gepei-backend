@@ -71,6 +71,7 @@ export default function CitySelector({
       <DialogTrigger asChild>
         <Button 
           variant="outline" 
+          type="button" // 防止表单提交
           data-testid={props['data-testid']}
           className={`w-full justify-start text-left font-normal ${!value && "text-muted-foreground"} ${className}`}
         >
@@ -96,6 +97,7 @@ export default function CitySelector({
             />
             {keyword && (
               <button 
+                type="button"
                 onClick={() => setKeyword("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2"
               >
@@ -105,7 +107,8 @@ export default function CitySelector({
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        {/* 替换 ScrollArea 为原生 div 滚动 */}
+        <div className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-6">
             {/* 搜索结果 */}
             {keyword ? (
@@ -118,6 +121,7 @@ export default function CitySelector({
                         key={city}
                         variant="outline"
                         size="sm"
+                        type="button"
                         data-testid={`city-option-${city}`}
                         onClick={() => handleSelect(city)}
                       >
@@ -140,6 +144,7 @@ export default function CitySelector({
                         key={city}
                         variant={value === city ? "default" : "outline"}
                         size="sm"
+                        type="button"
                         onClick={() => handleSelect(city)}
                         className={value === city ? "bg-orange-500 hover:bg-orange-600 border-orange-500" : ""}
                       >
@@ -173,7 +178,7 @@ export default function CitySelector({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

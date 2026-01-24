@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { orders, users, customRequirements, guides, customOrderCandidates } from '../db/schema';
-import { eq, desc, count, like, or, inArray } from 'drizzle-orm';
+import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants';
@@ -28,11 +28,28 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
 export async function getOrders(req: Request, res: Response) {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
+  const keyword = req.query.keyword as string;
   const offset = (page - 1) * limit;
 
   try {
+    // 构建查询条件
+    const conditions = [];
+    if (keyword) {
+      conditions.push(
+        or(
+          like(orders.orderNumber, `%${keyword}%`),
+          like(users.phone, `%${keyword}%`),
+          like(users.nickname, `%${keyword}%`)
+        )
+      );
+    }
+    
     // 1. 查询总数
-    const [{ value: total }] = await db.select({ value: count() }).from(orders);
+    const [{ value: total }] = await db
+      .select({ value: count() })
+      .from(orders)
+      .leftJoin(users, eq(orders.userId, users.id)) // 必须 join 才能搜 phone
+      .where(and(...conditions));
 
     // 2. 分页查询
     const allOrders = await db.select({
@@ -49,6 +66,7 @@ export async function getOrders(req: Request, res: Response) {
     })
     .from(orders)
     .leftJoin(users, eq(orders.userId, users.id))
+    .where(and(...conditions))
     .orderBy(desc(orders.createdAt))
     .limit(limit)
     .offset(offset);

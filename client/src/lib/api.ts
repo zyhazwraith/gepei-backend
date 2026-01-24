@@ -289,8 +289,10 @@ export interface GetAdminUsersResponse {
 /**
  * 获取所有订单 (管理员)
  */
-export async function getAdminOrders(page: number = 1, pageSize: number = 20): Promise<ApiResponse<GetAdminOrdersResponse>> {
-  return apiClient.get('/admin/orders', { params: { page, limit: pageSize } });
+export async function getAdminOrders(page: number = 1, pageSize: number = 20, keyword?: string): Promise<ApiResponse<GetAdminOrdersResponse>> {
+  const params: any = { page, limit: pageSize };
+  if (keyword) params.keyword = keyword;
+  return apiClient.get('/admin/orders', { params });
 }
 
 /**
