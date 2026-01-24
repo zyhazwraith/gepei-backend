@@ -7,6 +7,7 @@
 - **Data Inconsistency**: Reset `isGuide` flag for 50 users who had no corresponding guide records, resolving the "User Not Found" error in Guide Management.
 - **Robustness**: Implemented robust JSON parsing for `tags` and `photos` in Guide Model to prevent frontend crashes.
 - **UI/UX**: Fixed text contrast issues in Admin pages (Order List & User List) where text was invisible on white backgrounds.
+- **Validation**: Relaxed validation for custom order requirements (minimum length reduced from 10 to 1 character).
 
 ### Enhanced
 - **Default Nickname**: Automatically generate secure default nicknames (Pattern: `用户` + Last 4 digits + Random suffix) for new users if not provided.
