@@ -6,6 +6,7 @@
 - **Privacy Protection**: Replaced real name with user nickname in Guide List and Guide Detail APIs.
 - **Data Inconsistency**: Reset `isGuide` flag for 50 users who had no corresponding guide records, resolving the "User Not Found" error in Guide Management.
 - **Robustness**: Implemented robust JSON parsing for `tags` and `photos` in Guide Model to prevent frontend crashes.
+- **UI/UX**: Fixed text contrast issues in Admin pages (Order List & User List) where text was invisible on white backgrounds.
 
 ### Enhanced
 - **Default Nickname**: Automatically generate secure default nicknames (Pattern: `用户` + Last 4 digits + Random suffix) for new users if not provided.
