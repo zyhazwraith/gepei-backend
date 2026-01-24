@@ -37,8 +37,17 @@ export async function register(req: Request, res: Response): Promise<void> {
     // 加密密码
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // 生成默认昵称（如果未提供）
+    // 格式: 用户 + 手机尾号(4位) + _ + 随机字符(4位)
+    // 示例: 用户8000_a1b2
+    let finalNickname = nickname;
+    if (!finalNickname) {
+      const suffix = Math.random().toString(36).substring(2, 6);
+      finalNickname = `用户${phone.slice(-4)}_${suffix}`;
+    }
+
     // 创建用户
-    const userId = await createUser(phone, hashedPassword, nickname);
+    const userId = await createUser(phone, hashedPassword, finalNickname);
 
     // 查询新创建的用户
     const newUser = await findUserByPhone(phone);

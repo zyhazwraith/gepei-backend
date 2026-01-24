@@ -33,7 +33,7 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
     const list = guides.map(g => ({
       guideId: g.id,
       userId: g.user_id,
-      nickName: g.name, // 对应 Guide 表的 name 字段 (用户设置的昵称/显示名称)
+      nickName: g.user_nickname || '匿名用户', // 移除 g.name 兜底，改为默认值
       // 隐藏身份证号
       city: g.city,
       intro: g.intro,
@@ -89,7 +89,7 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
     const response = {
       guideId: guide.id,
       userId: guide.user_id,
-      nickName: guide.name,
+      nickName: guide.user_nickname || '匿名用户', // 移除 g.name 兜底
       city: guide.city,
       intro: guide.intro,
       hourlyPrice: guide.hourly_price,

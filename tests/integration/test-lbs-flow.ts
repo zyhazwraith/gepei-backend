@@ -57,7 +57,17 @@ async function testLBSFlow() {
         params: {
             lat: userLat,
             lng: userLng,
-            keyword: 'LBS Guide' // Filter to find our guide easily
+            // keyword: 'LBS Guide' // FIX: Do NOT filter by Real Name, as it's no longer exposed/searchable by default logic unless we index nickname?
+            // Actually, keyword search in findAllGuides searches `name` OR `intro`.
+            // Even though frontend shows nickname, backend search logic uses real name column `name`.
+            // Wait, does findAllGuides use `name` column for search? Yes: `like(guides.name, ...)`
+            // So searching by 'LBS Guide' (Real Name) SHOULD still work internally, even if result shows Nickname.
+            // However, let's debug why it failed. Maybe nickname is different?
+            // In createTestUser helper, nickname is `User_${random}`.
+            // The result list will have `nickName: 'User_...'`.
+            // But we are finding by `g.nickName === 'LBS Guide'`. THIS IS THE BUG.
+            // We should find by the user's nickname, or by ID.
+            keyword: 'LBS Guide'
         }
     });
 
@@ -66,10 +76,21 @@ async function testLBSFlow() {
     }
     // console.log('List Res Data:', JSON.stringify(listRes.data, null, 2));
 
-    const targetGuide = listRes.data.data.list.find((g: any) => g.nickName === 'LBS Guide');
+    // FIX: Match by guideId or just take the first one since we filtered by unique keyword (Real Name)
+    // The filter works on Real Name (DB side), but response returns Nickname.
+    // So `g.nickName` will be something like "User_123", not "LBS Guide".
+    // We should use guideIdNumber to verify or just assume the search works if result count > 0.
+    // Let's use `guideUser.nickname` which we have from creation.
+    
+    // Actually `createTestUser` returns the user object with nickname.
+    // We didn't capture nickname in step 1 explicitly but `guideUser` object has it.
+    
+    const targetGuide = listRes.data.data.list.find((g: any) => g.nickName === guideUser.nickname);
     
     if (!targetGuide) {
-        throw new Error('Guide not found in list');
+        console.log('List Response:', JSON.stringify(listRes.data.data.list, null, 2));
+        console.log('Expected Nickname:', guideUser.nickname);
+        throw new Error('Guide not found in list (matched by nickname)');
     }
 
     console.log(`Distance returned: ${targetGuide.distance} km`);
@@ -88,7 +109,8 @@ async function testLBSFlow() {
         params: { keyword: 'LBS Guide' }
     });
     
-    const targetGuideNoLoc = listResNoLoc.data.data.list.find((g: any) => g.nickName === 'LBS Guide');
+    // FIX: Match by user nickname here too
+    const targetGuideNoLoc = listResNoLoc.data.data.list.find((g: any) => g.nickName === guideUser.nickname);
     if (targetGuideNoLoc.distance === undefined || targetGuideNoLoc.distance === null) {
         console.log('✅ Distance hidden when user location not provided.');
     } else {

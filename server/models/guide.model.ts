@@ -1,3 +1,6 @@
+import { db } from '../db';
+import { guides, users } from '../db/schema';
+import { eq, and, isNull, sql, desc, or, like, count } from 'drizzle-orm';
 import { pool } from '../config/database.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
@@ -19,30 +22,66 @@ export interface Guide {
   id_verified_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  user_nickname?: string;
+}
+
+/**
+ * 辅助函数：安全地解析JSON字段
+ * 兼容 Drizzle 自动解析（返回对象）和 未解析（返回字符串）的情况
+ */
+function parseJsonField<T>(value: any): T | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      return null;
+    }
+  }
+  return value as T;
 }
 
 /**
  * 根据用户ID查找地陪信息
  */
 export async function findGuideByUserId(userId: number): Promise<Guide | null> {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM guides WHERE user_id = ? AND deleted_at IS NULL',
-    [userId]
-  );
+  const result = await db.select({
+      id: guides.id,
+      user_id: guides.userId,
+      name: guides.name,
+      id_number: guides.idNumber,
+      city: guides.city,
+      intro: guides.intro,
+      hourly_price: guides.hourlyPrice,
+      tags: guides.tags,
+      photos: guides.photos,
+      latitude: guides.latitude,
+      longitude: guides.longitude,
+      id_verified_at: guides.idVerifiedAt,
+      created_at: guides.createdAt,
+      updated_at: guides.updatedAt,
+      user_nickname: users.nickname
+    })
+    .from(guides)
+    .leftJoin(users, eq(guides.userId, users.id))
+    .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)))
+    .limit(1);
 
-  if (rows.length === 0) {
+  if (result.length === 0) {
     return null;
   }
 
-  const guide = rows[0];
+  const guide = result[0];
   console.log('findGuideByUserId raw:', guide); // Debug log
   
-  // MySQL JSON类型已自动解析，不需要再次JSON.parse
-  // 如果是字符串则解析，如果已经是对象则直接使用
   return {
     ...guide,
-    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
-    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
+    tags: parseJsonField<string[]>(guide.tags),
+    photos: parseJsonField<string[]>(guide.photos),
+    hourly_price: guide.hourly_price ? Number(guide.hourly_price) : null,
+    latitude: guide.latitude ? Number(guide.latitude) : null,
+    longitude: guide.longitude ? Number(guide.longitude) : null,
   } as Guide;
 }
 
@@ -50,21 +89,41 @@ export async function findGuideByUserId(userId: number): Promise<Guide | null> {
  * 根据ID查找地陪信息
  */
 export async function findGuideById(id: number): Promise<Guide | null> {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM guides WHERE id = ? AND deleted_at IS NULL',
-    [id]
-  );
+  const result = await db.select({
+      id: guides.id,
+      user_id: guides.userId,
+      name: guides.name,
+      id_number: guides.idNumber,
+      city: guides.city,
+      intro: guides.intro,
+      hourly_price: guides.hourlyPrice,
+      tags: guides.tags,
+      photos: guides.photos,
+      latitude: guides.latitude,
+      longitude: guides.longitude,
+      id_verified_at: guides.idVerifiedAt,
+      created_at: guides.createdAt,
+      updated_at: guides.updatedAt,
+      user_nickname: users.nickname
+    })
+    .from(guides)
+    .leftJoin(users, eq(guides.userId, users.id))
+    .where(and(eq(guides.id, id), isNull(guides.deletedAt)))
+    .limit(1);
 
-  if (rows.length === 0) {
+  if (result.length === 0) {
     return null;
   }
 
-  const guide = rows[0];
+  const guide = result[0];
   
   return {
     ...guide,
-    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
-    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
+    tags: parseJsonField<string[]>(guide.tags),
+    photos: parseJsonField<string[]>(guide.photos),
+    hourly_price: guide.hourly_price ? Number(guide.hourly_price) : null,
+    latitude: guide.latitude ? Number(guide.latitude) : null,
+    longitude: guide.longitude ? Number(guide.longitude) : null,
   } as Guide;
 }
 
@@ -175,78 +234,81 @@ export async function findAllGuides(
   userLng?: number
 ): Promise<{ guides: (Guide & { distance?: number })[]; total: number }> {
   const offset = (page - 1) * pageSize;
-  const conditions: string[] = ['deleted_at IS NULL'];
-  const params: any[] = [];
+  const conditions = [isNull(guides.deletedAt)];
 
   if (city) {
-    conditions.push('city = ?');
-    params.push(city);
+    conditions.push(eq(guides.city, city));
   }
 
   if (keyword) {
-    conditions.push('(name LIKE ? OR intro LIKE ?)');
-    params.push(`%${keyword}%`, `%${keyword}%`);
+    conditions.push(
+      or(
+        like(guides.name, `%${keyword}%`),
+        like(guides.intro, `%${keyword}%`)
+      )!
+    );
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  
-  // 距离计算 (Haversine Formula approximation for MySQL)
-  // 6371 is Earth radius in km
-  let distanceSelect = '';
+  // 距离计算
+  let distanceField = sql<number>`NULL`.as('distance');
   if (userLat !== undefined && userLng !== undefined) {
-    distanceSelect = `, (
-      6371 * acos (
-        cos ( radians(?) )
-        * cos( radians( latitude ) )
-        * cos( radians( longitude ) - radians(?) )
-        + sin ( radians(?) )
-        * sin( radians( latitude ) )
-      )
-    ) AS distance`;
-    // Add params for distance calculation: lat, lng, lat
-    // Note: params order matters. We need to prepend these to the SELECT query params if we use them in WHERE/ORDER BY, 
-    // but here we just select. However, mysql2 executes query with ? placeholders in order.
-    // Wait, standard SQL parameter injection works by position.
-    // The SELECT part is before WHERE. So distance params come first? No, we build the full query string.
-    
-    // Actually, constructing the query with parameters for SELECT clause is tricky with simple arrays if we mix with WHERE params.
-    // Let's use string interpolation for the SELECT part since we are just passing numbers (validated in controller), 
-    // OR be careful with param order.
-    // Since userLat/userLng are numbers, we can safely inject them into the string to simplify param management,
-    // provided we ensure they are valid numbers in the controller.
-    
-    distanceSelect = `, (
+    distanceField = sql<number>`(
       6371 * acos (
         cos ( radians(${userLat}) )
-        * cos( radians( latitude ) )
-        * cos( radians( longitude ) - radians(${userLng}) )
+        * cos( radians( ${guides.latitude} ) )
+        * cos( radians( ${guides.longitude} ) - radians(${userLng}) )
         + sin ( radians(${userLat}) )
-        * sin( radians( latitude ) )
+        * sin( radians( ${guides.latitude} ) )
       )
-    ) AS distance`;
+    )`.as('distance');
   }
 
   // 获取总数
-  const [countRows] = await pool.query<RowDataPacket[]>(
-    `SELECT COUNT(*) as total FROM guides ${whereClause}`,
-    params
-  );
-  const total = countRows[0].total;
+  const [countResult] = await db
+    .select({ total: count() })
+    .from(guides)
+    .where(and(...conditions));
+    
+  const total = countResult.total;
 
   // 获取数据
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT *${distanceSelect} FROM guides ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
-  );
+  const result = await db
+    .select({
+      id: guides.id,
+      user_id: guides.userId,
+      name: guides.name,
+      id_number: guides.idNumber,
+      city: guides.city,
+      intro: guides.intro,
+      hourly_price: guides.hourlyPrice,
+      tags: guides.tags,
+      photos: guides.photos,
+      latitude: guides.latitude,
+      longitude: guides.longitude,
+      id_verified_at: guides.idVerifiedAt,
+      created_at: guides.createdAt,
+      updated_at: guides.updatedAt,
+      user_nickname: users.nickname,
+      distance: distanceField
+    })
+    .from(guides)
+    .leftJoin(users, eq(guides.userId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(guides.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 
-  const guides = rows.map((guide) => ({
+  const mappedGuides = result.map((guide) => ({
     ...guide,
-    tags: typeof guide.tags === 'string' ? JSON.parse(guide.tags) : guide.tags,
-    photos: typeof guide.photos === 'string' ? JSON.parse(guide.photos) : guide.photos,
-    distance: guide.distance !== undefined ? Number(guide.distance) : undefined
+    tags: parseJsonField<string[]>(guide.tags),
+    photos: parseJsonField<string[]>(guide.photos),
+    hourly_price: guide.hourly_price ? Number(guide.hourly_price) : null,
+    latitude: guide.latitude ? Number(guide.latitude) : null,
+    longitude: guide.longitude ? Number(guide.longitude) : null,
+    distance: guide.distance ? Number(guide.distance) : undefined
   })) as (Guide & { distance?: number })[];
 
-  return { guides, total };
+  return { guides: mappedGuides, total };
 }
 
 /**
