@@ -35,7 +35,7 @@ export default function OrderCreate() {
     city: "", // 定制单
     content: "", // 定制单
     budget: "", // 定制单
-    remark: "", // 通用
+    requirements: "", // 通用 (原 remark)
   });
 
   const isCustom = !guideId;
@@ -112,13 +112,14 @@ export default function OrderCreate() {
           type: 'custom',
           serviceDate: formData.serviceDate, // Custom still uses Date for now or upgrade later
           serviceStartTime, // Common field
+          duration: Number(formData.serviceHours), // Include duration
           serviceAddress: formData.serviceAddress,
           serviceLat: Number(formData.serviceLat),
           serviceLng: Number(formData.serviceLng),
           city: formData.city,
           content: formData.content,
           budget: Number(formData.budget),
-          requirements: formData.remark, 
+          requirements: formData.requirements, 
         };
       } else {
         payload = {
@@ -129,7 +130,7 @@ export default function OrderCreate() {
           serviceLat: Number(formData.serviceLat),
           serviceLng: Number(formData.serviceLng),
           guideId: parseInt(guideId!),
-          remark: formData.remark,
+          requirements: formData.requirements,
         };
       }
 
@@ -187,18 +188,6 @@ export default function OrderCreate() {
         {/* Form */}
         <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
           
-          {/* 定制单特有字段：城市 */}
-          {isCustom && (
-            <div className="space-y-2">
-              <Label>目的地城市</Label>
-              <Input
-                placeholder="例如：北京、上海"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              />
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label>服务时间</Label>
             <div className="flex gap-2">
@@ -233,28 +222,27 @@ export default function OrderCreate() {
                 ...formData,
                 serviceAddress: loc.address,
                 serviceLat: loc.lat,
-                serviceLng: loc.lng
+                serviceLng: loc.lng,
+                city: loc.city || formData.city // Use picked city or fallback
               })}
             />
           </div>
 
           {/* 普通单特有字段：时长 */}
-          {!isCustom && (
-            <div className="space-y-2">
-              <Label>服务时长 (小时)</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  type="number"
-                  min={1}
-                  max={24}
-                  className="pl-9"
-                  value={formData.serviceHours}
-                  onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
-                />
-              </div>
+          <div className="space-y-2">
+            <Label>服务时长 (小时)</Label>
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="number"
+                min={1}
+                max={24}
+                className="pl-9"
+                value={formData.serviceHours}
+                onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
+              />
             </div>
-          )}
+          </div>
 
           {/* 定制单特有字段：预算和服务内容 */}
           {isCustom && (
@@ -288,8 +276,8 @@ export default function OrderCreate() {
               <Textarea
                 placeholder="其他特殊要求..."
                 className="pl-9 min-h-[80px]"
-                value={formData.remark}
-                onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+                value={formData.requirements}
+                onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
               />
             </div>
           </div>
@@ -298,10 +286,11 @@ export default function OrderCreate() {
         {/* Price & Submit */}
         <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex items-center gap-4 z-20">
           <div className="flex-1">
-            <p className="text-xs text-gray-500">总计</p>
+            <p className="text-xs text-gray-500">{isCustom ? "定金 (固定)" : "总计"}</p>
             <p className="text-2xl font-bold text-orange-600">
-              {isCustom ? (formData.budget ? `¥${formData.budget}` : "待定") : `¥${totalPrice}`}
+              {isCustom ? "¥150.00" : `¥${totalPrice}`}
             </p>
+            {isCustom && <p className="text-xs text-gray-400">后续费用请与向导协商</p>}
           </div>
           <Button 
             size="lg" 

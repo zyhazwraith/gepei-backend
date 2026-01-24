@@ -101,6 +101,7 @@
     - `type`: 'normal' | 'custom'
     - `serviceStartTime`: ISO Date String (e.g. "2026-02-01T09:00:00Z")
     - `duration`: Int (hours)
+    - `content`: String (Custom order core content)
     - `serviceAddress`: String
     - `serviceLat`: Number
     - `serviceLng`: Number

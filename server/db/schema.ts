@@ -80,7 +80,8 @@ export const orders = mysqlTable('orders', {
   serviceLng: decimal('service_lng', { precision: 10, scale: 6 }),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   deposit: decimal('deposit', { precision: 10, scale: 2 }).default('0.00'),
-  requirements: text('requirements'),
+  requirements: text('requirements'), // Common field for remarks/notes
+  content: text('content'), // Core requirement content (mostly for Custom Order)
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   deletedAt: timestamp('deleted_at'),

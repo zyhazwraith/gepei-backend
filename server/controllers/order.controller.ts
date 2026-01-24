@@ -14,6 +14,7 @@ const createCustomOrderSchema = z.object({
   serviceAddress: z.string().min(1, '服务地点不能为空'),
   serviceLat: z.number().min(-90).max(90),
   serviceLng: z.number().min(-180).max(180),
+  duration: z.number().int().min(1).default(8), // Add duration with default 8
   
   // Custom specific fields
   city: z.string().min(1, '城市不能为空'),
@@ -30,7 +31,7 @@ const createNormalOrderSchema = z.object({
   serviceAddress: z.string().min(1, '服务地点不能为空'),
   serviceLat: z.number().min(-90).max(90),
   serviceLng: z.number().min(-180).max(180),
-  remark: z.string().optional(),
+  requirements: z.string().optional(),
 });
 
 // 模拟支付 Schema
@@ -79,8 +80,10 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           serviceLat: validated.serviceLat.toString(),
           serviceLng: validated.serviceLng.toString(),
           serviceHours: 0, // 定制单按天或项目计价，初始设为0
-          duration: 0,
+          duration: validated.duration, // Use validated duration
           amount: '150.00', // 固定订金
+          content: validated.content, // Core requirement content
+          requirements: validated.requirements, // Additional remarks
           createdAt: new Date(),
         }).$returningId();
 
@@ -146,7 +149,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         serviceLat: validated.serviceLat.toString(),
         serviceLng: validated.serviceLng.toString(),
         amount: amount.toString(),
-        requirements: validated.remark,
+        requirements: validated.requirements, // Now using requirements instead of remark
         createdAt: new Date(),
       }).$returningId();
 

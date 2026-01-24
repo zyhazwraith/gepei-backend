@@ -1,13 +1,13 @@
 declare global {
   interface Window {
-    qq: any;
+    TMap: any;
   }
 }
 
 let loadPromise: Promise<void> | null = null;
 
 export function loadTencentMap(key: string): Promise<void> {
-  if (window.qq && window.qq.maps) {
+  if (window.TMap) {
     return Promise.resolve();
   }
 
@@ -23,7 +23,8 @@ export function loadTencentMap(key: string): Promise<void> {
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://map.qq.com/api/js?v=2.exp&key=${key}&callback=initQQMap`;
+    // Load GL version. Libraries 'service' includes Geocoder, Search, etc.
+    script.src = `https://map.qq.com/api/gljs?v=1.exp&key=${key}&libraries=service&callback=initQQMap`;
     script.async = true;
     script.onerror = (err) => {
       loadPromise = null;
