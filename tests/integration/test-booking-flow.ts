@@ -41,9 +41,12 @@ async function runTests() {
     // 2. Test Normal Booking (Success Case)
     const orderData = {
       guideId: guideId,
-      serviceDate: '2026-10-01',
-      serviceHours: 4,
-      remark: 'Looking forward to the trip'
+      serviceStartTime: '2026-10-01T09:00:00Z',
+      duration: 4,
+      serviceAddress: 'Shanghai Bund',
+      serviceLat: 31.230416,
+      serviceLng: 121.473701,
+      requirements: 'Looking forward to the trip'
     };
 
     const res = await axios.post(`${API_URL}/orders`, orderData, {
@@ -51,21 +54,66 @@ async function runTests() {
     });
 
     if (res.data.code === 0) {
-      const { order_id, amount } = res.data.data;
+      const { orderId, amount } = res.data.data;
       // Expected amount: 200 * 4 = 800
       if (Number(amount) === 800) {
-        logPass(`Normal Order Created. ID: ${order_id}, Amount Correct (800)`);
+        logPass(`Normal Order Created. ID: ${orderId}, Amount Correct (800)`);
       } else {
         throw new Error(`Amount calculation wrong. Expected 800, got ${amount}`);
       }
     }
 
-    // 3. Test Self-Booking (Should Fail)
+    // 3. Test Custom Booking (Success Case)
+    const customOrderData = {
+      type: 'custom',
+      city: 'Beijing',
+      content: 'Visit Great Wall',
+      budget: 5000,
+      serviceStartTime: '2026-11-01T08:00:00Z',
+      duration: 8, // New field for custom order
+      serviceAddress: 'Beijing Center',
+      serviceLat: 39.9042,
+      serviceLng: 116.4074,
+      requirements: 'Vegetarian food please'
+    };
+
+    const resCustom = await axios.post(`${API_URL}/orders`, customOrderData, {
+      headers: { Authorization: `Bearer ${userToken}` }
+    });
+
+    if (resCustom.data.code === 0) {
+      const { orderId, amount } = resCustom.data.data;
+      if (Number(amount) === 150) { // Deposit is fixed at 150
+         logPass(`Custom Order Created. ID: ${orderId}, Deposit Correct (150)`);
+         
+         // Verify details
+         const detailRes = await axios.get(`${API_URL}/orders/${orderId}`, {
+            headers: { Authorization: `Bearer ${userToken}` }
+         });
+         const detail = detailRes.data.data;
+         
+         if (detail.content === 'Visit Great Wall' && 
+             detail.requirements === 'Vegetarian food please' && 
+             Number(detail.duration) === 8) {
+             logPass(`Custom Order Details Verified: Content, Requirements, Duration(8)`);
+         } else {
+             throw new Error(`Custom Order Detail mismatch: ${JSON.stringify(detail)}`);
+         }
+
+      } else {
+         throw new Error(`Custom Order Amount wrong. Expected 150, got ${amount}`);
+      }
+    }
+
+    // 4. Test Self-Booking (Should Fail)
     try {
       await axios.post(`${API_URL}/orders`, {
-        guide_id: guideId,
-        service_date: '2026-10-02',
-        service_hours: 2
+        guideId: guideId,
+        serviceStartTime: '2026-10-02T10:00:00Z',
+        duration: 2,
+        serviceAddress: 'Home',
+        serviceLat: 31.0,
+        serviceLng: 121.0
       }, {
         headers: { Authorization: `Bearer ${guideToken}` } // Using guide's own token
       });
@@ -78,12 +126,15 @@ async function runTests() {
       }
     }
 
-    // 4. Test Invalid Guide ID (Should Fail)
+    // 5. Test Invalid Guide ID (Should Fail)
     try {
       await axios.post(`${API_URL}/orders`, {
         guideId: 999999,
-        serviceDate: '2026-10-02',
-        serviceHours: 2
+        serviceStartTime: '2026-10-02T10:00:00Z',
+        duration: 2,
+        serviceAddress: 'Nowhere',
+        serviceLat: 0,
+        serviceLng: 0
       }, {
         headers: { Authorization: `Bearer ${userToken}` }
       });

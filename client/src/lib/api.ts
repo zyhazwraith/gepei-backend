@@ -141,6 +141,7 @@ export interface GetGuidesResponse {
 export interface CreateOrderRequest {
   type: 'normal' | 'custom';
   serviceDate: string;
+  serviceStartTime?: string;
   // Custom Order Fields
   city?: string;
   content?: string;
@@ -149,6 +150,10 @@ export interface CreateOrderRequest {
   // Normal Order Fields
   guideId?: number;
   serviceHours?: number;
+  duration?: number;
+  serviceAddress?: string;
+  serviceLat?: number;
+  serviceLng?: number;
   remark?: string;
 }
 
@@ -180,6 +185,11 @@ export interface OrderDetailResponse {
   status: 'pending' | 'paid' | 'waiting_for_user' | 'in_progress' | 'completed' | 'cancelled';
   serviceDate: string;
   serviceHours: number;
+  serviceStartTime?: string;
+  duration?: number;
+  serviceAddress?: string;
+  serviceLat?: number;
+  serviceLng?: number;
   amount: string;
   deposit: string;
   requirements: string | null;

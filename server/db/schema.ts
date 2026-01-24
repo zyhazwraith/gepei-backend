@@ -69,11 +69,19 @@ export const orders = mysqlTable('orders', {
   guideId: int('guide_id').references(() => guides.id, { onDelete: 'set null' }),
   orderType: mysqlEnum('order_type', ['normal', 'custom']).notNull(),
   status: mysqlEnum('status', ['pending', 'paid', 'waiting_for_user', 'in_progress', 'completed', 'cancelled']).default('pending'),
+  // Deprecated fields (kept for migration safety)
   serviceDate: date('service_date', { mode: 'string' }),
   serviceHours: int('service_hours'),
+  // New fields
+  serviceStartTime: timestamp('service_start_time'),
+  duration: int('duration').default(8),
+  serviceAddress: varchar('service_address', { length: 255 }),
+  serviceLat: decimal('service_lat', { precision: 10, scale: 6 }),
+  serviceLng: decimal('service_lng', { precision: 10, scale: 6 }),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   deposit: decimal('deposit', { precision: 10, scale: 2 }).default('0.00'),
-  requirements: text('requirements'),
+  requirements: text('requirements'), // Common field for remarks/notes
+  content: text('content'), // Core requirement content (mostly for Custom Order)
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   deletedAt: timestamp('deleted_at'),
