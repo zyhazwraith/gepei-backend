@@ -11,7 +11,7 @@ import { ErrorCodes } from '../../shared/errorCodes.js';
 const createCustomOrderSchema = z.object({
   serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
   city: z.string().min(1, '城市不能为空'),
-  content: z.string().min(10, '服务内容至少10个字'),
+  content: z.string().min(1, '服务内容不能为空'), // 改为 min(1)，移除字数限制
   budget: z.number().min(0, '预算必须大于等于0'),
   requirements: z.string().optional(),
 });
