@@ -97,7 +97,15 @@
 ### 5.1 创建订单
 - **URL**: `POST /orders`
 - **Auth**: Required
-- **Body**: `{ type, serviceDate, ... }`
+- **Body**: 
+    - `type`: 'normal' | 'custom'
+    - `serviceStartTime`: ISO Date String (e.g. "2026-02-01T09:00:00Z")
+    - `duration`: Int (hours)
+    - `serviceAddress`: String
+    - `serviceLat`: Number
+    - `serviceLng`: Number
+    - `guideId` (Normal order only)
+    - `requirements` (Optional)
 - **Response**: 创建成功的订单信息。
 
 ### 5.2 获取订单列表

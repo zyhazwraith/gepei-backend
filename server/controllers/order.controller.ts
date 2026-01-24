@@ -9,9 +9,15 @@ import { ErrorCodes } from '../../shared/errorCodes.js';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
-  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
+  // Common fields
+  serviceStartTime: z.string().datetime({ message: '无效的时间格式 (ISO 8601)' }),
+  serviceAddress: z.string().min(1, '服务地点不能为空'),
+  serviceLat: z.number().min(-90).max(90),
+  serviceLng: z.number().min(-180).max(180),
+  
+  // Custom specific fields
   city: z.string().min(1, '城市不能为空'),
-  content: z.string().min(1, '服务内容不能为空'), // 改为 min(1)，移除字数限制
+  content: z.string().min(1, '服务内容不能为空'),
   budget: z.number().min(0, '预算必须大于等于0'),
   requirements: z.string().optional(),
 });
@@ -19,8 +25,11 @@ const createCustomOrderSchema = z.object({
 // 普通订单 Schema
 const createNormalOrderSchema = z.object({
   guideId: z.number().int().positive(),
-  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必须为 YYYY-MM-DD'),
-  serviceHours: z.number().int().min(1, '服务时长至少1小时'),
+  serviceStartTime: z.string().datetime({ message: '无效的时间格式 (ISO 8601)' }),
+  duration: z.number().int().min(1, '服务时长至少1小时'),
+  serviceAddress: z.string().min(1, '服务地点不能为空'),
+  serviceLat: z.number().min(-90).max(90),
+  serviceLng: z.number().min(-180).max(180),
   remark: z.string().optional(),
 });
 
@@ -65,8 +74,12 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           userId,
           orderType: 'custom',
           status: 'pending', // 初始状态为待支付
-          serviceDate: validated.serviceDate,
+          serviceStartTime: new Date(validated.serviceStartTime), // Use new field
+          serviceAddress: validated.serviceAddress,
+          serviceLat: validated.serviceLat.toString(),
+          serviceLng: validated.serviceLng.toString(),
           serviceHours: 0, // 定制单按天或项目计价，初始设为0
+          duration: 0,
           amount: '150.00', // 固定订金
           createdAt: new Date(),
         }).$returningId();
@@ -75,8 +88,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         await tx.insert(customRequirements).values({
           orderId: order.id,
           destination: validated.city, // 映射 city 到 destination
-          startDate: validated.serviceDate,
-          endDate: validated.serviceDate, // 暂定一天
+          startDate: validated.serviceStartTime.split('T')[0], // Extract date part
+          endDate: validated.serviceStartTime.split('T')[0], // 暂定一天
           peopleCount: 1, // 默认为1人，后续可添加字段
           budget: validated.budget.toString(),
           specialRequirements: validated.content + (validated.requirements ? `\n备注: ${validated.requirements}` : ''),
@@ -118,7 +131,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       }
       
       const price = Number(guide.hourlyPrice);
-      const amount = (price * validated.serviceHours).toFixed(2);
+      const amount = (price * validated.duration).toFixed(2);
 
       // 创建订单
       const [order] = await db.insert(orders).values({
@@ -127,8 +140,11 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         guideId: validated.guideId,
         orderType: 'normal',
         status: 'pending',
-        serviceDate: validated.serviceDate,
-        serviceHours: validated.serviceHours,
+        serviceStartTime: new Date(validated.serviceStartTime),
+        duration: validated.duration,
+        serviceAddress: validated.serviceAddress,
+        serviceLat: validated.serviceLat.toString(),
+        serviceLng: validated.serviceLng.toString(),
         amount: amount.toString(),
         requirements: validated.remark,
         createdAt: new Date(),

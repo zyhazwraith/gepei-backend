@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { createOrder, getGuideDetail, Guide, CreateOrderRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LocationPicker } from "@/components/common/LocationPicker";
 
 export default function OrderCreate() {
   const [location, setLocation] = useLocation();
@@ -25,8 +26,12 @@ export default function OrderCreate() {
 
   // Form Data
   const [formData, setFormData] = useState({
-    serviceDate: "",
+    serviceDate: new Date().toISOString().split('T')[0], // Default to today
+    serviceTime: "09:00",
     serviceHours: 8, // default 8 hours (普通单)
+    serviceAddress: "",
+    serviceLat: 0,
+    serviceLng: 0,
     city: "", // 定制单
     content: "", // 定制单
     budget: "", // 定制单
@@ -72,6 +77,11 @@ export default function OrderCreate() {
       return;
     }
 
+    if (!formData.serviceAddress || !formData.serviceLat) {
+        toast.error("请选择服务地点");
+        return;
+    }
+
     if (isCustom) {
       // 验证定制单必填项
       if (!formData.city) {
@@ -95,23 +105,31 @@ export default function OrderCreate() {
     setSubmitting(true);
     try {
       let payload: CreateOrderRequest;
+      const serviceStartTime = new Date(`${formData.serviceDate}T${formData.serviceTime}:00`).toISOString();
 
       if (isCustom) {
         payload = {
           type: 'custom',
-          serviceDate: formData.serviceDate,
+          serviceDate: formData.serviceDate, // Custom still uses Date for now or upgrade later
+          serviceStartTime, // Common field
+          serviceAddress: formData.serviceAddress,
+          serviceLat: Number(formData.serviceLat),
+          serviceLng: Number(formData.serviceLng),
           city: formData.city,
           content: formData.content,
           budget: Number(formData.budget),
-          requirements: formData.remark, // Map remark to requirements for Custom Order
+          requirements: formData.remark, 
         };
       } else {
         payload = {
           type: 'normal',
-          serviceDate: formData.serviceDate,
+          serviceStartTime,
+          duration: Number(formData.serviceHours),
+          serviceAddress: formData.serviceAddress,
+          serviceLat: Number(formData.serviceLat),
+          serviceLng: Number(formData.serviceLng),
           guideId: parseInt(guideId!),
-          serviceHours: Number(formData.serviceHours),
-          remark: formData.remark, // Use remark for Normal Order
+          remark: formData.remark,
         };
       }
 
@@ -182,17 +200,42 @@ export default function OrderCreate() {
           )}
 
           <div className="space-y-2">
-            <Label>服务日期</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="date"
-                className="pl-9"
-                min={new Date().toISOString().split("T")[0]}
-                value={formData.serviceDate}
-                onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
-              />
+            <Label>服务时间</Label>
+            <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    type="date"
+                    className="pl-9"
+                    min={new Date().toISOString().split("T")[0]}
+                    value={formData.serviceDate}
+                    onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
+                  />
+                </div>
+                <div className="w-32">
+                  <Input
+                    type="time"
+                    value={formData.serviceTime}
+                    onChange={(e) => setFormData({ ...formData, serviceTime: e.target.value })}
+                  />
+                </div>
             </div>
+          </div>
+
+          {/* Location Picker (Unified) */}
+          <div className="space-y-2">
+            <Label>服务地点</Label>
+            <LocationPicker 
+              value={formData.serviceAddress}
+              lat={formData.serviceLat || undefined}
+              lng={formData.serviceLng || undefined}
+              onChange={(loc) => setFormData({
+                ...formData,
+                serviceAddress: loc.address,
+                serviceLat: loc.lat,
+                serviceLng: loc.lng
+              })}
+            />
           </div>
 
           {/* 普通单特有字段：时长 */}
