@@ -121,7 +121,7 @@ export default function AdminOrderList() {
 
   return (
     <AdminLayout title="订单管理">
-      <div className="bg-white rounded-lg border shadow-sm flex flex-col h-full">
+      <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
         <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex justify-center p-8">

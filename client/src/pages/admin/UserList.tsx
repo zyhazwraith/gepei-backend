@@ -48,7 +48,7 @@ export default function AdminUserList() {
 
   return (
     <AdminLayout title="用户管理">
-      <div className="bg-white rounded-lg border shadow-sm flex flex-col h-full">
+      <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
         {/* 工具栏 */}
         <div className="p-4 border-b flex items-center gap-4">
           <div className="relative max-w-sm w-full">
