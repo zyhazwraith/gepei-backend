@@ -40,5 +40,8 @@ tmp/
 temp/
 *.tmp
 
+# Uploads
+uploads/
+
 # Trae Agent
 .trae/
