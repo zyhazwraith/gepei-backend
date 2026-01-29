@@ -30,8 +30,8 @@ export async function authenticate(
     // 验证Token
     const payload = verifyToken(token);
 
-    // 查询用户信息
-    const user = await findUserById(payload.userId);
+    // 4. 查找用户
+    const user = await findUserById(payload.id); // V2: userId -> id
     if (!user) {
       throw new AuthenticationError('用户不存在', ERROR_CODES.USER_NOT_FOUND);
     }

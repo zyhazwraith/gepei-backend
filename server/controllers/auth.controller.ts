@@ -58,7 +58,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     // 生成 Token
     const token = generateToken({
-      userId: newUser.id,
+      id: newUser.id, // V2: userId -> id
       phone: newUser.phone,
       role: newUser.role,
     });
@@ -117,7 +117,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     // 生成 Token
     const token = generateToken({
-      userId: user.id,
+      id: user.id, // V2: userId -> id
       phone: user.phone,
       role: user.role,
     });
@@ -159,7 +159,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       userId: user.id,
       phone: user.phone,
       nickName: user.nickname || '',
-      avatarUrl: user.avatar_url || '',
+      // Removed avatarUrl
       role: user.role,
       isGuide: user.is_guide,
       balance: user.balance,

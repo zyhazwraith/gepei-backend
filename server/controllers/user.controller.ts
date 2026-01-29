@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { updateUser, getUserById } from '../models/user.model';
+import { updateUser, findUserById } from '../models/user.model';
 import { ErrorCodes } from '../../shared/errorCodes';
 
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { nickName, avatarUrl } = req.body; // Camel Case request body
+    const { nickName } = req.body; // Removed avatarUrl
 
     // 验证参数
     if (nickName && (nickName.length < 2 || nickName.length > 20)) {
@@ -16,21 +16,10 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       });
     }
 
-    if (avatarUrl && !avatarUrl.startsWith('http')) {
-      return res.status(400).json({
-        code: ErrorCodes.INVALID_PARAMS,
-        message: '头像URL格式不正确',
-        data: null
-      });
-    }
-
     // 构建更新数据
-    // 注意：updateUser 内部可能需要 snake_case 或 camelCase 取决于 model 实现
-    // 检查 model: updateUser(id, { nickname: ... }) usually expects DB columns or ORM props
-    // 假设 model 接受 ORM 属性 (camelCase)
     const updateData: any = {};
-    if (nickName) updateData.nickname = nickName; // User model uses 'nickname' (lowercase? check schema)
-    if (avatarUrl) updateData.avatar_url = avatarUrl; // User model uses 'avatar_url' or 'avatarUrl'?
+    if (nickName) updateData.nickname = nickName;
+    // Removed avatarUrl logic
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
@@ -44,7 +33,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     await updateUser(userId, updateData);
 
     // 获取更新后的用户信息
-    const user = await getUserById(userId);
+    const user = await findUserById(userId); // Use findUserById
 
     if (!user) {
       return res.status(404).json({
@@ -61,7 +50,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         userId: user.id,
         phone: user.phone,
         nickName: user.nickname,
-        avatarUrl: user.avatar_url,
+        // Removed avatarUrl
         isGuide: user.is_guide,
         balance: user.balance,
         createdAt: user.created_at

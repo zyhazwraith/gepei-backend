@@ -7,9 +7,9 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 // Token payload 接口
 export interface TokenPayload {
-  userId: number;
+  id: number;
   phone: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'cs';
 }
 
 // 生成 JWT Token

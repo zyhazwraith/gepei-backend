@@ -51,7 +51,6 @@ export const users = mysqlTable('users', {
   phone: varchar('phone', { length: 11 }).notNull().unique(),
   password: varchar('password', { length: 255 }).notNull(),
   nickname: varchar('nickname', { length: 50 }),
-  avatarId: int('avatar_id'), // FK -> attachments.id
   isGuide: boolean('is_guide').default(false),
   role: mysqlEnum('role', ['user', 'admin', 'cs']).default('user'),
   balance: int('balance').default(0), // 单位: 分
@@ -72,6 +71,7 @@ export const users = mysqlTable('users', {
 export const guides = mysqlTable('guides', {
   userId: int('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 50 }).notNull(),
+  avatarId: int('avatar_id'), // V2: Moved from users
   idNumber: varchar('id_number', { length: 18 }).notNull().unique(),
   city: varchar('city', { length: 50 }).notNull(),
   address: varchar('address', { length: 255 }),
