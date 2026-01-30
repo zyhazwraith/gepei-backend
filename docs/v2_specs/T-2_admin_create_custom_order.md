@@ -8,6 +8,7 @@
 *   **2026-02-01**: Initial Draft.
 *   **2026-02-02**: Clarified Currency Policy (Input Yuan, Store Cents, Return Cents).
 *   **2026-02-03**: Added `guideId` as mandatory field. Added Frontend Integration Guide.
+*   **2026-02-04**: Changed Input `guideId` to `guidePhone` (UX). Changed Input `pricePerHour` to **Cents** (Consistency).
 
 ---
 
@@ -17,7 +18,7 @@
 *   **Logic**: `Total Amount = PricePerHour * Duration`.
 *   **Mandatory Rule**: Every order MUST belong to a specific Guide.
 *   **User Story**:
-    > As a CS Agent, I create a custom order by entering user phone, **guide ID**, hourly price, duration, service time, and content description.
+    > As a CS Agent, I create a custom order by entering user phone, **guide Phone**, hourly price (in Cents), duration, service time, and content description.
 
 ---
 
@@ -31,8 +32,8 @@
     ```typescript
     {
       userPhone: string;       // Required. User must exist.
-      guideId: number;         // Required. Guide must exist and be active.
-      pricePerHour: number;    // Required. Unit price in Yuan (e.g., 50, 100).
+      guidePhone: string;      // Required. Guide must exist and be active. (Changed from guideId)
+      pricePerHour: number;    // Required. Unit price in **Cents** (e.g., 5000 = 50 Yuan).
       duration: number;        // Required. Duration in Hours (Integer).
       serviceStartTime: string;// Required. ISO 8601 (e.g. "2026-02-01T09:00:00+08:00")
       serviceAddress: string;  // Required. Destination/Meeting Point.
@@ -58,20 +59,18 @@
 
 ### 2.2 Currency Policy
 
-*   **Input (API Request)**: **Yuan** (Float/Int). e.g., `50` or `50.5`.
-    *   *Reason*: Convenience for human input in Admin Dashboard.
-*   **Storage (DB)**: **Cents** (Int). e.g., `5000` or `5050`.
-    *   *Reason*: Precision safety for financial calculations.
+*   **Input (API Request)**: **Cents** (Int). e.g., `5000`.
+    *   *Reason*: Industry standard for consistency. Frontend handles conversion (Yuan -> Cents).
+*   **Storage (DB)**: **Cents** (Int). e.g., `5000`.
 *   **Output (API Response)**: **Cents** (Int).
-    *   *Reason*: Direct mapping from DB, standard for payment gateways (WeChat/Stripe).
 *   **Frontend Display**: Divide response value by 100. e.g., `80000 / 100 = 800`.
 
 ### 2.3 Database Mapping
 
 *   `orders` Table:
     *   `userId`: Resolved from `userPhone`.
-    *   `guideId`: `body.guideId` (Validated).
-    *   `pricePerHour`: `Math.round(body.pricePerHour * 100)`.
+    *   `guideId`: Resolved from `guidePhone`.
+    *   `pricePerHour`: `body.pricePerHour` (No conversion).
     *   `duration`: `body.duration`.
     *   `serviceStartTime`: `new Date(body.serviceStartTime)`.
     *   `serviceAddress`: `body.serviceAddress`.
@@ -88,8 +87,9 @@
 This section guides the Frontend Developer (or AI) on how to consume this API.
 
 1.  **Form Input**:
-    *   Price Input: Allow decimals (e.g., `100.5`). Send as-is (Yuan).
+    *   Price Input: User types `50.5` (Yuan). Frontend **MUST** multiply by 100 -> `5050` (Cents) before sending.
     *   Time Input: Use local time picker. Convert to ISO 8601 with offset (e.g., `moment().format()`) before sending.
+    *   Guide Input: User types Phone Number (String).
 2.  **Displaying Response**:
     *   The API returns `amount` in **Cents**.
     *   **MUST** divide by 100 before displaying.
@@ -99,12 +99,11 @@ This section guides the Frontend Developer (or AI) on how to consume this API.
 
 ## 4. Implementation Checklist
 
-*   [ ] **Step 1: Schema**: Create `server/schemas/admin.schema.ts` (Zod) with `guideId` required.
-*   [ ] **Step 2: Service**: Implement `createCustomOrder` in `admin.controller.ts`.
-    *   Validate User existence.
-    *   Validate Guide existence.
-    *   Convert Currency (Yuan -> Cents).
-*   [ ] **Step 3: Route**: Add to `admin.routes.ts`.
+*   [ ] **Step 1: Schema**: Update `server/schemas/admin.schema.ts` (guidePhone, pricePerHour Int).
+*   [ ] **Step 2: Service**: Update `createCustomOrder` in `admin.controller.ts`.
+    *   Resolve Guide by Phone.
+    *   Remove Currency Conversion.
+*   [ ] **Step 3: Route**: No change.
 
 ---
 
@@ -112,7 +111,6 @@ This section guides the Frontend Developer (or AI) on how to consume this API.
 
 *   **Script**: `scripts/verify-T2.ts`
 *   **Cases**:
-    1.  **Success**: Valid Inputs -> DB Check (amount=Price*Duration*100, guideId set).
-    2.  **Error - No Guide**: `guideId` missing -> 400.
-    3.  **Error - Invalid Guide**: `guideId` not found -> 404.
-    4.  **Error - Currency**: `pricePerHour` negative -> 400.
+    1.  **Success**: Valid Inputs (Cents, GuidePhone) -> DB Check.
+    2.  **Error - Guide Not Found**: Invalid Phone -> 404.
+    3.  **Error - Currency**: Float input -> 400 (Zod Int check).

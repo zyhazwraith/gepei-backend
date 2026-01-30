@@ -223,15 +223,20 @@ export const createCustomOrder = async (req: Request, res: Response, next: NextF
       throw new NotFoundError('用户不存在，请先引导用户注册');
     }
 
-    // 2. 验证地陪是否存在 (Spec: Mandatory)
-    const [guide] = await db.select().from(guides).where(eq(guides.userId, validated.guideId));
-    if (!guide) {
-      throw new NotFoundError('指定的地陪不存在或无效');
-    }
+    // 2. 验证地陪是否存在 (By Phone)
+    const [guideUser] = await db.select({ id: users.id, userId: guides.userId })
+        .from(users)
+        .leftJoin(guides, eq(users.id, guides.userId))
+        .where(eq(users.phone, validated.guidePhone));
 
-    // 3. 计算金额 (Yuan -> Cents)
+    if (!guideUser || !guideUser.userId) {
+      throw new NotFoundError('指定的地陪不存在或未认证');
+    }
+    const guideId = guideUser.userId;
+
+    // 3. 计算金额 (Direct Cents)
     // Spec: Amount = PricePerHour * Duration
-    const priceInCents = Math.round(validated.pricePerHour * 100);
+    const priceInCents = validated.pricePerHour; // Already in Cents
     const totalAmount = priceInCents * validated.duration;
 
     // 4. 创建订单
@@ -240,7 +245,7 @@ export const createCustomOrder = async (req: Request, res: Response, next: NextF
     const [result] = await db.insert(orders).values({
       orderNumber,
       userId: user.id,
-      guideId: guide.userId,
+      guideId: guideId,
       creatorId,
       type: 'custom',
       status: 'pending', // 待支付
