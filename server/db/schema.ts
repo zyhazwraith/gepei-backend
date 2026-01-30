@@ -102,7 +102,7 @@ export const orders = mysqlTable('orders', {
   id: int('id').primaryKey().autoincrement(),
   orderNumber: varchar('order_number', { length: 32 }).notNull().unique(),
   userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  guideId: int('guide_id').references(() => users.id, { onDelete: 'set null' }), // 指向 users 表
+  guideId: int('guide_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // 指向 users 表 (V2: 必填)
   creatorId: int('creator_id').references(() => users.id, { onDelete: 'set null' }),
   type: mysqlEnum('type', ['standard', 'custom']).notNull().default('standard'),
   status: mysqlEnum('status', [
@@ -121,7 +121,7 @@ export const orders = mysqlTable('orders', {
   duration: int('duration'), // 预约时长 (小时)
   amount: int('amount').notNull(), // 总额 (单位: 分)
   refundAmount: int('refund_amount').default(0), // 已退款金额 (单位: 分)
-  content: text('content'), // 核心服务内容 (JSON or Text)
+  content: text('content'), // 核心服务内容 (纯文本描述，如“三日包车游”)
   requirements: text('requirements'), // 备注/特殊要求
   
   // 时间信息

@@ -5,6 +5,8 @@ import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
+import { createCustomOrderSchema } from '../schemas/admin.schema.js';
+import { nanoid } from 'nanoid';
 
 // 更新状态 Schema
 const updateStatusSchema = z.object({
@@ -210,6 +212,75 @@ export async function getUsers(req: Request, res: Response) {
 // --------------------------------------------------------------------------
 // 指派地陪 (V2 Refactor)
 // --------------------------------------------------------------------------
+export const createCustomOrder = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = createCustomOrderSchema.parse(req.body);
+    const creatorId = req.user!.id; // Current Admin/CS ID
+
+    // 1. 验证用户是否存在
+    const [user] = await db.select().from(users).where(eq(users.phone, validated.userPhone));
+    if (!user) {
+      throw new NotFoundError('用户不存在，请先引导用户注册');
+    }
+
+    // 2. 验证地陪是否存在 (Spec: Mandatory)
+    const [guide] = await db.select().from(guides).where(eq(guides.userId, validated.guideId));
+    if (!guide) {
+      throw new NotFoundError('指定的地陪不存在或无效');
+    }
+
+    // 3. 计算金额 (Yuan -> Cents)
+    // Spec: Amount = PricePerHour * Duration
+    const priceInCents = Math.round(validated.pricePerHour * 100);
+    const totalAmount = priceInCents * validated.duration;
+
+    // 4. 创建订单
+    const orderNumber = `ORD${Date.now()}${nanoid(6).toUpperCase()}`;
+    
+    const [result] = await db.insert(orders).values({
+      orderNumber,
+      userId: user.id,
+      guideId: guide.userId,
+      creatorId,
+      type: 'custom',
+      status: 'pending', // 待支付
+      
+      // 金额与时长
+      pricePerHour: priceInCents,
+      duration: validated.duration,
+      amount: totalAmount,
+      
+      // 服务信息
+      serviceStartTime: new Date(validated.serviceStartTime),
+      serviceAddress: validated.serviceAddress,
+      content: validated.content,
+      requirements: validated.requirements,
+      
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    res.status(201).json({
+      code: 0,
+      message: '定制订单创建成功',
+      data: {
+        orderId: result.insertId,
+        orderNumber,
+        status: 'pending',
+        amount: totalAmount, // Cents
+        pricePerHour: priceInCents, // Cents
+        duration: validated.duration
+      }
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return next(new ValidationError('参数校验失败: ' + error.message));
+    }
+    next(error);
+  }
+};
+
 export const assignGuide = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { guideIds } = req.body; // V2: Array of guide IDs (but only 1 allowed for custom now)
