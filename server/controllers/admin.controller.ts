@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { orders, users, guides } from '../db/schema';
 import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
@@ -78,16 +79,9 @@ export async function getOrders(req: Request, res: Response) {
 
     // 3. 补充定制信息
     const enrichedOrders = allOrders.map((order) => {
-      let extra = {};
-      if (order.orderType === 'custom' && order.content) {
-         try {
-            const contentObj = JSON.parse(order.content as string);
-            extra = { content: contentObj }; 
-         } catch (e) {
-            extra = { content: order.content };
-         }
-      }
-      return { ...order, ...extra };
+      // Content is now just text, no parsing needed unless specifically required by older logic
+      // But per new spec, it is plain text.
+      return order;
     });
 
     res.json({
@@ -103,6 +97,69 @@ export async function getOrders(req: Request, res: Response) {
         }
       },
     });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * 获取订单详情 (管理员)
+ * GET /api/v1/admin/orders/:id
+ */
+export async function getOrderDetails(req: Request, res: Response) {
+  const orderId = parseInt(req.params.id);
+  if (isNaN(orderId)) {
+    throw new ValidationError('无效的订单ID');
+  }
+
+  try {
+    const guideUsers = alias(users, 'guideUsers');
+
+    const [order] = await db.select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        status: orders.status,
+        amount: orders.amount,
+        pricePerHour: orders.pricePerHour,
+        duration: orders.duration,
+        serviceAddress: orders.serviceAddress,
+        serviceStartTime: orders.serviceStartTime,
+        content: orders.content,
+        requirements: orders.requirements,
+        createdAt: orders.createdAt,
+        userId: orders.userId,
+        guideId: orders.guideId,
+        userPhone: users.phone,
+        userNickname: users.nickname,
+        guidePhone: guideUsers.phone,
+        guideNickname: guideUsers.nickname,
+    })
+    .from(orders)
+    .leftJoin(users, eq(orders.userId, users.id))
+    .leftJoin(guideUsers, eq(orders.guideId, guideUsers.id))
+    .where(eq(orders.id, orderId));
+
+    if (!order) {
+        throw new NotFoundError('订单不存在');
+    }
+
+    res.json({
+        code: 0,
+        message: '获取成功',
+        data: {
+            ...order,
+            // Content is already text, no parsing needed
+            user: {
+                phone: order.userPhone,
+                nickName: order.userNickname
+            },
+            guide: order.guideId ? {
+                phone: order.guidePhone,
+                nickName: order.guideNickname
+            } : null,
+        }
+    });
+
   } catch (error) {
     throw error;
   }
@@ -149,8 +206,6 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
     next(error);
   }
 }
-
-// 指派地陪相关逻辑已移除
 
 
 /**
@@ -350,4 +405,3 @@ export const assignGuide = async (req: Request, res: Response) => {
         throw new ValidationError('普通订单不可指派候选人');
     }
 }
-

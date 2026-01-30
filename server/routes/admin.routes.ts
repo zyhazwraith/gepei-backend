@@ -16,6 +16,9 @@ router.post('/custom-orders', asyncHandler(adminController.createCustomOrder));
 // GET /api/v1/admin/orders - 获取所有订单
 router.get('/orders', asyncHandler(adminController.getOrders));
 
+// GET /api/v1/admin/orders/:id - 获取订单详情
+router.get('/orders/:id', asyncHandler(adminController.getOrderDetails));
+
 // PUT /api/v1/admin/orders/:id/status - 更新订单状态
 router.put('/orders/:id/status', asyncHandler(adminController.updateOrderStatus));
 

@@ -1,92 +1,120 @@
 import axios from 'axios';
-import { nanoid } from 'nanoid';
 
 // Configuration
 const API_URL = 'http://localhost:3000/api/v1';
-const ADMIN_PHONE = '13800000000'; // Assuming this is seeded admin
-const USER_PHONE = '13800138000'; // Assuming this user exists or we create one
-const GUIDE_PHONE = '13900139000'; // Assuming this guide exists
+const ADMIN_PHONE = '19999999999';
+const ADMIN_PASSWORD = 'AdminPassword123';
+const USER_PHONE = '18800000001';
+const GUIDE_PHONE = '18800000002';
 
 async function main() {
   try {
     console.log('🚀 Starting Verification: [T-2] Admin Create Custom Order');
 
+    // 0. Ensure Users Exist (Helper)
+    async function ensureUser(phone: string, nickName: string) {
+        try {
+            await axios.post(`${API_URL}/auth/register`, {
+                phone,
+                password: 'password123',
+                nickName
+            });
+        } catch (e: any) {
+            // If exists (400), ignore
+            if (e.response?.status !== 400 && e.response?.data?.code !== 1002) {
+                 // 1002 is UserExists
+            }
+        }
+    }
+
+    console.log('\n0. Preparing Data...');
+    await ensureUser(USER_PHONE, 'TestUserT2');
+    await ensureUser(GUIDE_PHONE, 'TestGuideT2');
+    console.log('✅ Users prepared');
+
     // 1. Login as Admin
     console.log('\n1. Logging in as Admin...');
-    // Note: Assuming we have a way to get token. If not, we might need to seed/login first.
-    // For simplicity, let's assume we can login with a test account.
-    // If login fails, we might need to create an admin first.
     let token = '';
     try {
         const loginRes = await axios.post(`${API_URL}/auth/login`, {
             phone: ADMIN_PHONE,
-            password: 'password123' // Correct password from seed
+            password: ADMIN_PASSWORD
         });
         token = loginRes.data.data.token;
         console.log('✅ Login successful');
-    } catch (e) {
-        console.error('❌ Login failed. Ensure server is running and admin seeded.');
+    } catch (e: any) {
+        console.error('❌ Login failed:', e.response?.data || e.message);
         process.exit(1);
     }
 
-    // 2. Finding a valid Guide (Or any user)
-    // We will use the USER as a GUIDE for this test to prove any user can be assigned.
-    const TEST_GUIDE_PHONE = USER_PHONE; // Using the 'user' as the guide for testing
-    console.log(`\n2. Using User ${TEST_GUIDE_PHONE} as Guide...`);
-
-    // 3. Test Success Case
-    console.log('\n3. Testing Success Case...');
+    // 2. Test Success Case
+    console.log('\n2. Testing Create Custom Order (Success)...');
     const payload = {
-      userPhone: USER_PHONE, // User assigns to themselves (weird but valid for logic test)
-      guidePhone: TEST_GUIDE_PHONE,
-      pricePerHour: 10050, // 10050 Cents
+      userPhone: USER_PHONE,
+      guidePhone: GUIDE_PHONE,
+      pricePerHour: 10050, // 10050 Cents (100.5 Yuan)
       duration: 8,         // 8 Hours
-      serviceStartTime: new Date().toISOString(),
+      serviceStartTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
       serviceAddress: "Beijing Airport",
-      content: "Airport Pickup",
-      requirements: "Need a big van"
+      content: "Airport Pickup and 1-day Tour", // Plain Text
+      requirements: "VIP Service"
     };
-
-    // Create user if not exists
-    try {
-       await axios.post(`${API_URL}/auth/login`, { phone: USER_PHONE, code: '123456' });
-    } catch (e) {}
 
     const res = await axios.post(`${API_URL}/admin/custom-orders`, payload, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     const data = res.data.data;
-    console.log('Response:', data);
+    console.log('Create Response:', data);
 
     // Assertions
-    if (data.amount !== 80400) throw new Error(`Amount mismatch: expected 80400, got ${data.amount}`); // 10050 * 8
+    if (data.amount !== 80400) throw new Error(`Amount mismatch: expected 80400, got ${data.amount}`);
     if (data.status !== 'pending') throw new Error(`Status mismatch: expected pending, got ${data.status}`);
-    console.log('✅ Success Case Passed');
+    console.log('✅ Create Success');
 
-    // 4. Test Error: Missing Guide Phone
-    console.log('\n4. Testing Error: Missing GuidePhone...');
+    // 3. Test Get Order Details
+    console.log('\n3. Testing Get Order Details...');
+    const detailRes = await axios.get(`${API_URL}/admin/orders/${data.orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    const detail = detailRes.data.data;
+    console.log('Detail Response:', detail);
+
+    if (detail.id !== data.orderId) throw new Error('Detail ID mismatch');
+    if (detail.pricePerHour !== 10050) throw new Error('Detail Price mismatch');
+    if (detail.user.phone !== USER_PHONE) throw new Error('Detail User mismatch');
+    if (detail.guide.phone !== GUIDE_PHONE) throw new Error('Detail Guide mismatch');
+    
+    // Check content (Text)
+    if (detail.content !== "Airport Pickup and 1-day Tour") {
+        throw new Error('Content mismatch or unexpected parsing');
+    }
+    console.log('✅ Content verified (Plain Text)');
+    
+    console.log('✅ Get Details Success');
+
+    // 4. Test Error Cases
+    console.log('\n4. Testing Error Cases...');
+    
+    // Guide Not Found
     try {
-        const invalidPayload = { ...payload };
-        delete (invalidPayload as any).guidePhone;
-        await axios.post(`${API_URL}/admin/custom-orders`, invalidPayload, {
+        await axios.post(`${API_URL}/admin/custom-orders`, { ...payload, guidePhone: '10000000000' }, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        console.error('❌ Failed: Should have returned 400 for missing guidePhone');
+        console.error('❌ Failed: Should have returned 404 for invalid guide');
     } catch (e: any) {
-        if (e.response?.status === 400) console.log('✅ Error Case Passed (400)');
+        if (e.response?.status === 404) console.log('✅ Invalid Guide Case Passed (404)');
         else console.error(`❌ Unexpected Error: ${e.message}`);
     }
 
-    // 5. Test Error: Invalid Price (Float)
-    console.log('\n5. Testing Error: Float Price...');
+    // Invalid Currency (Float)
     try {
         await axios.post(`${API_URL}/admin/custom-orders`, { ...payload, pricePerHour: 100.5 }, {
             headers: { Authorization: `Bearer ${token}` }
         });
         console.error('❌ Failed: Should have returned 400 for float price');
     } catch (e: any) {
-        if (e.response?.status === 400) console.log('✅ Error Case Passed (400)');
+        if (e.response?.status === 400) console.log('✅ Float Price Case Passed (400)');
         else console.error(`❌ Unexpected Error: ${e.message}`);
     }
 
