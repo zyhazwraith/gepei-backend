@@ -296,6 +296,40 @@ export interface GetAdminUsersResponse {
   pagination: Pagination;
 }
 
+export interface CreateCustomOrderRequest {
+  userPhone: string;
+  guidePhone: string;
+  pricePerHour: number; // Cents
+  duration: number; // Hours
+  serviceStartTime: string; // ISO 8601
+  serviceAddress: string;
+  content: string;
+  requirements?: string;
+}
+
+export interface CreateCustomOrderResponse {
+  orderId: number;
+  orderNumber: string;
+  status: string;
+  amount: number; // Cents
+  pricePerHour: number; // Cents
+  duration: number;
+}
+
+/**
+ * 后台创建定制订单
+ */
+export async function createCustomOrder(data: CreateCustomOrderRequest): Promise<ApiResponse<CreateCustomOrderResponse>> {
+  return apiClient.post('/admin/custom-orders', data);
+}
+
+/**
+ * 获取订单详情 (管理员)
+ */
+export async function getOrderDetails(id: number): Promise<ApiResponse<AdminOrder>> {
+  return apiClient.get(`/admin/orders/${id}`);
+}
+
 /**
  * 获取所有订单 (管理员)
  */
