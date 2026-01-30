@@ -27,10 +27,10 @@
 - [ ] **[T-1] 废弃旧接口 (Deprecation)** `[PRD 2.3]`
     - *User Story*: 旧版 App 无法再发起定制单或选择候选人。
     - *Tech*: Delete/Disable routes.
-- [x] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Completed`
+- [x] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Backend Ready`
     - *Spec*: [Link](docs/v2_specs/T-2_admin_create_custom_order.md)
     - *User Story*: 客服在后台录入信息，生成“待支付”定制单。
-    - *Backend*: New API (`POST /admin/custom-orders`).
+    - *Backend*: [x] New API (`POST /admin/custom-orders`), [x] Detail API (`GET /admin/orders/:id`).
     - *Frontend*: **[FE-T2]** 适配“定制单创建”弹窗 (Input: Phone, Price in Yuan -> Cents).
 - [ ] **[T-3] 订单指派接口 (Assign Guide)** `[PRD 2.3]`
     - *User Story*: 客服将已支付订单直接指派给特定地陪。

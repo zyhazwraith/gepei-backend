@@ -82,6 +82,7 @@ export function errorHandler(
       'INVALID_PASSWORD': ErrorCodes.INVALID_CREDENTIALS,
       'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR,
       'FORBIDDEN': ErrorCodes.PERMISSION_DENIED,
+      'NOT_FOUND': ErrorCodes.USER_NOT_FOUND, // Map generic Not Found to 404
     };
 
     if (errorCodeMap[code]) {
