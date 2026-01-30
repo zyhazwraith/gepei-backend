@@ -93,7 +93,7 @@
     *   **Section 2: Guide Info**
         *   `Guide Phone`: Input (11 digits). *Note: Input phone, backend finds User ID.*
     *   **Section 3: Service Details**
-        *   `Price (Per Hour)`: Input (Type: Number, Step: 0.01, Unit: **Yuan**). *Display as ¥*.
+        *   `Price (Per Hour)`: Input (Type: Number, Step: 1, Unit: **Yuan**). *Display as ¥*.
         *   `Duration`: Input (Type: Number, Unit: Hours).
         *   `Total Amount`: Read-only. Auto-calculated (`Price * Duration`).
         *   `Start Time`: DateTime Picker.
@@ -107,13 +107,16 @@
 
 ### 3.2 Data Logic
 1.  **Form Input**:
-    *   Price Input: User types `50.5` (Yuan). Frontend **MUST** multiply by 100 -> `5050` (Cents) before sending.
+    *   Price Input: User types `50` (Yuan). Frontend **MUST** multiply by 100 -> `5000` (Cents) before sending.
     *   Time Input: Use local time picker. Convert to ISO 8601 with offset (e.g., `moment().format()`) before sending.
     *   Guide Input: User types Phone Number (String).
 2.  **Displaying Response**:
     *   The API returns `amount` in **Cents**.
     *   **MUST** divide by 100 before displaying.
     *   Example: `data.amount (80000) -> ¥800.00`.
+3.  **Success Action**:
+    *   On Success 201: Redirect to Order Detail Page (`/admin/orders/:id`).
+    *   Allow CS to verify the created order immediately.
 
 ---
 
