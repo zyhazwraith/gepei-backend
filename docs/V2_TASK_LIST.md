@@ -9,6 +9,11 @@
 ## **Level 1: 核心基座 (Foundation)**
 *构建数据与权限的底座，Blocker 级别。*
 
+- [x] **[F-0] 附件系统基础设施 (Attachment System)** `[Infrastructure]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/F-0_attachment_system.md)
+    - *User Story*: 系统提供统一的文件上传、压缩和存储服务。
+    - *Backend*: [x] Service with Sharp, [x] Controller with Strategy, [x] Routes with RBAC.
+    - *Verification*: [x] scripts/verify-F0.ts (Avatar Overwrite & System Config).
 - [ ] **[F-1] 实现角色鉴权 (RBAC)** `[PRD 3.4]`
     - *User Story*: 系统根据 User `role` 字段 (admin/cs) 拦截越权请求。
     - *Tech*: Middleware update.

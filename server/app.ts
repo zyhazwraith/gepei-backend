@@ -9,6 +9,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import attachmentRoutes from './routes/attachment.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -43,7 +44,8 @@ export function createApp(): Application {
   // API 路由（添加/v1版本号）
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/guides', guideRoutes);
-  app.use('/api/v1/upload', uploadRoutes);
+  app.use('/api/v1/upload', uploadRoutes); // Deprecated but kept for compat
+  app.use('/api/v1/attachments', attachmentRoutes); // New V2 Attachment API
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/admin', adminRoutes);

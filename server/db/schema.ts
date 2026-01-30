@@ -22,14 +22,17 @@ import {
 export const attachments = mysqlTable('attachments', {
   id: int('id').primaryKey().autoincrement(),
   uploaderId: int('uploader_id').notNull(), // FK handled logically or circular ref issue
+  key: varchar('key', { length: 255 }).unique(), // V2: Unique key for overwrite strategy
   url: varchar('url', { length: 500 }).notNull(),
   storageType: mysqlEnum('storage_type', ['local', 'oss']).default('local'),
   fileType: varchar('file_type', { length: 50 }), // MIME type
   usageType: varchar('usage_type', { length: 50 }), // avatar, check_in, id_card
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(), // V2: Track updates
 }, (table) => {
   return {
     idxUploader: index('idx_uploader_id').on(table.uploaderId),
+    idxKey: unique('idx_key').on(table.key),
   };
 });
 
