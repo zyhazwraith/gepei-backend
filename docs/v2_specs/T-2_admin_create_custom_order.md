@@ -8,7 +8,7 @@
 *   **2026-02-01**: Initial Draft.
 *   **2026-02-02**: Clarified Currency Policy (Input Yuan, Store Cents, Return Cents).
 *   **2026-02-03**: Added `guideId` as mandatory field. Added Frontend Integration Guide.
-*   **2026-02-04**: Changed Input `guideId` to `guidePhone` (UX). Changed Input `pricePerHour` to **Cents** (Consistency).
+*   **2026-02-04**: Changed Input `guideId` to `guidePhone` (UX). Changed Input `pricePerHour` to **Cents** (Consistency). Added UI/UX Design details.
 
 ---
 
@@ -84,8 +84,28 @@
 
 ## 3. Frontend Integration Guide
 
-This section guides the Frontend Developer (or AI) on how to consume this API.
+### 3.1 UI/UX Design
+*   **Entry Point**: Admin Dashboard -> Order List -> Button "Create Custom Order" (Top Right).
+*   **Modal Layout**:
+    *   **Title**: "创建定制订单"
+    *   **Section 1: User Info**
+        *   `User Phone`: Input (11 digits). Auto-search/Validate on blur.
+    *   **Section 2: Guide Info**
+        *   `Guide Phone`: Input (11 digits). *Note: Input phone, backend finds User ID.*
+    *   **Section 3: Service Details**
+        *   `Price (Per Hour)`: Input (Type: Number, Step: 0.01, Unit: **Yuan**). *Display as ¥*.
+        *   `Duration`: Input (Type: Number, Unit: Hours).
+        *   `Total Amount`: Read-only. Auto-calculated (`Price * Duration`).
+        *   `Start Time`: DateTime Picker.
+        *   `Location`: Input (Text).
+    *   **Section 4: Description**
+        *   `Content`: Textarea (Service details).
+        *   `Requirements`: Textarea (Optional).
+    *   **Footer**:
+        *   [Cancel]
+        *   [Create Order] (Primary)
 
+### 3.2 Data Logic
 1.  **Form Input**:
     *   Price Input: User types `50.5` (Yuan). Frontend **MUST** multiply by 100 -> `5050` (Cents) before sending.
     *   Time Input: Use local time picker. Convert to ISO 8601 with offset (e.g., `moment().format()`) before sending.
