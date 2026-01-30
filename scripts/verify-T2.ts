@@ -56,7 +56,7 @@ async function main() {
       duration: 8,         // 8 Hours
       serviceStartTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
       serviceAddress: "Beijing Airport",
-      content: JSON.stringify({ items: ["Pickup", "Tour"] }),
+      content: "Airport Pickup and 1-day Tour", // Plain Text
       requirements: "VIP Service"
     };
 
@@ -85,18 +85,11 @@ async function main() {
     if (detail.user.phone !== USER_PHONE) throw new Error('Detail User mismatch');
     if (detail.guide.phone !== GUIDE_PHONE) throw new Error('Detail Guide mismatch');
     
-    // Check content parsing
-    // Our controller tries to parse JSON content.
-    // If payload.content was JSON string, it should be object in detail.content if the logic works?
-    // Wait, in my controller logic:
-    // if (typeof order.content === 'string' && ...) parsedContent = JSON.parse(order.content);
-    // My payload content IS a JSON string: JSON.stringify(...)
-    // So detail.content should be an object.
-    if (typeof detail.content !== 'object' || !detail.content.items) {
-        console.warn('⚠️ Content not parsed as object (Expected if controller handles it)', detail.content);
-    } else {
-        console.log('✅ Content parsed correctly');
+    // Check content (Text)
+    if (detail.content !== "Airport Pickup and 1-day Tour") {
+        throw new Error('Content mismatch or unexpected parsing');
     }
+    console.log('✅ Content verified (Plain Text)');
     
     console.log('✅ Get Details Success');
 

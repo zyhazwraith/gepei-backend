@@ -77,7 +77,7 @@
         duration: number;
         serviceAddress: string;
         serviceStartTime: string;
-        content: string | object; // Parsed or Raw
+        content: string; // Plain Text Description
         requirements: string;
         user: {
             phone: string;

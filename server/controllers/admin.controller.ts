@@ -79,16 +79,9 @@ export async function getOrders(req: Request, res: Response) {
 
     // 3. 补充定制信息
     const enrichedOrders = allOrders.map((order) => {
-      let extra = {};
-      if (order.orderType === 'custom' && order.content) {
-         try {
-            const contentObj = JSON.parse(order.content as string);
-            extra = { content: contentObj }; 
-         } catch (e) {
-            extra = { content: order.content };
-         }
-      }
-      return { ...order, ...extra };
+      // Content is now just text, no parsing needed unless specifically required by older logic
+      // But per new spec, it is plain text.
+      return order;
     });
 
     res.json({
@@ -150,22 +143,12 @@ export async function getOrderDetails(req: Request, res: Response) {
         throw new NotFoundError('订单不存在');
     }
 
-    // Parse content if it is JSON string
-    let parsedContent = order.content;
-    try {
-        if (typeof order.content === 'string' && (order.content.startsWith('{') || order.content.startsWith('['))) {
-            parsedContent = JSON.parse(order.content);
-        }
-    } catch (e) {
-        // ignore error, keep original string
-    }
-
     res.json({
         code: 0,
         message: '获取成功',
         data: {
             ...order,
-            content: parsedContent,
+            // Content is already text, no parsing needed
             user: {
                 phone: order.userPhone,
                 nickName: order.userNickname
