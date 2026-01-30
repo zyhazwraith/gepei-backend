@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { getAdminOrders, updateOrderStatus, assignGuide, getGuides, AdminOrder, Pagination, Guide } from "@/lib/api";
+import CreateCustomOrderDialog from "@/components/admin/CreateCustomOrderDialog";
+import OrderDetailDialog from "@/components/admin/OrderDetailDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search, Plus, Eye } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -30,6 +32,11 @@ export default function AdminOrderList() {
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState("");
 
+  // Create & Detail Dialog States
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
+
   // 指派相关状态
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
@@ -45,13 +52,6 @@ export default function AdminOrderList() {
   const fetchOrders = async (p: number) => {
     setLoading(true);
     try {
-      // 传递 keyword 参数 (API 需要支持)
-      // 注意: 这里假设 getAdminOrders 已经更新支持 keyword 参数，
-      // 如果没有，我们需要更新 lib/api.ts。
-      // 让我们先检查一下 lib/api.ts，或者直接传参试试。
-      // 由于我们是在修改 client 代码，我们需要确保 api.ts 也是新的。
-      // 这里的 getAdminOrders(p) 可能只接受一个参数。
-      // 让我们假设它支持 (page, limit, keyword)。
       const res = await getAdminOrders(p, 20, keyword);
       if (res.code === 0 && res.data) {
         setOrders(res.data.list);
@@ -70,13 +70,22 @@ export default function AdminOrderList() {
     fetchOrders(1);
   };
 
+  const handleCreateSuccess = (newOrderId: number) => {
+    fetchOrders(1);
+    handleViewDetail(newOrderId);
+  };
+
+  const handleViewDetail = (orderId: number) => {
+    setDetailOrderId(orderId);
+    setDetailDialogOpen(true);
+  };
+
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     setUpdatingId(orderId);
     try {
       const res = await updateOrderStatus(orderId, newStatus);
       if (res.code === 0) {
         toast.success("状态更新成功");
-        // 更新本地列表
         setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
       } else {
         toast.error(res.message || "更新失败");
@@ -121,7 +130,6 @@ export default function AdminOrderList() {
       if (res.code === 0) {
         toast.success("指派成功");
         setAssignDialogOpen(false);
-        // 更新列表状态
         const newStatus = selectedOrder.orderType === 'custom' ? 'waiting_for_user' : 'in_progress';
         setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: newStatus as any } : o));
       } else {
@@ -138,7 +146,7 @@ export default function AdminOrderList() {
     <AdminLayout title="订单管理">
       <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
         {/* 工具栏 */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b flex justify-between items-center">
           <form onSubmit={handleSearch} className="flex gap-2 max-w-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -151,6 +159,14 @@ export default function AdminOrderList() {
             </div>
             <Button type="submit" size="sm">搜索</Button>
           </form>
+          <Button 
+            onClick={() => setCreateDialogOpen(true)} 
+            size="sm"
+            data-testid="create-custom-order-btn"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            创建定制订单
+          </Button>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -177,7 +193,15 @@ export default function AdminOrderList() {
                   const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-gray-100", textColor: "text-gray-800" };
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium text-gray-900">{order.orderNumber}</TableCell>
+                      <TableCell className="font-medium text-gray-900">
+                        <div 
+                          className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group"
+                          onClick={() => handleViewDetail(order.id)}
+                        >
+                          {order.orderNumber}
+                          <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-gray-900">{order.userNickname}</span>
@@ -199,7 +223,6 @@ export default function AdminOrderList() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          {/* 只有定制单且状态允许时显示指派按钮 */}
                           {order.orderType === 'custom' && ['pending', 'paid'].includes(order.status) && (
                             <Button 
                               size="sm" 
@@ -246,7 +269,6 @@ export default function AdminOrderList() {
           )}
         </div>
 
-        {/* 分页器 */}
         {pagination && pagination.total_pages > 1 && (
           <div className="p-4 border-t flex items-center justify-between bg-gray-50">
             <span className="text-sm text-gray-500">
@@ -272,7 +294,7 @@ export default function AdminOrderList() {
             </div>
           </div>
         )}
-        {/* 指派地陪弹窗 */}
+        
         <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -341,6 +363,18 @@ export default function AdminOrderList() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <CreateCustomOrderDialog 
+          open={createDialogOpen} 
+          onOpenChange={setCreateDialogOpen} 
+          onSuccess={handleCreateSuccess}
+        />
+
+        <OrderDetailDialog 
+          open={detailDialogOpen} 
+          onOpenChange={setDetailDialogOpen} 
+          orderId={detailOrderId}
+        />
       </div>
     </AdminLayout>
   );
