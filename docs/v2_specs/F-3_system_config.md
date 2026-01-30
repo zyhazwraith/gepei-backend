@@ -1,6 +1,6 @@
 # Feature Spec: [F-3] System Config & QR Code
 
-**Status**: Draft
+**Status**: Final
 **Task**: [F-3] 系统配置接口 (System Config)
 **Type**: Feature
 **Owner**: Backend Team
