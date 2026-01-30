@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import attachmentRoutes from './routes/attachment.routes.js';
+import systemConfigRoutes from './routes/system-config.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -49,6 +50,10 @@ export function createApp(): Application {
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/admin', adminRoutes);
+
+  // F-3: System Config Routes
+  app.use('/api/v1/system-configs', systemConfigRoutes);
+  app.use('/api/v1/admin/system-configs', systemConfigRoutes);
 
   // 404 处理 (API)
   app.use('/api/*', notFoundHandler);
