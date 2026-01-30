@@ -30,16 +30,20 @@
 - [x] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Completed`
     - *Spec*: [Link](docs/v2_specs/T-2_admin_create_custom_order.md)
     - *User Story*: 客服在后台录入信息，生成“待支付”定制单。
-    - *Tech*: New API (`POST /admin/custom-orders`).
+    - *Backend*: New API (`POST /admin/custom-orders`).
+    - *Frontend*: **[FE-T2]** 适配“定制单创建”弹窗 (Input: Phone, Price in Yuan -> Cents).
 - [ ] **[T-3] 订单指派接口 (Assign Guide)** `[PRD 2.3]`
     - *User Story*: 客服将已支付订单直接指派给特定地陪。
-    - *Tech*: Update `assignGuide` logic.
+    - *Backend*: Update `assignGuide` logic.
+    - *Frontend*: **[FE-T3]** 后台订单详情页增加“指派”按钮与选人弹窗.
 - [ ] **[T-4] 普通单校验 (Standard Order Check)** `[PRD 2.2]`
     - *User Story*: 用户下单时，系统强制校验地陪是否有 `realPrice`。
-    - *Tech*: Update `createOrder` logic.
+    - *Backend*: Update `createOrder` logic.
+    - *Frontend*: **[FE-T4]** App端下单页错误提示适配.
 - [ ] **[T-5] 统一支付回调 (Payment Callback)** `[PRD 1.1]`
     - *User Story*: 系统能正确处理普通/定制/加时单的微信支付回调。
-    - *Tech*: Refactor callback handler.
+    - *Backend*: Refactor callback handler.
+    - *Frontend*: N/A (Backend only).
 
 ---
 
