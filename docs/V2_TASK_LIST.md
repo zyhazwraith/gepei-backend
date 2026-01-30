@@ -20,9 +20,12 @@
 - [ ] **[F-2] 地陪资料升级 (Guide Profile)** `[PRD 3.3]`
     - *User Story*: 地陪可录入 LBS (lat/lng) 和相册；Admin 可查看并审核。
     - *Tech*: API update (`updateProfile`).
-- [ ] **[F-3] 系统配置接口 (System Config)** `[PRD 3.4.1]`
+- [x] **[F-3] 系统配置接口 (System Config)** `[PRD 3.4.1]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/F-3_system_config.md)
     - *User Story*: Admin 可上传/更新客服二维码 URL。
-    - *Tech*: New API (`SystemConfig` CRUD).
+    - *Backend*: [x] Service (Whitelist), [x] Controller, [x] Routes (Public/Admin).
+    - *Verification*: [x] scripts/verify-F3.ts.
+
 
 ---
 
