@@ -29,28 +29,17 @@ async function main() {
         process.exit(1);
     }
 
-    // 2. Prepare Data (Get Guide ID)
-    // We need a valid guideId. Let's list guides or just assume ID=1 if seeded.
-    // Better: Fetch a user and promote to guide if needed, but let's assume ID 1 exists.
-    // Or fetch /admin/users to find a guide.
-    console.log('\n2. Finding a valid Guide...');
-    const usersRes = await axios.get(`${API_URL}/admin/users?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    const guideUser = usersRes.data.data.list.find((u: any) => u.isGuide);
-    if (!guideUser) {
-        console.error('❌ No guide found in system. Please seed a guide first.');
-        process.exit(1);
-    }
-    const guideId = guideUser.id;
-    console.log(`✅ Found Guide ID: ${guideId}`);
+    // 2. Finding a valid Guide (Or any user)
+    // We will use the USER as a GUIDE for this test to prove any user can be assigned.
+    const TEST_GUIDE_PHONE = USER_PHONE; // Using the 'user' as the guide for testing
+    console.log(`\n2. Using User ${TEST_GUIDE_PHONE} as Guide...`);
 
     // 3. Test Success Case
     console.log('\n3. Testing Success Case...');
     const payload = {
-      userPhone: USER_PHONE,
-      guidePhone: GUIDE_PHONE, // Changed from guideId
-      pricePerHour: 10050, // 100.5 Yuan -> 10050 Cents
+      userPhone: USER_PHONE, // User assigns to themselves (weird but valid for logic test)
+      guidePhone: TEST_GUIDE_PHONE,
+      pricePerHour: 10050, // 10050 Cents
       duration: 8,         // 8 Hours
       serviceStartTime: new Date().toISOString(),
       serviceAddress: "Beijing Airport",

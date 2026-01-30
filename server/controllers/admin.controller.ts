@@ -223,16 +223,15 @@ export const createCustomOrder = async (req: Request, res: Response, next: NextF
       throw new NotFoundError('用户不存在，请先引导用户注册');
     }
 
-    // 2. 验证地陪是否存在 (By Phone)
-    const [guideUser] = await db.select({ id: users.id, userId: guides.userId })
+    // 2. 验证地陪是否存在 (By Phone, Any User allowed)
+    const [guideUser] = await db.select({ id: users.id })
         .from(users)
-        .leftJoin(guides, eq(users.id, guides.userId))
         .where(eq(users.phone, validated.guidePhone));
 
-    if (!guideUser || !guideUser.userId) {
-      throw new NotFoundError('指定的地陪不存在或未认证');
+    if (!guideUser) {
+      throw new NotFoundError('指定的地陪手机号不存在');
     }
-    const guideId = guideUser.userId;
+    const guideId = guideUser.id;
 
     // 3. 计算金额 (Direct Cents)
     // Spec: Amount = PricePerHour * Duration
