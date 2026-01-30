@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, customRequirements, payments, users, guides, customOrderCandidates } from '../db/schema';
+import { orders, payments, users, guides } from '../db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
@@ -73,31 +73,28 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         const [order] = await tx.insert(orders).values({
           orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
           userId,
-          orderType: 'custom',
+          type: 'custom', // V2: orderType -> type
           status: 'pending', // 初始状态为待支付
           serviceStartTime: new Date(validated.serviceStartTime), // Use new field
           serviceAddress: validated.serviceAddress,
           serviceLat: validated.serviceLat.toString(),
           serviceLng: validated.serviceLng.toString(),
-          serviceHours: 0, // 定制单按天或项目计价，初始设为0
+          // serviceHours: 0, // Removed
           duration: validated.duration, // Use validated duration
-          amount: '150.00', // 固定订金
-          content: validated.content, // Core requirement content
+          amount: 15000, // 固定订金 150.00 -> 15000 (分)
+          content: JSON.stringify({ // V2: Store requirements in content JSON
+            destination: validated.city,
+            startDate: validated.serviceStartTime.split('T')[0],
+            endDate: validated.serviceStartTime.split('T')[0],
+            peopleCount: 1,
+            budget: validated.budget.toString(),
+            specialRequirements: validated.content
+          }),
           requirements: validated.requirements, // Additional remarks
           createdAt: new Date(),
         }).$returningId();
 
-        // 创建定制需求详情
-        await tx.insert(customRequirements).values({
-          orderId: order.id,
-          destination: validated.city, // 映射 city 到 destination
-          startDate: validated.serviceStartTime.split('T')[0], // Extract date part
-          endDate: validated.serviceStartTime.split('T')[0], // 暂定一天
-          peopleCount: 1, // 默认为1人，后续可添加字段
-          budget: validated.budget.toString(),
-          specialRequirements: validated.content + (validated.requirements ? `\n备注: ${validated.requirements}` : ''),
-          createdAt: new Date(),
-        });
+        // Removed customRequirements insert
 
         return order;
       });
@@ -107,7 +104,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         message: '订单创建成功',
         data: {
           orderId: result.id,
-          amount: 150.00,
+          amount: 150.00, // Response in Yuan for frontend compat? Or 15000? Let's keep 150.00 for now or change frontend.
+          // Assuming frontend expects Yuan, we might need to divide. But for Type check, just ensuring DB insert is correct.
         },
       });
 
@@ -117,7 +115,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
 
       // 校验地陪有效性
       const guide = await db.query.guides.findFirst({
-        where: eq(guides.id, validated.guideId)
+        where: eq(guides.userId, validated.guideId) // V2: guides.id -> guides.userId
       });
 
       if (!guide) {
@@ -129,26 +127,26 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       }
 
       // 计算金额
-      if (!guide.hourlyPrice) {
+      if (!guide.realPrice) { // V2: hourlyPrice -> realPrice
         throw new ValidationError('该地陪未设置价格，无法预订');
       }
       
-      const price = Number(guide.hourlyPrice);
-      const amount = (price * validated.duration).toFixed(2);
+      const price = guide.realPrice; // Already int (fen)
+      const amount = price * validated.duration; // int * int = int
 
       // 创建订单
       const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
         userId,
         guideId: validated.guideId,
-        orderType: 'normal',
+        type: 'standard', // V2: orderType -> type
         status: 'pending',
         serviceStartTime: new Date(validated.serviceStartTime),
         duration: validated.duration,
         serviceAddress: validated.serviceAddress,
         serviceLat: validated.serviceLat.toString(),
         serviceLng: validated.serviceLng.toString(),
-        amount: amount.toString(),
+        amount: amount, // int
         requirements: validated.requirements, // Now using requirements instead of remark
         createdAt: new Date(),
       }).$returningId();
@@ -158,7 +156,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         message: '订单创建成功',
         data: {
           orderId: order.id,
-          amount: Number(amount),
+          amount: amount / 100, // Return Yuan for frontend
         },
       });
     }
@@ -204,9 +202,10 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
     await db.transaction(async (tx) => {
       // 3.1 创建支付流水
       await tx.insert(payments).values({
-        orderId,
-        paymentMethod: validated.paymentMethod,
-        transactionId: `TXN${Date.now()}${nanoid(6)}`.toUpperCase(),
+        relatedType: 'order',
+        relatedId: orderId,
+        paymentMethod: 'wechat',
+        transactionId: `MOCK_${nanoid()}`,
         amount: order.amount,
         status: 'success',
         paidAt: new Date(),
@@ -263,23 +262,20 @@ export async function getOrders(req: Request, res: Response) {
     // 既然是 MVP，我们先直接返回订单列表，前端在详情页再查详细信息
     // 或者如果列表页需要展示目的地，我们需要查出来
     
-    const enrichedOrders = await Promise.all(result.map(async (order) => {
+    const enrichedOrders = result.map((order) => {
       let extra = {};
-      if (order.orderType === 'custom') {
-        const [req] = await db.select().from(customRequirements).where(eq(customRequirements.orderId, order.id));
-        if (req) {
-          extra = { destination: req.destination, startDate: req.startDate };
-        }
+      if (order.type === 'custom' && order.content) {
+         try {
+            const contentObj = JSON.parse(order.content as string);
+            extra = { 
+                destination: contentObj.destination, 
+                startDate: contentObj.startDate 
+            }; 
+         } catch (e) {
+            // ignore
+         }
       }
-      // Drizzle returns camelCase by default, so we are good.
       return { ...order, ...extra };
-    }));
-
-    // 按时间倒序排序 (内存排序，因为orderBy在orm里写起来可能有点繁琐，先这样)
-    enrichedOrders.sort((a, b) => {
-      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return tB - tA;
     });
 
     res.json({
@@ -317,13 +313,9 @@ export async function getOrderById(req: Request, res: Response) {
 
     let result: any = { ...order };
 
-    // 如果是定制单，查询需求详情
-    if (order.orderType === 'custom') {
-      const [requirements] = await db.select().from(customRequirements).where(
-        eq(customRequirements.orderId, orderId)
-      );
-      // Change custom_requirements to customRequirements (Camel Case)
-      result.customRequirements = requirements || null;
+    if (order.type === 'custom') { // V2: orderType -> type
+        // V2: Candidates logic removed.
+        // Just return order info
     }
 
     res.json({
@@ -337,100 +329,21 @@ export async function getOrderById(req: Request, res: Response) {
 }
 
 /**
- * 获取候选地陪列表
+ * 获取候选地陪列表 (Deprecated in V2)
  */
 export async function getCandidates(req: Request, res: Response) {
-  const userId = req.user!.id;
-  const orderId = parseInt(req.params.id);
-
-  try {
-    const [order] = await db.select().from(orders).where(
-      and(eq(orders.id, orderId), eq(orders.userId, userId))
-    );
-    if (!order) throw new NotFoundError('订单不存在');
-
-    const candidates = await db.select({
-      guideId: guides.id,
-      nickName: users.nickname,
-      avatarUrl: users.avatarUrl,
-      hourlyPrice: guides.hourlyPrice,
-      city: guides.city,
-      isSelected: customOrderCandidates.isSelected,
-    })
-    .from(customOrderCandidates)
-    .innerJoin(guides, eq(customOrderCandidates.guideId, guides.id))
-    .innerJoin(users, eq(guides.userId, users.id))
-    .where(eq(customOrderCandidates.orderId, orderId));
-
-    res.json({
-      code: 0,
-      message: '获取成功',
-      data: { list: candidates }
-    });
-  } catch (error) {
-    throw error;
-  }
+  // V2: This API is deprecated as custom orders are directly assigned by admin/CS.
+  res.json({
+    code: 0,
+    message: '获取成功',
+    data: { list: [] }
+  });
 }
 
 /**
- * 用户选择地陪
+ * 用户选择地陪 (Deprecated in V2)
  */
 export async function selectGuide(req: Request, res: Response, next: NextFunction) {
-  const userId = req.user!.id;
-  const orderId = parseInt(req.params.id);
-
-  try {
-    const { guideId } = selectGuideSchema.parse(req.body);
-
-    const [order] = await db.select().from(orders).where(
-      and(eq(orders.id, orderId), eq(orders.userId, userId))
-    );
-    if (!order) throw new NotFoundError('订单不存在');
-    
-    // 允许的状态: waiting_for_user (正常流程), paid (如果流程是先付后选), pending (如果允许未支付选择)
-    // 根据 Admin Controller 设置，指派后状态为 waiting_for_user
-    if (order.status !== 'waiting_for_user') {
-        throw new ValidationError('当前订单状态不允许选择地陪');
-    }
-
-    // Check if candidate exists
-    const [candidate] = await db.select().from(customOrderCandidates).where(
-        and(
-            eq(customOrderCandidates.orderId, orderId),
-            eq(customOrderCandidates.guideId, guideId)
-        )
-    );
-    if (!candidate) throw new ValidationError('该地陪不在候选名单中');
-
-    await db.transaction(async (tx) => {
-        // Update order
-        await tx.update(orders)
-            .set({ 
-                guideId, 
-                status: 'in_progress',
-                updatedAt: new Date() 
-            })
-            .where(eq(orders.id, orderId));
-            
-        // Update candidates status
-        await tx.update(customOrderCandidates)
-            .set({ isSelected: true })
-            .where(and(eq(customOrderCandidates.orderId, orderId), eq(customOrderCandidates.guideId, guideId)));
-            
-        await tx.update(customOrderCandidates)
-            .set({ isSelected: false })
-            .where(and(eq(customOrderCandidates.orderId, orderId), ne(customOrderCandidates.guideId, guideId)));
-    });
-
-    res.json({
-        code: 0,
-        message: '选择成功',
-        data: { orderId, guideId, status: 'in_progress' }
-    });
-  } catch (error) {
-     if (error instanceof z.ZodError) {
-      return next(new ValidationError('参数错误'));
-    }
-    next(error);
-  }
+  // V2: Deprecated. Custom orders are assigned by admin.
+  return next(new ValidationError('该接口已废弃'));
 }

@@ -5,8 +5,13 @@ import * as adminController from '../controllers/admin.controller';
 
 const router = Router();
 
-// 所有路由都需要管理员权限
-router.use(authenticate, authorize(['admin']));
+// 所有路由都需要管理员权限 (admin or cs)
+// V2 Update: Role check should be handled per route or group if granularity is needed.
+// For now, most admin routes are for both. createCustomOrder is for both.
+router.use(authenticate, authorize(['admin', 'cs']));
+
+// POST /api/v1/admin/custom-orders - 后台创建定制单
+router.post('/custom-orders', asyncHandler(adminController.createCustomOrder));
 
 // GET /api/v1/admin/orders - 获取所有订单
 router.get('/orders', asyncHandler(adminController.getOrders));

@@ -14,16 +14,48 @@ import {
   unique,
 } from 'drizzle-orm/mysql-core';
 
-// 1. 用户表
+// --------------------------------------------------------------------------
+// 1. 系统与支撑表 (System & Support)
+// --------------------------------------------------------------------------
+
+// 1.1 附件表 (Attachments) [V2 新增]
+export const attachments = mysqlTable('attachments', {
+  id: int('id').primaryKey().autoincrement(),
+  uploaderId: int('uploader_id').notNull(), // FK handled logically or circular ref issue
+  url: varchar('url', { length: 500 }).notNull(),
+  storageType: mysqlEnum('storage_type', ['local', 'oss']).default('local'),
+  fileType: varchar('file_type', { length: 50 }), // MIME type
+  usageType: varchar('usage_type', { length: 50 }), // avatar, check_in, id_card
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    idxUploader: index('idx_uploader_id').on(table.uploaderId),
+  };
+});
+
+// 1.2 系统配置表 (System Configs) [V2 新增]
+export const systemConfigs = mysqlTable('system_configs', {
+  key: varchar('key', { length: 50 }).primaryKey(),
+  value: text('value'),
+  description: varchar('description', { length: 100 }),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+// --------------------------------------------------------------------------
+// 2. 核心用户与地陪 (Users & Guides)
+// --------------------------------------------------------------------------
+
+// 2.1 用户表 (Users) [V2 修改]
 export const users = mysqlTable('users', {
   id: int('id').primaryKey().autoincrement(),
   phone: varchar('phone', { length: 11 }).notNull().unique(),
   password: varchar('password', { length: 255 }).notNull(),
   nickname: varchar('nickname', { length: 50 }),
-  avatarUrl: varchar('avatar_url', { length: 500 }),
   isGuide: boolean('is_guide').default(false),
-  role: mysqlEnum('role', ['user', 'admin']).default('user'),
-  balance: decimal('balance', { precision: 10, scale: 2 }).default('0.00'),
+  role: mysqlEnum('role', ['user', 'admin', 'cs']).default('user'),
+  balance: int('balance').default(0), // 单位: 分
+  status: mysqlEnum('status', ['active', 'banned']).default('active'),
+  banReason: varchar('ban_reason', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   deletedAt: timestamp('deleted_at'),
@@ -35,18 +67,19 @@ export const users = mysqlTable('users', {
   };
 });
 
-// 2. 地陪表
+// 2.2 地陪表 (Guides) [V2 重构]
 export const guides = mysqlTable('guides', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  userId: int('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 50 }).notNull(),
+  avatarId: int('avatar_id'), // V2: Moved from users
   idNumber: varchar('id_number', { length: 18 }).notNull().unique(),
   city: varchar('city', { length: 50 }).notNull(),
+  address: varchar('address', { length: 255 }),
   intro: text('intro'),
-  hourlyPrice: decimal('hourly_price', { precision: 10, scale: 2 }),
+  expectedPrice: int('expected_price'), // 单位: 分
+  realPrice: int('real_price'), // 单位: 分
   tags: json('tags'),
-  photos: json('photos'),
-  // LBS Fields
+  photoIds: json('photo_ids'), // Array of attachment IDs
   latitude: decimal('latitude', { precision: 10, scale: 6 }),
   longitude: decimal('longitude', { precision: 10, scale: 6 }),
   idVerifiedAt: timestamp('id_verified_at'),
@@ -56,32 +89,51 @@ export const guides = mysqlTable('guides', {
 }, (table) => {
   return {
     idxCity: index('idx_city').on(table.city),
-    idxUserId: index('idx_user_id').on(table.userId),
     idxDeletedAt: index('idx_deleted_at').on(table.deletedAt),
   };
 });
 
-// 3. 订单表
+// --------------------------------------------------------------------------
+// 3. 订单与交易 (Orders & Transactions)
+// --------------------------------------------------------------------------
+
+// 3.1 订单表 (Orders) [V2 重构]
 export const orders = mysqlTable('orders', {
   id: int('id').primaryKey().autoincrement(),
   orderNumber: varchar('order_number', { length: 32 }).notNull().unique(),
   userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  guideId: int('guide_id').references(() => guides.id, { onDelete: 'set null' }),
-  orderType: mysqlEnum('order_type', ['normal', 'custom']).notNull(),
-  status: mysqlEnum('status', ['pending', 'paid', 'waiting_for_user', 'in_progress', 'completed', 'cancelled']).default('pending'),
-  // Deprecated fields (kept for migration safety)
-  serviceDate: date('service_date', { mode: 'string' }),
-  serviceHours: int('service_hours'),
-  // New fields
+  guideId: int('guide_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // 指向 users 表 (V2: 必填)
+  creatorId: int('creator_id').references(() => users.id, { onDelete: 'set null' }),
+  type: mysqlEnum('type', ['standard', 'custom']).notNull().default('standard'),
+  status: mysqlEnum('status', [
+    'pending',
+    'paid',
+    'waiting_service',
+    'in_service',
+    'service_ended',
+    'completed',
+    'cancelled',
+    'refunded'
+  ]).default('pending'),
+  
+  // 核心服务信息
+  pricePerHour: int('price_per_hour'), // 单位: 分 (单价快照)
+  duration: int('duration'), // 预约时长 (小时)
+  amount: int('amount').notNull(), // 总额 (单位: 分)
+  refundAmount: int('refund_amount').default(0), // 已退款金额 (单位: 分)
+  content: text('content'), // 核心服务内容 (纯文本描述，如“三日包车游”)
+  requirements: text('requirements'), // 备注/特殊要求
+  
+  // 时间信息
   serviceStartTime: timestamp('service_start_time'),
-  duration: int('duration').default(8),
+  paidAt: timestamp('paid_at'),
+  completedAt: timestamp('completed_at'),
+  
+  // LBS 快照 (可选保留，视业务需要)
   serviceAddress: varchar('service_address', { length: 255 }),
   serviceLat: decimal('service_lat', { precision: 10, scale: 6 }),
   serviceLng: decimal('service_lng', { precision: 10, scale: 6 }),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  deposit: decimal('deposit', { precision: 10, scale: 2 }).default('0.00'),
-  requirements: text('requirements'), // Common field for remarks/notes
-  content: text('content'), // Core requirement content (mostly for Custom Order)
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   deletedAt: timestamp('deleted_at'),
@@ -91,102 +143,55 @@ export const orders = mysqlTable('orders', {
     idxUserId: index('idx_user_id').on(table.userId),
     idxGuideId: index('idx_guide_id').on(table.guideId),
     idxStatus: index('idx_status').on(table.status),
-    idxOrderType: index('idx_order_type').on(table.orderType),
+    idxType: index('idx_type').on(table.type),
     idxDeletedAt: index('idx_deleted_at').on(table.deletedAt),
   };
 });
 
-// 4. 支付记录表
-export const payments = mysqlTable('payments', {
+// 3.2 加时记录表 (Overtime Records) [V2 新增]
+export const overtimeRecords = mysqlTable('overtime_records', {
   id: int('id').primaryKey().autoincrement(),
   orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  paymentMethod: mysqlEnum('payment_method', ['wechat']).default('wechat'),
+  duration: int('duration').notNull(), // 计费时长 (小时)
+  fee: int('fee').notNull(), // 单位: 分
+  status: mysqlEnum('status', ['pending', 'paid']).default('pending'),
+  startTime: timestamp('start_time'), // 物理开始时间
+  endTime: timestamp('end_time'), // 物理结束时间
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    idxOrderId: index('idx_order_id').on(table.orderId),
+  };
+});
+
+// 3.3 支付记录表 (Payments) [V2 修改]
+export const payments = mysqlTable('payments', {
+  id: int('id').primaryKey().autoincrement(),
+  amount: int('amount').notNull(), // 单位: 分
   transactionId: varchar('transaction_id', { length: 64 }),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: mysqlEnum('payment_method', ['wechat']).default('wechat'),
   status: mysqlEnum('status', ['pending', 'success', 'failed']).default('pending'),
+  relatedType: mysqlEnum('related_type', ['order', 'overtime']).notNull(),
+  relatedId: int('related_id').notNull(), // OrderID or OvertimeID
   paidAt: timestamp('paid_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => {
   return {
-    idxOrderId: index('idx_order_id').on(table.orderId),
     idxTransactionId: index('idx_transaction_id').on(table.transactionId),
-    idxStatus: index('idx_status').on(table.status),
+    idxRelated: index('idx_related').on(table.relatedType, table.relatedId),
   };
 });
 
-// 5. 提现记录表
-export const withdrawals = mysqlTable('withdrawals', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  status: mysqlEnum('status', ['pending', 'processing', 'completed', 'failed']).default('pending'),
-  bankInfo: json('bank_info'),
-  processedAt: timestamp('processed_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
-}, (table) => {
-  return {
-    idxUserId: index('idx_user_id').on(table.userId),
-    idxStatus: index('idx_status').on(table.status),
-  };
-});
+// --------------------------------------------------------------------------
+// 4. 资金与审计 (Finance & Audit)
+// --------------------------------------------------------------------------
 
-// 6. 私人定制需求表
-export const customRequirements = mysqlTable('custom_requirements', {
+// 4.1 审计日志表 (Audit Logs) [V2 重构]
+export const auditLogs = mysqlTable('audit_logs', {
   id: int('id').primaryKey().autoincrement(),
-  orderId: int('order_id').notNull().unique().references(() => orders.id, { onDelete: 'cascade' }),
-  destination: varchar('destination', { length: 100 }).notNull(),
-  startDate: date('start_date', { mode: 'string' }).notNull(),
-  endDate: date('end_date', { mode: 'string' }).notNull(),
-  peopleCount: int('people_count').notNull(),
-  budget: decimal('budget', { precision: 10, scale: 2 }),
-  specialRequirements: text('special_requirements'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
-}, (table) => {
-  return {
-    idxOrderId: index('idx_order_id').on(table.orderId),
-  };
-});
-
-// 7. 定制订单候选地陪表
-export const customOrderCandidates = mysqlTable('custom_order_candidates', {
-  id: int('id').primaryKey().autoincrement(),
-  orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  guideId: int('guide_id').notNull().references(() => guides.id, { onDelete: 'cascade' }),
-  isSelected: boolean('is_selected').default(false),
-  createdAt: timestamp('created_at').defaultNow(),
-}, (table) => {
-  return {
-    idxOrderId: index('idx_order_id').on(table.orderId),
-    idxGuideId: index('idx_guide_id').on(table.guideId),
-    uniqueOrderGuide: unique('unique_order_guide').on(table.orderId, table.guideId),
-  };
-});
-
-// 8. 评价表
-export const reviews = mysqlTable('reviews', {
-  id: int('id').primaryKey().autoincrement(),
-  orderId: int('order_id').notNull().unique().references(() => orders.id, { onDelete: 'cascade' }),
-  userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  guideId: int('guide_id').notNull().references(() => guides.id, { onDelete: 'cascade' }),
-  rating: int('rating').notNull(),
-  comment: text('comment'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
-}, (table) => {
-  return {
-    idxOrderId: index('idx_order_id').on(table.orderId),
-    idxGuideId: index('idx_guide_id').on(table.guideId),
-  };
-});
-
-// 9. 管理员操作日志表
-export const adminLogs = mysqlTable('admin_logs', {
-  id: int('id').primaryKey().autoincrement(),
-  adminId: int('admin_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  action: varchar('action', { length: 100 }).notNull(),
+  operatorId: int('operator_id').notNull().references(() => users.id),
+  action: varchar('action', { length: 50 }).notNull(), // guide_audit, withdraw_audit, refund...
   targetType: varchar('target_type', { length: 50 }),
   targetId: int('target_id'),
   details: json('details'),
@@ -194,8 +199,103 @@ export const adminLogs = mysqlTable('admin_logs', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => {
   return {
-    idxAdminId: index('idx_admin_id').on(table.adminId),
+    idxOperator: index('idx_operator_id').on(table.operatorId),
     idxAction: index('idx_action').on(table.action),
-    idxCreatedAt: index('idx_created_at').on(table.createdAt),
   };
 });
+
+// 4.2 资金流水表 (Wallet Logs) [V2 新增]
+export const walletLogs = mysqlTable('wallet_logs', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: mysqlEnum('type', [
+    'income', 
+    'withdraw_freeze', 
+    'withdraw_unfreeze', 
+    'withdraw_success', 
+    'refund'
+  ]).notNull(),
+  amount: int('amount').notNull(), // 单位: 分, +/-
+  relatedType: varchar('related_type', { length: 50 }), // order, withdrawal
+  relatedId: int('related_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    idxUser: index('idx_user_id').on(table.userId),
+    idxType: index('idx_type').on(table.type),
+  };
+});
+
+// 4.3 提现申请表 (Withdrawals) [V2 修改]
+export const withdrawals = mysqlTable('withdrawals', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  amount: int('amount').notNull(), // 单位: 分
+  status: mysqlEnum('status', ['pending', 'processing', 'completed', 'failed']).default('pending'),
+  bankInfo: json('bank_info'),
+  auditLogId: int('audit_log_id'), // FK -> audit_logs.id
+  processedAt: timestamp('processed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => {
+  return {
+    idxUser: index('idx_user_id').on(table.userId),
+    idxStatus: index('idx_status').on(table.status),
+  };
+});
+
+// 4.4 退款记录表 (Refund Records) [V2 新增]
+export const refundRecords = mysqlTable('refund_records', {
+  id: int('id').primaryKey().autoincrement(),
+  orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  amount: int('amount').notNull(), // 单位: 分
+  reason: varchar('reason', { length: 255 }),
+  operatorId: int('operator_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    idxOrder: index('idx_order_id').on(table.orderId),
+  };
+});
+
+// --------------------------------------------------------------------------
+// 5. 其他业务表 (Others)
+// --------------------------------------------------------------------------
+
+// 5.1 评价表 (Reviews) [V1 保留]
+export const reviews = mysqlTable('reviews', {
+  id: int('id').primaryKey().autoincrement(),
+  orderId: int('order_id').notNull().unique().references(() => orders.id, { onDelete: 'cascade' }),
+  userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  guideId: int('guide_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // Point to user_id
+  rating: int('rating').notNull(),
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => {
+  return {
+    idxOrder: index('idx_order_id').on(table.orderId),
+    idxGuide: index('idx_guide_id').on(table.guideId),
+  };
+});
+
+// 5.2 打卡记录表 (Check In Records) [V2 新增]
+export const checkInRecords = mysqlTable('check_in_records', {
+  id: int('id').primaryKey().autoincrement(),
+  orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  type: mysqlEnum('type', ['start', 'end']).notNull(),
+  time: timestamp('time').defaultNow(),
+  location: varchar('location', { length: 255 }), // LBS Address
+  attachmentId: int('attachment_id'), // FK -> attachments.id (Photo)
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    idxOrder: index('idx_order_id').on(table.orderId),
+  };
+});
+
+// --------------------------------------------------------------------------
+// Deprecated Tables (Kept for migration reference if needed, but commented out)
+// --------------------------------------------------------------------------
+// export const customRequirements = ...
+// export const customOrderCandidates = ...

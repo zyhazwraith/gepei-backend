@@ -5,7 +5,6 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import {
   findGuideByUserId,
   findGuideByIdNumber,
-  findGuideById,
   findAllGuides,
   createGuide,
   updateGuide,
@@ -31,28 +30,26 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
 
     // 转换为前端友好的格式（隐藏敏感信息）
     const list = guides.map(g => ({
-      guideId: g.id,
-      userId: g.user_id,
-      nickName: g.user_nickname || '匿名用户', // 移除 g.name 兜底，改为默认值
-      // 隐藏身份证号
+      guideId: g.userId, // V2: userId is PK
+      userId: g.userId,
+      nickName: g.userNickName || '匿名用户', 
       city: g.city,
       intro: g.intro,
-      hourlyPrice: g.hourly_price,
+      hourlyPrice: g.realPrice || g.expectedPrice || 0, // 优先展示真实价格
       tags: g.tags,
-      // photos: g.photos, // 列表页可能只需要第一张图
-      avatarUrl: g.photos && Array.isArray(g.photos) && g.photos.length > 0 ? g.photos[0] : '', // 模拟头像
+      // photos: g.photoIds, // 暂不返回图片ID，等待附件系统完善
+      // 兼容旧前端逻辑，尝试返回空数组或mock
+      photos: [], 
+      avatarUrl: '', // Mock or empty
       rating: 4.8, // Mock
       reviewCount: 50, // Mock
       distance: g.distance !== undefined ? Number(g.distance.toFixed(2)) : undefined, // 保留2位小数
       latitude: g.latitude ? Number(g.latitude) : undefined,
       longitude: g.longitude ? Number(g.longitude) : undefined,
-      // tags: g.tags,
-      // photos: g.photos,
-      // created_at: g.created_at,
     }));
 
     successResponse(res, {
-      list, // or items
+      list, 
       pagination: {
         total,
         page,
@@ -69,6 +66,7 @@ export async function getGuides(req: Request, res: Response): Promise<void> {
 /**
  * 获取地陪详情（公开接口）
  * GET /api/v1/guides/:id
+ * Note: :id here is interpreted as userId/guideId (PK)
  */
 export async function getGuideDetail(req: Request, res: Response): Promise<void> {
   try {
@@ -78,27 +76,29 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const guide = await findGuideById(guideId);
+    // V2: findGuideByUserId IS findGuideById
+    const guide = await findGuideByUserId(guideId);
 
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
     }
 
-    // 转换为前端友好的格式（隐藏敏感信息）
+    // 转换为前端友好的格式
     const response = {
-      guideId: guide.id,
-      userId: guide.user_id,
-      nickName: guide.user_nickname || '匿名用户', // 移除 g.name 兜底
+      guideId: guide.userId,
+      userId: guide.userId,
+      nickName: guide.userNickName || '匿名用户',
       city: guide.city,
       intro: guide.intro,
-      hourlyPrice: guide.hourly_price,
+      hourlyPrice: guide.realPrice || guide.expectedPrice || 0,
       tags: guide.tags,
-      photos: guide.photos,
-      avatarUrl: guide.photos && Array.isArray(guide.photos) && guide.photos.length > 0 ? guide.photos[0] : '',
+      photos: [], // TODO: Resolve URLs from photoIds
+      photoIds: guide.photoIds,
+      avatarUrl: '',
       rating: 4.8,
       reviewCount: 50,
-      createdAt: guide.created_at,
+      createdAt: guide.createdAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,
     };
@@ -128,13 +128,18 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       idNumber,
       name,
       city,
-      photos,
+      photos, // Input might still be array of something, but we map to photoIds if possible
+      photoIds, // New field
       hourlyPrice,
       intro,
       tags,
       latitude,
       longitude,
     } = req.body;
+
+    // 兼容逻辑：优先用 photoIds，如果没有则忽略 photos (因为无法自动转ID)
+    // 或者假设 photos 是 ID 数组 (如果前端改了)
+    const finalPhotoIds = (Array.isArray(photoIds) ? photoIds : []) as number[];
 
     console.log('Update Guide Profile:', { userId: user.id, latitude, longitude });
 
@@ -160,7 +165,7 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       return;
     }
 
-    // 验证小时价格
+    // 验证价格 (mapped to expectedPrice)
     if (hourlyPrice !== undefined && hourlyPrice !== null) {
       const price = Number(hourlyPrice);
       if (isNaN(price) || price < 0) {
@@ -169,20 +174,13 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       }
     }
 
-    // 验证照片数量（最多5张）
-    if (photos && Array.isArray(photos) && photos.length > 5) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '照片最多上传5张');
-      return;
-    }
-
     // 查找当前用户的地陪信息
     const currentGuide = await findGuideByUserId(user.id);
 
     // 检查身份证号是否已被其他用户使用
-    // 如果是更新操作且身份证号未改变，则跳过检查
-    if (!currentGuide || currentGuide.id_number !== idNumber) {
+    if (!currentGuide || currentGuide.idNumber !== idNumber) {
       const existingGuide = await findGuideByIdNumber(idNumber);
-      if (existingGuide && existingGuide.user_id !== user.id) {
+      if (existingGuide && existingGuide.userId !== user.id) {
         errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
         return;
       }
@@ -191,31 +189,33 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     let guideId: number;
 
     if (currentGuide) {
-      // 更新现有地陪信息
+      // 更新
       await updateGuide(
         user.id,
         name,
         idNumber,
         city,
         intro || null,
-        hourlyPrice || null,
+        hourlyPrice || null, // Mapped to expectedPrice
         tags || null,
-        photos || null,
+        finalPhotoIds.length > 0 ? finalPhotoIds : null,
+        null, // address
         latitude || null,
         longitude || null
       );
-      guideId = currentGuide.id;
+      guideId = currentGuide.userId;
     } else {
-      // 创建新的地陪信息
+      // 创建
       guideId = await createGuide(
         user.id,
         name,
         idNumber,
         city,
         intro || null,
-        hourlyPrice || null,
+        hourlyPrice || null, // Mapped to expectedPrice
         tags || null,
-        photos || null,
+        finalPhotoIds.length > 0 ? finalPhotoIds : null,
+        null, // address
         latitude || null,
         longitude || null
       );
@@ -234,16 +234,18 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
 
     // 返回响应
     const response = {
-      guideId: updatedGuide.id,
-      userId: updatedGuide.user_id,
+      guideId: updatedGuide.userId,
+      userId: updatedGuide.userId,
       name: updatedGuide.name,
-      idNumber: updatedGuide.id_number,
+      idNumber: updatedGuide.idNumber,
       city: updatedGuide.city,
       intro: updatedGuide.intro,
-      hourlyPrice: updatedGuide.hourly_price,
+      hourlyPrice: updatedGuide.expectedPrice, // 返回期望价格供确认
+      realPrice: updatedGuide.realPrice,
       tags: updatedGuide.tags,
-      photos: updatedGuide.photos,
-      idVerifiedAt: updatedGuide.id_verified_at,
+      photoIds: updatedGuide.photoIds,
+      photos: [],
+      idVerifiedAt: updatedGuide.idVerifiedAt,
       latitude: updatedGuide.latitude ? Number(updatedGuide.latitude) : undefined,
       longitude: updatedGuide.longitude ? Number(updatedGuide.longitude) : undefined,
     };
@@ -294,16 +296,18 @@ export async function getGuideProfile(req: Request, res: Response): Promise<void
 
     // 返回响应
     const response = {
-      guideId: guide.id,
-      userId: guide.user_id,
+      guideId: guide.userId,
+      userId: guide.userId,
       name: guide.name,
-      idNumber: guide.id_number,
+      idNumber: guide.idNumber,
       city: guide.city,
       intro: guide.intro,
-      hourlyPrice: guide.hourly_price,
+      hourlyPrice: guide.expectedPrice, // 展示期望价格
+      realPrice: guide.realPrice,
       tags: guide.tags,
-      photos: guide.photos,
-      idVerifiedAt: guide.id_verified_at,
+      photoIds: guide.photoIds,
+      photos: [],
+      idVerifiedAt: guide.idVerifiedAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,
     };
