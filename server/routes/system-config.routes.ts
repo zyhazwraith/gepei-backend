@@ -4,8 +4,8 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-// GET /api/v1/system-configs?keys=...
-// Public access, whitelist filtered by service
+// GET /api/v1/system-configs
+// Public access, always returns all whitelisted configs
 router.get('/', asyncHandler(getPublicConfigs));
 
 export default router;

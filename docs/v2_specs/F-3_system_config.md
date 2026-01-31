@@ -20,16 +20,17 @@
 
 ### 2.1 API Design
 
-#### 2.1.1 Get Public Config
+#### 2.1.1 Get Public Configs
 *   **Endpoint**: `GET /api/v1/system-configs`
 *   **Auth**: Public (No Token Required)
-*   **Query**: `?keys=cs_qrcode_url` (Optional, filter specific keys)
+*   **Query**: None (Always returns all whitelisted configs)
 *   **Response**:
     ```json
     {
       "code": 0,
       "data": {
-        "cs_qrcode_url": "/uploads/system/qrcode.png?t=171..."
+        "cs_qrcode_url": "/uploads/system/qrcode.png?t=171...",
+        "cs_phone": "13800000000"
       }
     }
     ```
