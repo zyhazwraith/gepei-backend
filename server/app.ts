@@ -52,8 +52,10 @@ export function createApp(): Application {
   app.use('/api/v1/admin', adminRoutes);
 
   // F-3: System Config Routes
+  // Public GET /api/v1/system-configs
   app.use('/api/v1/system-configs', systemConfigRoutes);
-  app.use('/api/v1/admin/system-configs', systemConfigRoutes);
+  
+  // Note: Admin PUT /api/v1/admin/system-configs is now mounted in adminRoutes
 
   // 404 处理 (API)
   app.use('/api/*', notFoundHandler);

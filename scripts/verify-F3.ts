@@ -74,9 +74,7 @@ async function verifySystemConfig() {
   // 3. Get System Config (via Public Config API)
   console.log('\nStep 3: Getting Public Configs...');
   try {
-    const res = await axios.get(`${API_URL}/system-configs`, {
-      params: { keys: 'cs_qrcode_url,cs_phone' }
-    });
+    const res = await axios.get(`${API_URL}/system-configs`);
     console.log('✅ Get Success:', res.data.data);
     
     if (res.data.data.cs_qrcode_url !== qrUrl) {
@@ -91,8 +89,8 @@ async function verifySystemConfig() {
     process.exit(1);
   }
 
-  // 4. Test Whitelist (Try to get a non-whitelisted key if any, or verify whitelist behavior)
-  // Let's manually insert a secret config and try to fetch it
+  // 4. Test Whitelist (Verify secret key is NOT returned)
+  // Let's manually insert a secret config and ensure it's not in the full response
   console.log('\nStep 4: Testing Whitelist...');
   try {
     // Direct DB insert
@@ -102,12 +100,10 @@ async function verifySystemConfig() {
         description: 'Should not be visible'
     }).onDuplicateKeyUpdate({ set: { value: 'hidden_value' } });
 
-    // Try to fetch it
-    const res = await axios.get(`${API_URL}/system-configs`, {
-        params: { keys: 'secret_admin_key' }
-    });
+    // Try to fetch all configs
+    const res = await axios.get(`${API_URL}/system-configs`);
     
-    // Should return empty object or null for that key, NOT the value
+    // Should NOT contain the secret key
     if (res.data.data.secret_admin_key) {
         throw new Error('❌ Whitelist Failed: Secret key leaked!');
     }

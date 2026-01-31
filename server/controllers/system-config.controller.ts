@@ -5,11 +5,8 @@ import { ValidationError } from '../utils/errors.js';
 
 export const getPublicConfigs = async (req: Request, res: Response) => {
   try {
-    // Parse query param ?keys=a,b,c
-    const keysQuery = req.query.keys as string;
-    const keys = keysQuery ? keysQuery.split(',').map(k => k.trim()).filter(k => k) : undefined;
-
-    const data = await SystemConfigService.getConfigs(keys, true); // true = enforce whitelist
+    // isPublic = true, enforce whitelist, ignore req.query.keys
+    const data = await SystemConfigService.getConfigs(undefined, true); 
 
     res.json({
       code: 0,

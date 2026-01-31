@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { asyncHandler } from '../middleware/errorHandler';
-import { authenticate, authorize } from '../middleware/auth.middleware';
-import * as adminController from '../controllers/admin.controller';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { authenticate, authorize, requireAdmin } from '../middleware/auth.middleware.js';
+import * as adminController from '../controllers/admin.controller.js';
+import { updateConfigs } from '../controllers/system-config.controller.js';
 
 const router = Router();
 
@@ -27,5 +28,10 @@ router.post('/orders/:id/assign', asyncHandler(adminController.assignGuide));
 
 // GET /api/v1/admin/users - 获取所有用户
 router.get('/users', asyncHandler(adminController.getUsers));
+
+// PUT /api/v1/admin/system-configs - 更新系统配置 (Admin Only)
+// 注意：authorize(['admin', 'cs']) 允许客服，但 System Config 应该只允许 Admin
+// 所以我们额外叠加 requireAdmin 中间件
+router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));
 
 export default router;

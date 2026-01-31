@@ -24,19 +24,9 @@ export class SystemConfigService {
     let queryKeys = keys;
 
     if (isPublic) {
-      // 如果是 Public 调用
-      if (queryKeys && queryKeys.length > 0) {
-        // 1. 如果请求指定了 key，则必须全在白名单内，过滤掉非法的
-        queryKeys = queryKeys.filter(k => PUBLIC_KEYS_WHITELIST.includes(k));
-      } else {
-        // 2. 如果没指定 key，则默认返回所有白名单内的配置
-        queryKeys = PUBLIC_KEYS_WHITELIST;
-      }
-
-      // 如果过滤后为空（且原请求不为空），说明请求的全是非法 key，直接返回空
-      if (keys && keys.length > 0 && queryKeys.length === 0) {
-        return {};
-      }
+      // 极简方案：如果是 Public 调用，无视 keys，直接返回所有白名单内的配置
+      // 这样前端无需维护 key 列表，后端也无需做复杂的交集运算
+      queryKeys = PUBLIC_KEYS_WHITELIST;
     }
 
     // 构建查询
