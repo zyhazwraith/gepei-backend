@@ -80,6 +80,22 @@
 
 ---
 
-## 4. Frontend Plan (Later)
-*   **Admin**: "系统设置"页面，包含一个 ImageUploader 组件。
-*   **Client**: "联系客服"弹窗，读取 `cs_qrcode_url`。
+## 4. Frontend Implementation
+
+### 4.1 Page Design
+*   **Path**: `/admin/settings`
+*   **Structure**:
+    *   Card: **System Settings**
+        *   ImageUploader: `cs_qrcode_url` (WeChat QR Code)
+    *   **Action**: Save Button
+
+### 4.2 Components
+*   **ImageUploader**: Reuses `Attachment API` (`POST /attachments/system`).
+    *   Props: `onUploadSuccess(url: string)`
+    *   Flow: Upload -> Get URL -> Set Form Value.
+
+### 4.3 Implementation Steps
+1.  **API**: Add `getPublicConfigs` & `updateSystemConfigs` to `api.ts`.
+2.  **Page**: Create `SettingsPage.tsx` using `react-hook-form`.
+3.  **Route**: Register `/admin/settings`.
+
