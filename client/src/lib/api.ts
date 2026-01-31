@@ -389,4 +389,32 @@ export async function selectGuide(orderId: number, guideId: number): Promise<Api
   return apiClient.post(`/orders/${orderId}/select-guide`, { guideId });
 }
 
+// ==================== F-3: System Config API ====================
+
+export interface SystemConfigs {
+  [key: string]: string | null;
+}
+
+export interface UpdateSystemConfigRequest {
+  configs: {
+    key: string;
+    value: string;
+    description?: string;
+  }[];
+}
+
+/**
+ * 获取系统配置 (Public)
+ */
+export async function getPublicConfigs(): Promise<ApiResponse<SystemConfigs>> {
+  return apiClient.get('/system-configs');
+}
+
+/**
+ * 更新系统配置 (Admin)
+ */
+export async function updateSystemConfigs(data: UpdateSystemConfigRequest): Promise<ApiResponse<any>> {
+  return apiClient.put('/admin/system-configs', data);
+}
+
 export default apiClient;
