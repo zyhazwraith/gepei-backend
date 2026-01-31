@@ -61,5 +61,5 @@ export interface AuthResponse {
 export interface JwtPayload {
   userId: number;
   phone: string;
-  role: string;
+  role: 'user' | 'admin' | 'cs';
 }
