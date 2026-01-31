@@ -14,9 +14,11 @@
     - *User Story*: 系统提供统一的文件上传、压缩和存储服务。
     - *Backend*: [x] Service with Sharp, [x] Controller with Strategy, [x] Routes with RBAC.
     - *Verification*: [x] scripts/verify-F0.ts (Avatar Overwrite & System Config).
-- [ ] **[F-1] 实现角色鉴权 (RBAC)** `[PRD 3.4]`
+- [x] **[F-1] 实现角色鉴权 (RBAC)** `[PRD 3.4]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/F-1_rbac.md)
     - *User Story*: 系统根据 User `role` 字段 (admin/cs) 拦截越权请求。
-    - *Tech*: Middleware update.
+    - *Tech*: Middleware update, Types update.
+    - *Verification*: [x] scripts/verify-rbac.ts (Admin/CS/User Matrix).
 - [ ] **[F-2] 地陪资料升级 (Guide Profile)** `[PRD 3.3]`
     - *User Story*: 地陪可录入 LBS (lat/lng) 和相册；Admin 可查看并审核。
     - *Tech*: API update (`updateProfile`).
