@@ -33,12 +33,6 @@ export function createApp(): Application {
     });
   });
 
-  // [BACKEND] Static Check Log
-  app.use('/uploads', (req, res, next) => {
-    console.log(`[BACKEND-STATIC] Request for: ${req.url}`);
-    next();
-  });
-
   // 静态文件服务（上传的图片）
   app.use('/uploads', express.static('uploads'));
 
