@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { getPublicConfigs, updateSystemConfigs } from "@/lib/api";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import AdminLayout from "@/components/layouts/AdminLayout";
 
 // Form Schema
 // PRD 5.3.1 Only mentions QR Code
@@ -70,64 +71,63 @@ export default function SettingsPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
+      <AdminLayout title="系统设置">
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">系统设置</h1>
-        <p className="text-muted-foreground">管理平台全局参数与联系方式。</p>
+    <AdminLayout title="系统设置">
+      <div className="space-y-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="system-config-form">
+            
+            {/* Card 1: 联系方式 */}
+            <Card className="bg-white text-slate-900">
+              <CardHeader>
+                <CardTitle>客服联系方式</CardTitle>
+                <CardDescription>设置前台展示的微信二维码。</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-w-md">
+                  <FormField
+                    control={form.control}
+                    name="cs_qrcode_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>客服微信二维码</FormLabel>
+                        <FormControl>
+                          <div data-testid="image-uploader-wrapper">
+                            <ImageUploader 
+                              value={field.value} 
+                              onChange={field.onChange}
+                              usage="system" // Must match backend enum
+                              slot="qrcode"  // Must match backend slot
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={loading} size="lg" data-testid="submit-config-btn">
+                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Save className="w-4 h-4 mr-2" />
+                保存配置
+              </Button>
+            </div>
+
+          </form>
+        </Form>
       </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="system-config-form">
-          
-          {/* Card 1: 联系方式 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>客服联系方式</CardTitle>
-              <CardDescription>设置前台展示的微信二维码。</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="max-w-md">
-                <FormField
-                  control={form.control}
-                  name="cs_qrcode_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>客服微信二维码</FormLabel>
-                      <FormControl>
-                        <div data-testid="image-uploader-wrapper">
-                          <ImageUploader 
-                            value={field.value} 
-                            onChange={field.onChange}
-                            usage="system" // Must match backend enum
-                            slot="qrcode"  // Must match backend slot
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={loading} size="lg" data-testid="submit-config-btn">
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              <Save className="w-4 h-4 mr-2" />
-              保存配置
-            </Button>
-          </div>
-
-        </form>
-      </Form>
-    </div>
+    </AdminLayout>
   );
 }
