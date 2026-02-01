@@ -16,7 +16,7 @@ interface LocationPickerProps {
   className?: string;
 }
 
-const TENCENT_KEY = import.meta.env.VITE_TENCENT_MAP_KEY || '';
+const TENCENT_KEY = (import.meta as any).env.VITE_TENCENT_MAP_KEY || '';
 const SEARCH_URL = 'https://apis.map.qq.com/ws/place/v1/search';
 const GEOCODER_URL = 'https://apis.map.qq.com/ws/geocoder/v1/';
 const IP_LOC_URL = 'https://apis.map.qq.com/ws/location/v1/ip';

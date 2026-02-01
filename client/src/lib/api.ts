@@ -7,7 +7,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { getToken, removeToken } from '../utils/token';
 
 // API基础URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || '/api/v1';
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
@@ -111,19 +111,25 @@ export interface LoginResponse {
 export interface Guide {
   guideId: number;
   userId: number;
-  nickName: string;
+  stageName: string; // V2: Renamed from name
   idNumber: string;
   city: string;
-  intro: string | null;
-  hourlyPrice: number | null;
-  tags: string[] | null;
-  photos: string[] | null;
-  avatarUrl: string; // Ensure this is present
-  idVerifiedAt: string;
-  createdAt: string;
+  avatarId?: number;
+  avatarUrl?: string; // From join
+  intro: string;
+  hourlyPrice: number;
+  expectedPrice?: number;
+  realPrice?: number;
+  tags: string[];
+  photoIds?: number[];
+  photos: string[];
+  idVerifiedAt?: string;
   latitude?: number;
   longitude?: number;
   distance?: number;
+  address?: string;
+  nickName?: string; // From User table join
+  phone?: string;
 }
 
 export interface Pagination {

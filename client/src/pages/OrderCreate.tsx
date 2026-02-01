@@ -124,24 +124,25 @@ export default function OrderCreate() {
       } else {
         payload = {
           type: 'normal',
+          serviceDate: formData.serviceDate,
           serviceStartTime,
           duration: Number(formData.serviceHours),
           serviceAddress: formData.serviceAddress,
           serviceLat: Number(formData.serviceLat),
           serviceLng: Number(formData.serviceLng),
           guideId: parseInt(guideId!),
-          requirements: formData.requirements,
+          requirements: formData.requirements || '',
+          city: formData.city || '',
         };
       }
 
       const res = await createOrder(payload);
 
-      if (res.code === 0) {
-        toast.success("预订成功！");
-        // 跳转到订单详情页 (或列表页如果详情页未开发)
+      if (res.code === 0 && res.data) {
+        toast.success("订单创建成功");
         setLocation(`/orders/${res.data.orderId}`);
       } else {
-        toast.error(res.message || "预订失败");
+        toast.error(res.message || "创建失败");
       }
     } catch (error: any) {
       toast.error(error.message || "提交失败");

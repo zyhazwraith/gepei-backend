@@ -65,7 +65,7 @@ test.describe('Admin System Config', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           code: 0,
-          data: { url: MOCK_QR_URL }
+          data: { url: MOCK_QR_URL, id: 1001 }
         })
       });
     });

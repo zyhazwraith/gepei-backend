@@ -86,10 +86,10 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-4 py-3 mb-2">
           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white">
-            {user.nickname?.[0] || "A"}
+            {user.nickName?.[0] || "A"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user.nickname}</p>
+            <p className="text-sm font-medium text-white truncate">{user.nickName}</p>
             <p className="text-xs text-slate-500 truncate">管理员</p>
           </div>
         </div>

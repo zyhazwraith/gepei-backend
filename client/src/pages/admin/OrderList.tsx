@@ -269,10 +269,10 @@ export default function AdminOrderList() {
           )}
         </div>
 
-        {pagination && pagination.total_pages > 1 && (
+        {pagination && pagination.totalPages > 1 && (
           <div className="p-4 border-t flex items-center justify-between bg-gray-50">
             <span className="text-sm text-gray-500">
-              共 {pagination.total} 条，第 {pagination.page} / {pagination.total_pages} 页
+              共 {pagination.total} 条，第 {pagination.page} / {pagination.totalPages} 页
             </span>
             <div className="flex gap-2">
               <Button
@@ -286,8 +286,8 @@ export default function AdminOrderList() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
-                disabled={page >= pagination.total_pages || loading}
+                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={page >= pagination.totalPages || loading}
               >
                 下一页 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>

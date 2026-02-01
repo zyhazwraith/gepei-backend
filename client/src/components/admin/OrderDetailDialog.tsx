@@ -113,7 +113,8 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
               <div>
                 <h4 className="text-sm font-semibold mb-2">服务内容</h4>
                 <div className="bg-white border rounded p-3 text-sm whitespace-pre-wrap">
-                  {typeof order.content === 'string' ? order.content : JSON.stringify(order.content)}
+                  {/* @ts-ignore: content might be missing in type definition but exists in API response */}
+                  {typeof (order as any).content === 'string' ? (order as any).content : JSON.stringify((order as any).content || "")}
                 </div>
               </div>
               {order.requirements && (

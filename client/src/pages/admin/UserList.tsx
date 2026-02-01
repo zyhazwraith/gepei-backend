@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, ChevronLeft, ChevronRight, User as UserIcon, Shield, Search } from "lucide-react";
+import { Link } from "wouter";
 
 export default function AdminUserList() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -88,7 +89,7 @@ export default function AdminUserList() {
                     <TableCell className="font-mono text-gray-500">#{user.id}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">{user.nickname}</span>
+                        <span className="font-medium text-gray-900">{user.nickName}</span>
                         <span className="text-xs text-gray-500">{user.phone}</span>
                       </div>
                     </TableCell>
@@ -105,11 +106,15 @@ export default function AdminUserList() {
                     </TableCell>
                     <TableCell>
                       {user.isGuide === 1 ? (
-                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
-                          认证地陪
-                        </Badge>
+                        <Link href={`/admin/guides/${user.id}`}>
+                          <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100">
+                            认证地陪
+                          </Badge>
+                        </Link>
                       ) : (
-                        <span className="text-gray-400 text-sm">-</span>
+                        <Link href={`/admin/guides/${user.id}`}>
+                          <span className="text-gray-400 text-sm cursor-pointer hover:text-orange-500 hover:underline">审核/查看</span>
+                        </Link>
                       )}
                     </TableCell>
                     <TableCell className="font-medium text-gray-900">¥{user.balance}</TableCell>
@@ -136,10 +141,10 @@ export default function AdminUserList() {
         </div>
 
         {/* 分页器 */}
-        {pagination && pagination.total_pages > 1 && (
+        {pagination && pagination.totalPages > 1 && (
           <div className="p-4 border-t flex items-center justify-between bg-gray-50">
             <span className="text-sm text-gray-500">
-              共 {pagination.total} 条，第 {pagination.page} / {pagination.total_pages} 页
+              共 {pagination.total} 条，第 {pagination.page} / {pagination.totalPages} 页
             </span>
             <div className="flex gap-2">
               <Button
@@ -153,8 +158,8 @@ export default function AdminUserList() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
-                disabled={page >= pagination.total_pages || loading}
+                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={page >= pagination.totalPages || loading}
               >
                 下一页 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>

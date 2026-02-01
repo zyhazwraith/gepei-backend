@@ -21,7 +21,9 @@ import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminOrderList from "./pages/admin/OrderList";
 import AdminUserList from "./pages/admin/UserList";
+import AdminGuideList from "./pages/admin/GuideList";
 import AdminSettings from "./pages/admin/SettingsPage";
+import AdminGuideAudit from "./pages/admin/GuideAudit";
 
 function Router() {
   return (
@@ -45,6 +47,8 @@ function Router() {
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin/orders"} component={AdminOrderList} />
       <Route path={"/admin/users"} component={AdminUserList} />
+      <Route path={"/admin/guides"} component={AdminGuideList} />
+      <Route path={"/admin/guides/:id/audit"} component={AdminGuideAudit} />
       <Route path={"/admin/settings"} component={AdminSettings} />
 
       <Route path={"/404"} component={NotFound} />

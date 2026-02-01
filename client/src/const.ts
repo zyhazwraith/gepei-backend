@@ -1,4 +1,10 @@
-export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+export const COOKIE_NAME = "gepei_token";
+export const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+export const OAUTH_CONFIG = {
+  oauthPortalUrl: (import.meta as any).env.VITE_OAUTH_PORTAL_URL,
+  appId: (import.meta as any).env.VITE_APP_ID,
+};
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {
