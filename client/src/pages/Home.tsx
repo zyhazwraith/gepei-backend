@@ -169,18 +169,18 @@ export default function Home() {
         <div className="space-y-3">
           {recommendedGuides.map((guide) => (
             <Card
-              key={guide.id}
+              key={guide.userId}
               className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setLocation(`/guides/${guide.guideId}`)}
+              onClick={() => setLocation(`/guides/${guide.userId}`)}
             >
               <Avatar className="w-15 h-15">
-                <AvatarImage src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} alt={guide.nickName} />
-                <AvatarFallback>{guide.nickName?.[0] || 'G'}</AvatarFallback>
+                <AvatarImage src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} alt={guide.stageName || guide.nickName} />
+                <AvatarFallback>{(guide.stageName || guide.nickName)?.[0] || 'G'}</AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-foreground">{guide.nickName}</span>
+                  <span className="text-sm font-semibold text-foreground">{guide.stageName || guide.nickName}</span>
                   <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
                     认证
                   </Badge>
@@ -200,7 +200,7 @@ export default function Home() {
                 </div>
 
                 <p className="text-sm font-semibold text-primary">
-                  ¥{guide.hourlyPrice}/小时
+                  ¥{guide.price || guide.realPrice}/小时
                 </p>
               </div>
             </Card>
