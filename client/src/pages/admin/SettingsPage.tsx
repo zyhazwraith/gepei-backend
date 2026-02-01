@@ -102,11 +102,11 @@ export default function SettingsPage() {
                       <FormControl>
                         <div data-testid="image-uploader-wrapper">
                           <ImageUploader 
-                            value={field.value ? [{url: field.value}] : []} 
-                            onChange={(values) => field.onChange(values[0]?.url || "")}
+                            value={field.value ? field.value : ""} 
+                            onChange={(url) => field.onChange(url)}
                             usage="system" // Must match backend enum
                             slot="qrcode"  // Must match backend slot
-                            maxCount={1}
+                            className="w-32 h-32"
                           />
                         </div>
                       </FormControl>

@@ -57,20 +57,6 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   refunded: [], 
 };
 
-export async function getDashboardStats(req: Request, res: Response) {
-    // Placeholder implementation
-    res.json({
-        code: 0,
-        message: 'Success',
-        data: {
-            totalOrders: 0,
-            totalUsers: 0,
-            totalGuides: 0,
-            totalIncome: 0
-        }
-    });
-}
-
 /**
  * 获取所有订单列表 (管理员)
  * 
@@ -298,44 +284,6 @@ export async function listUsers(req: Request, res: Response) {
           total_pages: Math.ceil(total / limit)
         }
       },
-    });
-  } catch (error) {
-    throw error;
-  }
-}
-
-/**
- * 更新用户状态 (管理员)
- */
-export async function updateUserStatus(req: Request, res: Response) {
-  const userId = parseInt(req.params.id);
-  const { status, banReason } = req.body;
-
-  if (isNaN(userId)) {
-    throw new ValidationError('无效的用户ID');
-  }
-
-  try {
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) {
-      throw new NotFoundError('用户不存在');
-    }
-
-    if (status && !['active', 'banned'].includes(status)) {
-        throw new ValidationError('无效的状态');
-    }
-
-    await db.update(users)
-      .set({ 
-          status: status || user.status,
-          banReason: status === 'banned' ? banReason : null,
-          updatedAt: new Date()
-      })
-      .where(eq(users.id, userId));
-
-    res.json({
-      code: 0,
-      message: '用户状态更新成功'
     });
   } catch (error) {
     throw error;

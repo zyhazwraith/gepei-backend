@@ -110,7 +110,6 @@ export interface LoginResponse {
 
 export interface Guide {
   userId: number; // Primary ID (same as User ID)
-  // guideId: number; // Deprecated. Use userId.
   nickName?: string; // Fallback
   stageName: string; // V2: Main Display Name (花名)
   avatarUrl: string;
@@ -120,7 +119,6 @@ export interface Guide {
   expectedPrice?: number; // Guide's input
   realPrice?: number; // Verified price
   price?: number; // Display price (usually same as realPrice)
-  hourlyPrice?: number; // Legacy alias for price
   tags?: string[];
   photos: { id: number; url: string }[]; // V2: Object array
   distance?: number;

@@ -2,9 +2,7 @@ import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/errorHandler';
 import { 
-  getDashboardStats, 
   getUsers, 
-  updateUserStatus, 
   getOrders, 
   updateOrderStatus, 
   assignGuide 
@@ -16,9 +14,6 @@ const router = Router();
 
 // GET /api/v1/admin/users
 router.get('/users', asyncHandler(getUsers));
-
-// PUT /api/v1/admin/users/:id/status
-router.put('/users/:id/status', asyncHandler(updateUserStatus));
 
 // GET /api/v1/admin/orders
 router.get('/orders', asyncHandler(getOrders));
