@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { ErrorCodes } from '../../shared/errorCodes.js';
-import { validateIdNumber } from '../utils/idValidator.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import {
   findGuideByUserId,
@@ -106,11 +105,11 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
 }
 
 /**
- * 更新地陪资料（包含认证逻辑）
+ * 更新地陪资料
  * PUT /api/v1/guides/profile
  * 
  * Spec V2:
- * - Input: Clean fields, no compatibility hacks.
+ * - Input: Clean fields, NO idNumber.
  * - Photos: Accepts `photoIds` (number[]) only.
  */
 export async function updateGuideProfile(req: Request, res: Response): Promise<void> {
@@ -123,7 +122,6 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     }
 
     const {
-      idNumber,
       stageName, 
       city,
       photoIds, 
@@ -148,10 +146,6 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
        errorResponse(res, ErrorCodes.INVALID_PARAMS, '期望价格必须为非负数');
        return;
     }
-    if (idNumber && !validateIdNumber(idNumber)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '身份证号格式不正确');
-      return;
-    }
 
     // Ensure photoIds is an array of numbers
     const safePhotoIds = (Array.isArray(photoIds) ? photoIds : []).map((id: any) => Number(id)).filter((id: number) => !isNaN(id));
@@ -159,14 +153,9 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     // Check Existence
     const currentGuide = await findGuideByUserId(user.id);
 
-    // Unique Check for ID Number
-    if (idNumber && (!currentGuide || currentGuide.idNumber !== idNumber)) {
-      const existingGuide = await findGuideByIdNumber(idNumber);
-      if (existingGuide && existingGuide.userId !== user.id) {
-        errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
-        return;
-      }
-    }
+    // Note: idNumber logic is removed from Spec V2.
+    // We use empty string for DB persistence to satisfy NOT NULL constraints if any,
+    // but we do NOT accept it from frontend.
 
     let guideId: number;
 
@@ -175,7 +164,7 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       await updateGuide(
         user.id,
         stageName || currentGuide.stageName,
-        idNumber || currentGuide.idNumber,
+        currentGuide.idNumber, // Keep existing ID number in DB (do not update)
         city || currentGuide.city,
         intro || null,
         expectedPrice || null,
@@ -188,11 +177,8 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
       guideId = currentGuide.userId;
     } else {
       // Create
-      // V2 Policy: Allow creating without ID/Name if not provided (DB schema permitting or placeholders)
-      // Since `guides` table has NOT NULL constraints on name/idNumber, we must provide defaults if missing.
-      // This logic should ideally be in Service layer, but keeping here for now.
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      const idToSave = idNumber || ""; // Assuming empty string passes or validator logic handles it
+      const idToSave = ""; // Placeholder for DB constraint
       const cityToSave = city || "未知";
 
       guideId = await createGuide(
@@ -223,7 +209,7 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     const response = {
       userId: updatedGuide.userId,
       stageName: updatedGuide.stageName,
-      idNumber: updatedGuide.idNumber,
+      // idNumber: updatedGuide.idNumber, // Removed from V2 Response
       city: updatedGuide.city,
       address: updatedGuide.address,
       intro: updatedGuide.intro,
@@ -238,13 +224,6 @@ export async function updateGuideProfile(req: Request, res: Response): Promise<v
     successResponse(res, response);
   } catch (error: any) {
     console.error('更新地陪资料失败:', error);
-    // Unique constraint error handling
-    if (error.code === 'ER_DUP_ENTRY') {
-      if (error.message.includes('id_number')) {
-        errorResponse(res, ErrorCodes.INVALID_PARAMS, '该身份证号已被使用');
-        return;
-      }
-    }
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
 }
@@ -265,9 +244,6 @@ export async function getGuideProfile(req: Request, res: Response): Promise<void
     const guide = await findGuideByUserId(user.id);
 
     if (!guide) {
-      // 1003 = USER_NOT_FOUND, but for profile check it means "Not a guide yet"
-      // Return empty/null or specific code? Frontend expects 200 with null data or error?
-      // Spec: Return error so frontend redirects to Create page.
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪信息不存在');
       return;
     }
@@ -278,7 +254,7 @@ export async function getGuideProfile(req: Request, res: Response): Promise<void
     const response = {
       userId: guide.userId,
       stageName: guide.stageName,
-      idNumber: guide.idNumber,
+      // idNumber: guide.idNumber, // Removed from V2 Response
       city: guide.city,
       intro: guide.intro,
       expectedPrice: guide.expectedPrice,
