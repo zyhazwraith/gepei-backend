@@ -1,23 +1,26 @@
-# Feature Spec: [F-2] Guide Profile Update
+# F-2 Guide Profile Management (V2)
 
-## 1. Context & User Story
+## 1. Overview
 *   **PRD Reference**: Flow 8 (Guide Profile Edit) & Flow 10 (Admin Audit).
 *   **Goal**: Allow guides to maintain their profile (LBS, Photos, Price) and Admins to manage guide visibility/pricing.
 *   **User Stories**:
     *   **Guide**: "I want to update my photos, intro, and location so customers can find me."
     *   **Admin**: "I want to review guide profiles, set their billing price (`real_price`), and enable/disable them (`is_guide`)."
 
-## 2. Technical Design
+## 2. Technical Specification
 
-### 2.1 Database Design
-*   **Target Table**: `guides` & `users`
-*   **Key Fields**:
-    *   `users.is_guide` (Boolean): **Primary Switch**. `true` = Active/Verified, `false` = Inactive/Pending.
-    *   `guides.stage_name` (Varchar): **New**. Display name for guides (Renamed from `name`). Decoupled from `users.nickname`.
-    *   `guides.expected_price` (Int): Set by Guide (Request).
-    *   `guides.real_price` (Int): Set by Admin (Actual).
-    *   `guides.id_verified_at` (Timestamp): **Verification Record**. Records the time when `is_guide` flips to true. Used to display "Verified since...".
-    *   `guides.latitude` / `longitude` / `city` / `address`: LBS info (Stored as flat columns).
+### 2.1 Implementation Status (As of 2026-02-01)
+*   **Backend API**: ✅ **Completed & Verified**
+    *   `listPublicGuides`: Optimized with batch avatar resolution.
+    *   `getPublicGuideDetail`: Fully implemented with photos/avatar.
+    *   `getMyProfile`: Fully implemented.
+    *   `updateMyProfile`: Implemented with clean input/output.
+*   **Database**: ✅ **Migrated**
+    *   `guides` table schema updated (`stageName`, `avatarId`, `realPrice`...).
+*   **Admin Backend**: ✅ **Adapted**
+    *   Controllers updated to support V2 schema changes.
+*   **Frontend**: ❌ **Discarded / Pending**
+    *   Previous frontend branch is deprecated due to API misalignment. Needs rebuild based on current Spec.
 
 ### 2.2 API Design
 
