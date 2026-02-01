@@ -49,15 +49,9 @@ export default function GuideEdit() {
 
   // 加载现有地陪信息
   useEffect(() => {
-    // 1. 如果用户未认证为地陪，直接跳过请求，避免 404
-    if (!user?.isGuide) {
-        // 预填充部分默认值
-        setStageName(user?.nickName || '');
-        return;
-    }
-    // 强制每次进入时重新获取
+    // 强制每次进入时尝试获取
     loadGuideProfile();
-  }, [user?.isGuide]); // 依赖 user 状态
+  }, []); // 仅组件挂载时执行
 
   const loadGuideProfile = async () => {
     setInitialLoading(true);
@@ -95,7 +89,10 @@ export default function GuideEdit() {
       }
     } catch (error: any) {
       // 如果是 1003 (USER_NOT_FOUND) 错误，说明还没有地陪信息，这在"新增"场景下是正常的
-      if (error.response?.data?.code !== 1003) {
+      if (error.response?.data?.code === 1003) {
+        // 预填充部分默认值
+        setStageName(user?.nickName || '');
+      } else {
         console.error('加载地陪信息失败:', error);
         toast.error('加载信息失败，请重试');
       }
