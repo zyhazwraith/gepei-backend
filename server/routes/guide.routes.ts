@@ -14,8 +14,8 @@ router.post('/profile', asyncHandler(authenticate), asyncHandler(guideController
 // GET /api/v1/guides/profile - 获取当前用户的地陪资料
 router.get('/profile', asyncHandler(authenticate), asyncHandler(guideController.getGuideProfile));
 
-// V2: PUT /api/v1/guides/me - Update Profile
-router.put('/me', asyncHandler(authenticate), asyncHandler(guideController.updateGuideProfile));
+// PUT /api/v1/guides/profile - 更新地陪资料
+router.put('/profile', asyncHandler(authenticate), asyncHandler(guideController.updateGuideProfile));
 
 // GET /api/v1/guides/:id - 获取地陪详情（公开）
 router.get('/:id', asyncHandler(guideController.getGuideDetail));
