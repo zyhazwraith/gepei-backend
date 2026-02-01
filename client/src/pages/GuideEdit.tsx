@@ -31,8 +31,8 @@ export default function GuideEdit() {
   const [stageName, setStageName] = useState(''); // V2: Renamed from name
   const [city, setCity] = useState('');
   
-  // V2: Photos state (Array of objects with id and url)
-  const [photos, setPhotos] = useState<{ id: number; url: string }[]>([]);
+  // V2: Photos state (Array of 5 slots, nullable)
+  const [photos, setPhotos] = useState<({ id: number; url: string } | null)[]>([null, null, null, null, null]);
   // Avatar state (Single object or null)
   const [avatar, setAvatar] = useState<{ id: number; url: string } | null>(null);
   
@@ -65,9 +65,15 @@ export default function GuideEdit() {
         
         // Handle Photos
         if (data.photos && Array.isArray(data.photos)) {
-            setPhotos(data.photos.map((p: any) => 
-                typeof p === 'string' ? { id: 0, url: p } : p
-            ));
+            // Map backend photos to slots. Assuming backend returns list in order or we just fill sequentially.
+            // If backend doesn't return slot info, we just fill 0..N
+            const newPhotos: ({ id: number; url: string } | null)[] = [null, null, null, null, null];
+            data.photos.forEach((p: any, index: number) => {
+                if (index < 5) {
+                    newPhotos[index] = typeof p === 'string' ? { id: 0, url: p } : p;
+                }
+            });
+            setPhotos(newPhotos);
         }
 
         // Handle Avatar
@@ -148,8 +154,8 @@ export default function GuideEdit() {
 
     // Extract IDs
     const photoIds = photos
-        .map(p => p.id)
-        .filter((id): id is number => id !== undefined);
+        .filter((p): p is { id: number; url: string } => p !== null && p.id !== undefined)
+        .map(p => p.id);
     
     const avatarId = avatar?.id;
 
@@ -270,39 +276,42 @@ export default function GuideEdit() {
           
           <div className="grid grid-cols-3 gap-3">
             {photos.map((photo, index) => (
-              <div key={photo.id || index} className="relative aspect-square group">
-                <img
-                  src={photo.url}
-                  alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-cover rounded-lg border border-gray-200"
-                />
-                <button
-                  onClick={() => {
-                    const newPhotos = [...photos];
-                    newPhotos.splice(index, 1);
-                    setPhotos(newPhotos);
-                  }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
-                  type="button"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div key={index} className="aspect-square">
+                {photo ? (
+                  <div className="relative w-full h-full group">
+                    <img
+                      src={photo.url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      onClick={() => {
+                        const newPhotos = [...photos];
+                        newPhotos[index] = null;
+                        setPhotos(newPhotos);
+                      }}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
+                      type="button"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <ImageUploader
+                    usage="guide_photo"
+                    slot={String(index)} // Pass slot explicitly
+                    onChange={(url, id) => {
+                      if (url && id) {
+                        const newPhotos = [...photos];
+                        newPhotos[index] = { id, url };
+                        setPhotos(newPhotos);
+                      }
+                    }}
+                    className="w-full h-full"
+                  />
+                )}
               </div>
             ))}
-            
-            {photos.length < 5 && (
-              <div className="aspect-square">
-                <ImageUploader
-                  usage="guide_photo"
-                  onChange={(url, id) => {
-                    if (url && id) {
-                      setPhotos([...photos, { id, url }]);
-                    }
-                  }}
-                  className="w-full h-full"
-                />
-              </div>
-            )}
           </div>
         </div>
 
