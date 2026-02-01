@@ -9,32 +9,9 @@ import {
   updateGuide,
   resolvePhotoUrls,
 } from '../models/guide.model.js';
-
-/**
- * ==============================================================================
- * V2 GUIDE API SPECIFICATION (V2 地陪接口规范)
- * ==============================================================================
- * 
- * 1. Public List (公开列表)
- *    - GET /api/v1/guides
- *    - Filter: 仅展示 status=verified (已审核) 的地陪。
- *    - Fields: userId, stageName, city, intro(摘要), tags, price(realPrice), avatarUrl, lat/lng, distance.
- * 
- * 2. Public Detail (公开详情)
- *    - GET /api/v1/guides/:id
- *    - Fields: List字段 + photos(完整URL), intro(完整), expectedPrice(可选展示).
- * 
- * 3. My Profile (我的资料)
- *    - GET /api/v1/guides/profile
- *    - Fields: 全量字段 (realPrice, expectedPrice, address, photos[{id,url}]...).
- * 
- * 4. Update Profile (更新资料)
- *    - PUT /api/v1/guides/profile
- *    - Input: stageName, city, photoIds, expectedPrice, intro, tags, lat/lng, address.
- *    - Output: Success (无数据返回).
- * 
- * ==============================================================================
- */
+import { db } from '../db/index.js';
+import { users, attachments } from '../db/schema.js';
+import { inArray, eq } from 'drizzle-orm';
 
 /**
  * 获取地陪列表（公开接口）
@@ -49,47 +26,59 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    // TODO: Improve Model to support 'verified' filter natively.
-    // Current findAllGuides returns all. We filter in memory or update Model?
-    // For MVP/V2, let's assume findAllGuides is updated or we filter here.
-    // But `findAllGuides` is complex LBS query.
-    // Let's pass a flag `onlyVerified: true` to findAllGuides (need to check model definition).
-    // Checking model... `findAllGuides` has `onlyVerified` param? 
-    // Previous read showed `findAllGuides(page, pageSize, city, keyword, lat, lng)`.
-    // We should probably filter in memory if model update is out of scope, OR assume model returns all and we filter.
-    // But pagination will be wrong if we filter in memory.
-    
-    // Assumption: findAllGuides returns mixed.
-    // Let's rely on the result and filter.
-    
     const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng);
 
     // Filter Verified Only (Business Rule)
-    // Condition: isGuide=true (from users table join) AND realPrice > 0
-    // Note: findAllGuides result `g` has `isGuide`?
-    // Let's check model return type. Usually it joins user.
+    const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
+
+    // Batch resolve avatars
+    // 1. Get all user IDs
+    const userIds = verifiedGuides.map(g => g.userId);
     
-    // Mapping & Filtering
-    const list = guides
-        .filter(g => g.realPrice && g.realPrice > 0) // Basic filter: must have system price
-        .map(g => ({
+    // 2. Fetch avatarIds from users table
+    const userAvatars = userIds.length > 0 ? await db
+      .select({ userId: users.id, avatarId: users.avatarId })
+      .from(users)
+      .where(inArray(users.id, userIds)) : [];
+      
+    // 3. Collect non-null avatar IDs
+    const avatarIds = userAvatars
+      .map(u => u.avatarId)
+      .filter((id): id is number => id !== null);
+      
+    // 4. Resolve URLs for these avatar IDs
+    const avatarMap = new Map<number, string>();
+    if (avatarIds.length > 0) {
+       const resolved = await resolvePhotoUrls(avatarIds);
+       resolved.forEach(p => avatarMap.set(p.id, p.url));
+    }
+    
+    // 5. Create UserId -> AvatarUrl Map
+    const userAvatarUrlMap = new Map<number, string>();
+    userAvatars.forEach(u => {
+        if (u.avatarId && avatarMap.has(u.avatarId)) {
+            userAvatarUrlMap.set(u.userId, avatarMap.get(u.avatarId)!);
+        }
+    });
+
+    const list = verifiedGuides.map(g => ({
           userId: g.userId,
           stageName: g.stageName || g.userNickName || '匿名地陪', 
           nickName: g.userNickName || '匿名用户', 
           city: g.city,
           intro: g.intro ? g.intro.substring(0, 100) : '', 
           tags: g.tags,
-          price: g.realPrice, // Return Real Price
-          avatarUrl: '', // TODO: Resolve avatar
+          price: g.realPrice, 
+          avatarUrl: userAvatarUrlMap.get(g.userId) || '', 
           latitude: g.latitude ? Number(g.latitude) : undefined,
           longitude: g.longitude ? Number(g.longitude) : undefined,
           distance: g.distance !== undefined ? Number(g.distance.toFixed(2)) : undefined,
-        }));
+    }));
 
     successResponse(res, {
       list, 
       pagination: {
-        total, // Note: total might be inaccurate after filter, but acceptable for MVP
+        total, 
         page,
         page_size: pageSize,
         total_pages: Math.ceil(total / pageSize)

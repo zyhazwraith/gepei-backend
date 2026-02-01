@@ -21,32 +21,53 @@
 
 ### 2.2 API Design
 
-#### A. Client Side (Guide)
-*   **Endpoint**: `PUT /api/v1/guides/me`
-*   **Auth**: `Role: user` (Authenticated)
-*   **Payload** (Flattened LBS for simplicity):
-    ```json
-    {
-      "stage_name": "MyStageName", // New
-      "avatar_id": 123, 
-      "photo_ids": [1, 2, 3],
-      "intro": "String",
-      "expected_price": 2000, // Cents
-      "tags": ["tag1"],
-      "latitude": 30.123456,
-      "longitude": 120.123456,
-      "city": "Hangzhou",
-      "address": "West Lake"
-    }
-    ```
-*   **Logic**: 
-    *   Updates `guides` table. 
-    *   **Removed**: `name` (Real Name), `idNumber` (Not required in V2 Guide Edit, handled in separate ID Verification flow if needed, or Admin Only).
-    *   **Renamed**: `name` -> `stageName` in Schema.
-    *   **Validation**: Frontend-only check for age.
+#### A. Public API (C-Side)
+*   **List Endpoint**: `GET /api/v1/guides`
+    *   **Logic**: Returns list of **Verified** guides (`isGuide=true` & `realPrice>0`).
+    *   **Response**:
+        ```json
+        [
+          {
+            "userId": 1,
+            "stageName": "Anna",
+            "city": "Shanghai",
+            "intro": "Short intro...",
+            "price": 30000, // realPrice (System Price)
+            "tags": ["Tag1"],
+            "avatarUrl": "http://...",
+            "latitude": 31.23,
+            "longitude": 121.47,
+            "distance": 5.2 // km (if lat/lng provided in query)
+          }
+        ]
+        ```
+*   **Detail Endpoint**: `GET /api/v1/guides/:id`
+    *   **Response**: Same as List + `photos` (full objects `[{id, url}]`) + full `intro`.
 
-#### B. Admin Side (Management)
-*   **List Endpoint**: `GET /api/v1/admin/guides` (New)
+#### B. User API (Guide Side)
+*   **Get Profile**: `GET /api/v1/guides/profile`
+    *   **Auth**: Guide Only.
+    *   **Response**: Full DB fields (`realPrice`, `expectedPrice`, `address`, `idNumber`, `photos`...).
+*   **Update Profile**: `PUT /api/v1/guides/profile`
+    *   **Auth**: Guide Only.
+    *   **Payload**:
+        ```json
+        {
+          "stageName": "MyStageName",
+          "city": "Hangzhou",
+          "intro": "Full intro...",
+          "tags": ["tag1"],
+          "expectedPrice": 2000, // User's desired price
+          "photoIds": [101, 102], // IDs only
+          "latitude": 30.12,
+          "longitude": 120.12,
+          "address": "West Lake District"
+        }
+        ```
+    *   **Response**: `{ "code": 0, "message": "更新成功" }` (No data returned).
+
+#### C. Admin API (Management)
+*   **List Endpoint**: `GET /api/v1/admin/guides`
     *   **Query**: `page`, `page_size`, `status` (all, pending, verified), `keyword`.
     *   **Returns**: List of guides including `isGuide` status.
 *   **Detail Endpoint**: `GET /api/v1/admin/guides/:userId` (New)
