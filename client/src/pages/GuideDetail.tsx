@@ -238,7 +238,7 @@ export default function GuideDetail() {
         <Button 
           size="lg" 
           className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg shadow-orange-200"
-          onClick={() => setLocation(`/orders/create?guide_id=${guide.guideId}`)}
+          onClick={() => setLocation(`/orders/create?guideId=${guide.userId}`)}
         >
           立即预订
         </Button>

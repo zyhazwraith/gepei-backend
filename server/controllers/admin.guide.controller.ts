@@ -56,23 +56,6 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const guide = await findGuideByUserId(userId);
-    if (!guide) {
-      errorResponse(res, ErrorCodes.USER_NOT_FOUND, 'Guide not found');
-      return;
-    }
-
-    // Need to fetch user info (isGuide, realName, etc) if not fully in guide object
-    // findGuideByUserId already joins users table but check what it returns.
-    // It returns mapDbRowToGuide result.
-    // We need 'isGuide' which is in users table.
-    // findGuideByUserId implementation:
-    // .leftJoin(users, ...).select({...guides, userNickName: users.nickname})
-    // It does NOT select isGuide.
-    
-    // So we need a separate query or modify findGuideByUserId.
-    // Let's do a specific query here for Admin to get everything.
-    
     const [fullProfile] = await db
       .select({
         ...getTableColumns(guides),

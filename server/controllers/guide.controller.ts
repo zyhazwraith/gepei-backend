@@ -80,13 +80,13 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
  */
 export async function getPublicGuideDetail(req: Request, res: Response): Promise<void> {
   try {
-    const guideId = parseInt(req.params.id);
-    if (isNaN(guideId)) {
+    const userId = parseInt(req.params.id); // guideId -> userId
+    if (isNaN(userId)) {
       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的地陪ID');
       return;
     }
 
-    const guide = await findGuideByUserId(guideId);
+    const guide = await findGuideByUserId(userId);
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
@@ -200,12 +200,15 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
     const updatedGuide = await findGuideByUserId(user.id);
     successResponse(res, { 
       message: '更新成功',
-      guideId: user.id, // guideId is basically userId in this system
+      userId: user.id, // guideId -> userId
       data: updatedGuide
     });
 
   } catch (error) {
     console.error('更新地陪资料失败:', error);
+    if (error instanceof Error) {
+        console.error('Error stack:', error.stack);
+    }
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
 }

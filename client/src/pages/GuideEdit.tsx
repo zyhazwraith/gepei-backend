@@ -158,7 +158,7 @@ export default function GuideEdit() {
 
     setIsSaving(true);
     try {
-      const response = await apiClient.post('/guides/profile', {
+      const response = await apiClient.put('/guides/profile', {
         stageName, // V2: Use stageName
         city,
         address,

@@ -108,7 +108,7 @@ export default function Guides() {
         ) : guides.length > 0 ? (
           guides.map((guide) => (
             <Card 
-              key={guide.guideId} 
+              key={guide.userId} 
               className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => setLocation(`/guides/${guide.userId}`)}
             >
