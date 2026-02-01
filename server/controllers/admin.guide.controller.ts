@@ -78,7 +78,6 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
         ...getTableColumns(guides),
         userNickName: users.nickname,
         isGuide: users.isGuide,
-        userAvatarId: users.avatarId,
         userPhone: users.phone, // Sensitive
       })
       .from(guides)

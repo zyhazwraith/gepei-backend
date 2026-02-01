@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/errorHandler';
 import { 
-  getUsers, 
+  listUsers, 
   getOrders, 
   updateOrderStatus, 
   assignGuide 
@@ -13,7 +13,7 @@ import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/ad
 const router = Router();
 
 // GET /api/v1/admin/users
-router.get('/users', asyncHandler(getUsers));
+router.get('/users', asyncHandler(listUsers));
 
 // GET /api/v1/admin/orders
 router.get('/orders', asyncHandler(getOrders));

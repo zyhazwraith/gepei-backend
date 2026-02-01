@@ -218,7 +218,7 @@ export async function findAllGuides(
     const guide = mapDbRowToGuide(row);
     return {
       ...guide,
-      isGuide: row.isGuide, // Pass through isGuide
+      isGuide: row.isGuide ?? false, // Pass through isGuide
       distance: row.distance ? Number(row.distance) : undefined
     };
   });

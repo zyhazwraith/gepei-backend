@@ -82,6 +82,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           // serviceHours: 0, // Removed
           duration: validated.duration, // Use validated duration
           amount: 15000, // 固定订金 150.00 -> 15000 (分)
+          guideId: req.body.guideId || 0, // V2 Temporary: Must have guideId per schema, but custom flow might not have it yet.
           content: JSON.stringify({ // V2: Store requirements in content JSON
             destination: validated.city,
             startDate: validated.serviceStartTime.split('T')[0],
