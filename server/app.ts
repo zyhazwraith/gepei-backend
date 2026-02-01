@@ -45,7 +45,7 @@ export function createApp(): Application {
   // API 路由（添加/v1版本号）
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/guides', guideRoutes);
-  app.use('/api/v1/upload', uploadRoutes); // Deprecated but kept for compat
+  // app.use('/api/v1/upload', uploadRoutes); // Deprecated in favor of attachments
   app.use('/api/v1/attachments', attachmentRoutes); // New V2 Attachment API
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);

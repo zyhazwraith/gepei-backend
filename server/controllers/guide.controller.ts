@@ -28,8 +28,9 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
 
     const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng);
 
-    // Filter Verified Only (Business Rule)
-    const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
+    // Filter Verified Only (Business Rule) - MOVED TO MODEL
+    // const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
+    const verifiedGuides = guides;
 
     // Batch resolve avatars
     // 1. Collect non-null avatar IDs directly from guide objects
@@ -150,6 +151,7 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
       latitude,
       longitude,
       address, 
+      avatarId,
     } = req.body;
 
     // Validation
@@ -184,7 +186,8 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         safePhotoIds.length > 0 ? safePhotoIds : null,
         address || null, 
         latitude || null,
-        longitude || null
+        longitude || null,
+        avatarId ? Number(avatarId) : null
       );
     } else {
       // Create
@@ -203,14 +206,20 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         safePhotoIds.length > 0 ? safePhotoIds : null,
         address || null, 
         latitude || null,
-        longitude || null
+        longitude || null,
+        avatarId ? Number(avatarId) : null
       );
     }
 
-    // Success Response (Simple)
-    successResponse(res, { message: '更新成功' });
+    // Return the guideId (and other essential info)
+    const updatedGuide = await findGuideByUserId(user.id);
+    successResponse(res, { 
+      message: '更新成功',
+      guideId: user.id, // guideId is basically userId in this system
+      data: updatedGuide
+    });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('更新地陪资料失败:', error);
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
@@ -239,7 +248,14 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
     const photos = await resolvePhotoUrls((guide.photoIds || []) as number[]);
     
     // Resolve Avatar
-    const avatarUrl = await resolveUserAvatar(guide.userId);
+    let avatarUrl = '';
+    let avatarId = guide.avatarId;
+    if (guide.avatarId) {
+        const resolved = await resolvePhotoUrls([guide.avatarId]);
+        if (resolved.length > 0) {
+            avatarUrl = resolved[0].url;
+        }
+    }
 
     const response = {
       userId: guide.userId,
@@ -252,8 +268,9 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       realPrice: guide.realPrice, // Show verified price
       expectedPrice: guide.expectedPrice, // Show my input price
       tags: guide.tags,
-      photos: photos, 
+      photos: photos, // Now returns {id, url}[]
       avatarUrl: avatarUrl,
+      avatarId: avatarId,
       idVerifiedAt: guide.idVerifiedAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,

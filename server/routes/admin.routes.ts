@@ -1,11 +1,16 @@
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.middleware';
-import { asyncHandler } from '../utils/asyncHandler';
-import { getDashboardStats } from '../controllers/admin.controller';
-import { getUsers, updateUserStatus } from '../controllers/admin.user.controller';
-import { getOrders, updateOrderStatus, assignGuide } from '../controllers/admin.controller'; // Merged admin controller
-import { updateConfigs } from '../controllers/systemConfig.controller';
-import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller';
+import { asyncHandler } from '../middleware/errorHandler';
+import { 
+  getDashboardStats, 
+  getUsers, 
+  updateUserStatus, 
+  getOrders, 
+  updateOrderStatus, 
+  assignGuide 
+} from '../controllers/admin.controller.js';
+import { updateConfigs } from '../controllers/system-config.controller.js';
+import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
 
 const router = Router();
 

@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import { db } from '../db';
 import { users, guides } from '../db/schema';
 import { eq, sql, desc, count, getTableColumns, isNull } from 'drizzle-orm';
-import { ErrorCodes } from '../../shared/errorCodes';
-import { successResponse, errorResponse } from '../utils/response';
-import { findAllGuides, findGuideByUserId, resolvePhotoUrls } from '../models/guide.model';
+import { ErrorCodes } from '../../shared/errorCodes.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { findAllGuides, findGuideByUserId, resolvePhotoUrls } from '../models/guide.model.js';
 
 /**
  * Admin Get Guide List

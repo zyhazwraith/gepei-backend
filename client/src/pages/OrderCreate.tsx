@@ -173,11 +173,11 @@ export default function OrderCreate() {
           <Card className="border-none shadow-sm overflow-hidden">
             <CardContent className="p-0 flex h-24">
               <img 
-                src={guide.photos?.[0] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 
+                src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
                 className="w-24 h-24 object-cover" 
               />
               <div className="p-3 flex flex-col justify-center">
-                <h3 className="font-bold text-gray-900">{guide.nickName}</h3>
+                <h3 className="font-bold text-gray-900">{guide.stageName || guide.nickName}</h3>
                 <p className="text-sm text-gray-500">{guide.city}</p>
                 <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
               </div>
