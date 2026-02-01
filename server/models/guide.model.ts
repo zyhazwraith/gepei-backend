@@ -218,7 +218,6 @@ export async function findAllGuides(
     const guide = mapDbRowToGuide(row);
     return {
       ...guide,
-      userId: row.userId, // Explicitly include userId
       isGuide: row.isGuide ?? false, // Pass through isGuide
       distance: row.distance ? Number(row.distance) : undefined
     };

@@ -106,7 +106,9 @@ export default function Guides() {
             </Card>
           ))
         ) : guides.length > 0 ? (
-          guides.map((guide) => (
+          guides.map((guide) => {
+            console.log('Rendering guide:', guide); // Debug log
+            return (
             <Card 
               key={guide.userId} 
               className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -162,7 +164,8 @@ export default function Guides() {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         ) : (
           <EmptyState 
             icon={Search} 
