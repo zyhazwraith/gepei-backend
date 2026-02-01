@@ -124,6 +124,7 @@ export default function SettingsPage() {
               <Save className="w-4 h-4 mr-2" />
               保存配置
             </Button>
+          </div>
           </form>
         </Form>
       </div>

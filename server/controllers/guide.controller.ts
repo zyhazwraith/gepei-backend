@@ -189,7 +189,7 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
     } else {
       // Create
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      const idToSave = ""; 
+      const idToSave = `PENDING_ID_${user.id}`;
       const cityToSave = city || "未知";
 
       await createGuide(
