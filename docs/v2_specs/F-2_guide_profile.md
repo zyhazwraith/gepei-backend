@@ -42,12 +42,12 @@
         ]
         ```
 *   **Detail Endpoint**: `GET /api/v1/guides/:id`
-    *   **Response**: Same as List + `photos` (full objects `[{id, url}]`) + full `intro`.
+    *   **Response**: Same as List + `photos` (full objects `[{id, url}]`) + full `intro` + `avatarUrl`.
 
 #### B. User API (Guide Side)
 *   **Get Profile**: `GET /api/v1/guides/profile`
     *   **Auth**: Guide Only.
-    *   **Response**: Full DB fields (`realPrice`, `expectedPrice`, `address`, `idNumber`, `photos`...).
+    *   **Response**: Full DB fields (`realPrice`, `expectedPrice`, `address`, `idNumber`, `photos`, `avatarUrl`...).
 *   **Update Profile**: `PUT /api/v1/guides/profile`
     *   **Auth**: Guide Only.
     *   **Payload**:

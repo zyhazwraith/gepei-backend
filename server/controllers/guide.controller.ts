@@ -91,6 +91,24 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
 }
 
 /**
+ * Helper to resolve single user avatar
+ */
+async function resolveUserAvatar(userId: number): Promise<string> {
+    const [user] = await db
+      .select({ avatarId: users.avatarId })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (user && user.avatarId) {
+        const resolved = await resolvePhotoUrls([user.avatarId]);
+        if (resolved.length > 0) {
+            return resolved[0].url;
+        }
+    }
+    return '';
+}
+
+/**
  * 获取地陪详情（公开接口）
  * GET /api/v1/guides/:id
  */
@@ -111,6 +129,9 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
     // Resolve Photos
     const photoIds = (guide.photoIds || []) as number[];
     const photos = await resolvePhotoUrls(photoIds);
+    
+    // Resolve Avatar
+    const avatarUrl = await resolveUserAvatar(guide.userId);
 
     const response = {
       userId: guide.userId,
@@ -122,6 +143,7 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
       expectedPrice: guide.expectedPrice || 0, // Optional
       tags: guide.tags,
       photos: photos,
+      avatarUrl: avatarUrl,
       createdAt: guide.createdAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,
@@ -244,6 +266,9 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
     }
 
     const photos = await resolvePhotoUrls((guide.photoIds || []) as number[]);
+    
+    // Resolve Avatar
+    const avatarUrl = await resolveUserAvatar(guide.userId);
 
     const response = {
       userId: guide.userId,
@@ -257,6 +282,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       expectedPrice: guide.expectedPrice, // Show my input price
       tags: guide.tags,
       photos: photos, 
+      avatarUrl: avatarUrl,
       idVerifiedAt: guide.idVerifiedAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,
