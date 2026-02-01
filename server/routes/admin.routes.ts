@@ -1,37 +1,45 @@
 import { Router } from 'express';
-import { asyncHandler } from '../middleware/errorHandler.js';
-import { authenticate, authorize, requireAdmin } from '../middleware/auth.middleware.js';
-import * as adminController from '../controllers/admin.controller.js';
-import { updateConfigs } from '../controllers/system-config.controller.js';
+import { requireAdmin } from '../middleware/auth.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
+import { getDashboardStats } from '../controllers/admin.controller';
+import { getUsers, updateUserStatus } from '../controllers/admin.user.controller';
+import { getOrders, updateOrderStatus, assignGuide } from '../controllers/admin.controller'; // Merged admin controller
+import { updateConfigs } from '../controllers/systemConfig.controller';
+import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller';
 
 const router = Router();
 
-// 所有路由都需要管理员权限 (admin or cs)
-// V2 Update: Role check should be handled per route or group if granularity is needed.
-// For now, most admin routes are for both. createCustomOrder is for both.
-router.use(authenticate, authorize(['admin', 'cs']));
+// GET /api/v1/admin/dashboard
+router.get('/dashboard', asyncHandler(getDashboardStats));
 
-// POST /api/v1/admin/custom-orders - 后台创建定制单
-router.post('/custom-orders', asyncHandler(adminController.createCustomOrder));
+// GET /api/v1/admin/users
+router.get('/users', asyncHandler(getUsers));
 
-// GET /api/v1/admin/orders - 获取所有订单
-router.get('/orders', asyncHandler(adminController.getOrders));
+// PUT /api/v1/admin/users/:id/status
+router.put('/users/:id/status', asyncHandler(updateUserStatus));
 
-// GET /api/v1/admin/orders/:id - 获取订单详情
-router.get('/orders/:id', asyncHandler(adminController.getOrderDetails));
+// GET /api/v1/admin/orders
+router.get('/orders', asyncHandler(getOrders));
 
-// PUT /api/v1/admin/orders/:id/status - 更新订单状态
-router.put('/orders/:id/status', asyncHandler(adminController.updateOrderStatus));
+// PUT /api/v1/admin/orders/:id/status
+router.put('/orders/:id/status', asyncHandler(updateOrderStatus));
 
-// POST /api/v1/admin/orders/:id/assign - 指派地陪
-router.post('/orders/:id/assign', asyncHandler(adminController.assignGuide));
-
-// GET /api/v1/admin/users - 获取所有用户
-router.get('/users', asyncHandler(adminController.getUsers));
+// POST /api/v1/admin/orders/:id/assign
+router.post('/orders/:id/assign', asyncHandler(assignGuide));
 
 // PUT /api/v1/admin/system-configs - 更新系统配置 (Admin Only)
 // 注意：authorize(['admin', 'cs']) 允许客服，但 System Config 应该只允许 Admin
 // 所以我们额外叠加 requireAdmin 中间件
 router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));
+
+// Guide Management
+// GET /api/v1/admin/guides - 获取地陪列表
+router.get('/guides', requireAdmin, asyncHandler(listGuides));
+
+// GET /api/v1/admin/guides/:userId - 获取地陪详情
+router.get('/guides/:userId', requireAdmin, asyncHandler(getGuideDetail));
+
+// PUT /api/v1/admin/guides/:userId - 更新地陪状态与定价 (Admin Only)
+router.put('/guides/:userId', requireAdmin, asyncHandler(updateGuideStatus));
 
 export default router;

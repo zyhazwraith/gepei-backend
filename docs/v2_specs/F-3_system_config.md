@@ -91,8 +91,8 @@
 
 ### 4.2 Components
 *   **ImageUploader**: Reuses `Attachment API` (`POST /attachments/system`).
-    *   Props: `onUploadSuccess(url: string)`
-    *   Flow: Upload -> Get URL -> Set Form Value.
+    *   **Props**: `value: string[]`, `onChange: (urls: string[]) => void`, `maxCount: number`.
+    *   **Flow**: Upload -> Get URL -> Update Form State (Single string wrapped in array for compatibility).
 
 ### 4.3 Implementation Steps
 1.  **API**: Add `getPublicConfigs` & `updateSystemConfigs` to `api.ts`.

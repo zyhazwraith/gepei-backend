@@ -95,6 +95,6 @@
 - [ ] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]`
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).
-- [ ] **[O-7] 审计日志查询接口 (View Audit Logs)** `[PRD 3.4.3]`
-    - *User Story*: Admin 可按时间/操作人/类型筛选查看审计日志。
-    - *Tech*: New API (`GET /admin/audit-logs`).
+- [ ] **[O-7] 审计日志系统 (Audit System)** `[PRD 3.4.3]`
+    - *User Story*: 系统记录关键操作 (如地陪审核)，Admin 可查询审计日志。
+    - *Tech*: Shared Logger Module, Frontend Viewer, API (`GET /admin/audit-logs`).
