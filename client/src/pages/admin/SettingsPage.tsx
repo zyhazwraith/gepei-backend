@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { getPublicConfigs, updateSystemConfigs } from "@/lib/api";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import AdminLayout from "@/components/layouts/AdminLayout";
 
 // Form Schema
 // PRD 5.3.1 Only mentions QR Code
@@ -70,29 +71,27 @@ export default function SettingsPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
+      <AdminLayout title="系统设置">
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">系统设置</h1>
-        <p className="text-muted-foreground">管理平台全局参数与联系方式。</p>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="system-config-form">
-          
-          {/* Card 1: 联系方式 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>客服联系方式</CardTitle>
-              <CardDescription>设置前台展示的微信二维码。</CardDescription>
-            </CardHeader>
-            <CardContent>
+    <AdminLayout title="系统设置">
+      <div className="space-y-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="system-config-form">
+            
+            {/* Card 1: 联系方式 */}
+            <Card className="bg-slate-900 border-slate-800 text-slate-100">
+              <CardHeader>
+                <CardTitle>客服联系方式</CardTitle>
+                <CardDescription className="text-slate-400">设置前台展示的微信二维码。</CardDescription>
+              </CardHeader>
+              <CardContent>
               <div className="max-w-md">
                 <FormField
                   control={form.control}
@@ -103,10 +102,11 @@ export default function SettingsPage() {
                       <FormControl>
                         <div data-testid="image-uploader-wrapper">
                           <ImageUploader 
-                            value={field.value} 
-                            onChange={field.onChange}
+                            value={field.value ? [{url: field.value}] : []} 
+                            onChange={(values) => field.onChange(values[0]?.url || "")}
                             usage="system" // Must match backend enum
                             slot="qrcode"  // Must match backend slot
+                            maxCount={1}
                           />
                         </div>
                       </FormControl>
@@ -124,10 +124,9 @@ export default function SettingsPage() {
               <Save className="w-4 h-4 mr-2" />
               保存配置
             </Button>
-          </div>
-
-        </form>
-      </Form>
-    </div>
+          </form>
+        </Form>
+      </div>
+    </AdminLayout>
   );
 }
