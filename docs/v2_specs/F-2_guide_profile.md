@@ -42,12 +42,51 @@
         ]
         ```
 *   **Detail Endpoint**: `GET /api/v1/guides/:id`
-    *   **Response**: Same as List + `photos` (full objects `[{id, url}]`) + full `intro` + `avatarUrl`.
+    *   **Response**:
+        ```json
+        {
+          "userId": 1,
+          "stageName": "Anna",
+          "city": "Shanghai",
+          "intro": "Full intro...",
+          "price": 30000,
+          "expectedPrice": 30000, // Optional
+          "tags": ["Tag1"],
+          "avatarUrl": "http://...",
+          "photos": [
+            { "id": 101, "url": "http://..." },
+            { "id": 102, "url": "http://..." }
+          ],
+          "createdAt": "2023-01-01T00:00:00Z",
+          "latitude": 31.23,
+          "longitude": 121.47
+        }
+        ```
 
 #### B. User API (Guide Side)
 *   **Get Profile**: `GET /api/v1/guides/profile`
     *   **Auth**: Guide Only.
-    *   **Response**: Full DB fields (`realPrice`, `expectedPrice`, `address`, `idNumber`, `photos`, `avatarUrl`...).
+    *   **Response**:
+        ```json
+        {
+          "userId": 1,
+          "stageName": "Anna",
+          "city": "Shanghai",
+          "address": "Detailed Address",
+          "intro": "Full intro...",
+          "realPrice": 30000,
+          "expectedPrice": 30000,
+          "idNumber": "310101...",
+          "tags": ["Tag1"],
+          "avatarUrl": "http://...",
+          "photos": [
+            { "id": 101, "url": "http://..." }
+          ],
+          "idVerifiedAt": "2023-01-01T00:00:00Z",
+          "latitude": 31.23,
+          "longitude": 121.47
+        }
+        ```
 *   **Update Profile**: `PUT /api/v1/guides/profile`
     *   **Auth**: Guide Only.
     *   **Payload**:

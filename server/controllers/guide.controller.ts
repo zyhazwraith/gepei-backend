@@ -32,35 +32,18 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
 
     // Batch resolve avatars
-    // 1. Get all user IDs
-    const userIds = verifiedGuides.map(g => g.userId);
-    
-    // 2. Fetch avatarIds from users table
-    const userAvatars = userIds.length > 0 ? await db
-      .select({ userId: users.id, avatarId: users.avatarId })
-      .from(users)
-      .where(inArray(users.id, userIds)) : [];
+    // 1. Collect non-null avatar IDs directly from guide objects
+    const avatarIds = verifiedGuides
+      .map(g => g.avatarId)
+      .filter((id): id is number => id !== null && id !== undefined);
       
-    // 3. Collect non-null avatar IDs
-    const avatarIds = userAvatars
-      .map(u => u.avatarId)
-      .filter((id): id is number => id !== null);
-      
-    // 4. Resolve URLs for these avatar IDs
+    // 2. Resolve URLs for these avatar IDs
     const avatarMap = new Map<number, string>();
     if (avatarIds.length > 0) {
        const resolved = await resolvePhotoUrls(avatarIds);
        resolved.forEach(p => avatarMap.set(p.id, p.url));
     }
     
-    // 5. Create UserId -> AvatarUrl Map
-    const userAvatarUrlMap = new Map<number, string>();
-    userAvatars.forEach(u => {
-        if (u.avatarId && avatarMap.has(u.avatarId)) {
-            userAvatarUrlMap.set(u.userId, avatarMap.get(u.avatarId)!);
-        }
-    });
-
     const list = verifiedGuides.map(g => ({
           userId: g.userId,
           stageName: g.stageName || g.userNickName || '匿名地陪', 
@@ -69,7 +52,7 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
           intro: g.intro ? g.intro.substring(0, 100) : '', 
           tags: g.tags,
           price: g.realPrice, 
-          avatarUrl: userAvatarUrlMap.get(g.userId) || '', 
+          avatarUrl: (g.avatarId && avatarMap.has(g.avatarId)) ? avatarMap.get(g.avatarId)! : '', 
           latitude: g.latitude ? Number(g.latitude) : undefined,
           longitude: g.longitude ? Number(g.longitude) : undefined,
           distance: g.distance !== undefined ? Number(g.distance.toFixed(2)) : undefined,
@@ -88,24 +71,6 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     console.error('获取地陪列表失败:', error);
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
-}
-
-/**
- * Helper to resolve single user avatar
- */
-async function resolveUserAvatar(userId: number): Promise<string> {
-    const [user] = await db
-      .select({ avatarId: users.avatarId })
-      .from(users)
-      .where(eq(users.id, userId));
-
-    if (user && user.avatarId) {
-        const resolved = await resolvePhotoUrls([user.avatarId]);
-        if (resolved.length > 0) {
-            return resolved[0].url;
-        }
-    }
-    return '';
 }
 
 /**
@@ -131,7 +96,13 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
     const photos = await resolvePhotoUrls(photoIds);
     
     // Resolve Avatar
-    const avatarUrl = await resolveUserAvatar(guide.userId);
+    let avatarUrl = '';
+    if (guide.avatarId) {
+        const resolved = await resolvePhotoUrls([guide.avatarId]);
+        if (resolved.length > 0) {
+            avatarUrl = resolved[0].url;
+        }
+    }
 
     const response = {
       userId: guide.userId,
