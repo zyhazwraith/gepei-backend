@@ -86,45 +86,44 @@ export default function SettingsPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="system-config-form">
             
             {/* Card 1: 联系方式 */}
-            <Card className="bg-white text-slate-900">
+            <Card className="bg-slate-900 border-slate-800 text-slate-100">
               <CardHeader>
                 <CardTitle>客服联系方式</CardTitle>
-                <CardDescription>设置前台展示的微信二维码。</CardDescription>
+                <CardDescription className="text-slate-400">设置前台展示的微信二维码。</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-w-md">
-                  <FormField
-                    control={form.control}
-                    name="cs_qrcode_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>客服微信二维码</FormLabel>
-                        <FormControl>
-                          <div data-testid="image-uploader-wrapper">
-                            <ImageUploader 
-                              value={field.value} 
-                              onChange={field.onChange}
-                              usage="system" // Must match backend enum
-                              slot="qrcode"  // Must match backend slot
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              <div className="max-w-md">
+                <FormField
+                  control={form.control}
+                  name="cs_qrcode_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>客服微信二维码</FormLabel>
+                      <FormControl>
+                        <div data-testid="image-uploader-wrapper">
+                          <ImageUploader 
+                            value={field.value ? [{url: field.value}] : []} 
+                            onChange={(values) => field.onChange(values[0]?.url || "")}
+                            usage="system" // Must match backend enum
+                            slot="qrcode"  // Must match backend slot
+                            maxCount={1}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={loading} size="lg" data-testid="submit-config-btn">
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                <Save className="w-4 h-4 mr-2" />
-                保存配置
-              </Button>
-            </div>
-
+          <div className="flex justify-end">
+            <Button type="submit" disabled={loading} size="lg" data-testid="submit-config-btn">
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Save className="w-4 h-4 mr-2" />
+              保存配置
+            </Button>
           </form>
         </Form>
       </div>

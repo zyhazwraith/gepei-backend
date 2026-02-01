@@ -122,6 +122,10 @@ export class AttachmentService {
     // URL with timestamp for cache busting
     const url = `/uploads/${key}?t=${Date.now()}`;
     
+    // We use MySQL, so we can't easily get the ID from ON DUPLICATE KEY UPDATE in one query consistently
+    // across drivers. Drizzle insert return type depends on driver.
+    // The safest way is to query by key after upsert.
+    
     await db.insert(attachments).values({
       uploaderId: ctx.uploaderId,
       key: key,
@@ -139,8 +143,19 @@ export class AttachmentService {
       }
     });
 
+    // Retrieve ID
+    const [record] = await db.select({ id: attachments.id })
+        .from(attachments)
+        .where(sql`${attachments.key} = ${key}`)
+        .limit(1);
+
+    if (!record) {
+        throw new Error("Failed to retrieve attachment ID after save");
+    }
+
     // 7. Return Result
     return {
+      id: record.id,
       key,
       url,
       usage: ctx.usage,

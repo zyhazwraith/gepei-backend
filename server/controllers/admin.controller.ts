@@ -15,20 +15,55 @@ const updateStatusSchema = z.object({
   force: z.boolean().optional(),
 });
 
+/**
+ * ==============================================================================
+ * V2 ADMIN WORKFLOW SPECIFICATION (V2 业务逻辑规范)
+ * ==============================================================================
+ * 
+ * 1. Admin Order Management Scope (后台订单管理范围):
+ *    - 与 `order.controller.ts` (用户端) 不同，Admin 接口具有全局视野。
+ *    - 必须包含用户信息 (User) 和地陪信息 (Guide) 的关联展示。
+ * 
+ * 2. Order Status Transition (订单状态流转):
+ *    - Pending (待支付): 初始状态。
+ *    - Paid (已支付): 用户支付完成，等待服务或指派。
+ *    - Waiting Service (待服务): 定制单特有状态，指派地陪后进入此状态。
+ *    - In Service (服务中): 订单开始执行。
+ *    - Service Ended (服务结束): 双方确认结束。
+ *    - Completed (已完成): 系统结算完成 (终态)。
+ *    - Cancelled (已取消): 用户或系统取消 (终态)。
+ *    - Refunded (已退款): 发生退款 (终态)。
+ * 
+ * 3. Custom Order Workflow (定制单流程 - V2):
+ *    - User: 提交需求 (Type=custom, Status=pending)。
+ *    - Admin: 在后台查看列表 (`getOrders`)。
+ *    - Admin: 线下联系用户与地陪，确认意向。
+ *    - Admin: 使用 `assignGuide` 接口直接指派一名地陪。
+ *      - Action: 设置 `guideId`，状态变更为 `waiting_service` (如果已支付) 或保持 `pending` (如果未支付)。
+ *      - Note: 废弃了 V1 的 "Candidates (候选人)" 模式，改为直接指派。
+ * 
+ * ==============================================================================
+ */
+
 // 状态流转规则 (Updated for V2)
 export const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ['paid', 'waiting_service', 'cancelled'], // waiting_service for custom orders assigned directly
-  paid: ['in_service', 'cancelled', 'refunded'], // Standard order paid -> in_service
+  pending: ['paid', 'waiting_service', 'cancelled'], 
+  paid: ['in_service', 'cancelled', 'refunded', 'waiting_service'], // Added waiting_service
   waiting_service: ['in_service', 'cancelled'],
-  in_service: ['service_ended', 'completed', 'cancelled'], // service_ended by guide/user?
+  in_service: ['service_ended', 'completed', 'cancelled'], 
   service_ended: ['completed'],
-  completed: [], // 终态
-  cancelled: ['pending'], // 允许重启
-  refunded: [], // 终态
+  completed: [], 
+  cancelled: ['pending'], 
+  refunded: [], 
 };
 
 /**
  * 获取所有订单列表 (管理员)
+ * 
+ * Spec:
+ * - 默认按创建时间倒序。
+ * - 支持关键词搜索 (订单号、用户手机、用户昵称)。
+ * - 返回包含 User Profile 的富文本信息。
  */
 export async function getOrders(req: Request, res: Response) {
   const page = parseInt(req.query.page as string) || 1;
@@ -53,7 +88,7 @@ export async function getOrders(req: Request, res: Response) {
     const [{ value: total }] = await db
       .select({ value: count() })
       .from(orders)
-      .leftJoin(users, eq(orders.userId, users.id)) // 必须 join 才能搜 phone
+      .leftJoin(users, eq(orders.userId, users.id)) 
       .where(and(...conditions));
 
     // 2. 分页查询
@@ -61,7 +96,7 @@ export async function getOrders(req: Request, res: Response) {
       id: orders.id,
       orderNumber: orders.orderNumber,
       userId: orders.userId,
-      orderType: orders.type, // V2: type
+      orderType: orders.type,
       status: orders.status,
       amount: orders.amount,
       serviceStartTime: orders.serviceStartTime,
@@ -77,18 +112,11 @@ export async function getOrders(req: Request, res: Response) {
     .limit(limit)
     .offset(offset);
 
-    // 3. 补充定制信息
-    const enrichedOrders = allOrders.map((order) => {
-      // Content is now just text, no parsing needed unless specifically required by older logic
-      // But per new spec, it is plain text.
-      return order;
-    });
-
     res.json({
       code: 0,
       message: '获取成功',
       data: {
-        list: enrichedOrders,
+        list: allOrders,
         pagination: {
           total,
           page,
@@ -148,7 +176,6 @@ export async function getOrderDetails(req: Request, res: Response) {
         message: '获取成功',
         data: {
             ...order,
-            // Content is already text, no parsing needed
             user: {
                 phone: order.userPhone,
                 nickName: order.userNickname
@@ -234,7 +261,6 @@ export async function getUsers(req: Request, res: Response) {
       id: users.id,
       phone: users.phone,
       userNickname: users.nickname,
-      // avatarId: users.avatarId, // Removed from users
       role: users.role,
       isGuide: users.isGuide,
       balance: users.balance,
@@ -265,84 +291,21 @@ export async function getUsers(req: Request, res: Response) {
 }
 
 // --------------------------------------------------------------------------
-// 指派地陪 (V2 Refactor)
+// 指派地陪 (V2 Core)
 // --------------------------------------------------------------------------
-export const createCustomOrder = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const validated = createCustomOrderSchema.parse(req.body);
-    const creatorId = req.user!.id; // Current Admin/CS ID
 
-    // 1. 验证用户是否存在
-    const [user] = await db.select().from(users).where(eq(users.phone, validated.userPhone));
-    if (!user) {
-      throw new NotFoundError('用户不存在，请先引导用户注册');
-    }
-
-    // 2. 验证地陪是否存在 (By Phone, Any User allowed)
-    const [guideUser] = await db.select({ id: users.id })
-        .from(users)
-        .where(eq(users.phone, validated.guidePhone));
-
-    if (!guideUser) {
-      throw new NotFoundError('指定的地陪手机号不存在');
-    }
-    const guideId = guideUser.id;
-
-    // 3. 计算金额 (Direct Cents)
-    // Spec: Amount = PricePerHour * Duration
-    const priceInCents = validated.pricePerHour; // Already in Cents
-    const totalAmount = priceInCents * validated.duration;
-
-    // 4. 创建订单
-    const orderNumber = `ORD${Date.now()}${nanoid(6).toUpperCase()}`;
-    
-    const [result] = await db.insert(orders).values({
-      orderNumber,
-      userId: user.id,
-      guideId: guideId,
-      creatorId,
-      type: 'custom',
-      status: 'pending', // 待支付
-      
-      // 金额与时长
-      pricePerHour: priceInCents,
-      duration: validated.duration,
-      amount: totalAmount,
-      
-      // 服务信息
-      serviceStartTime: new Date(validated.serviceStartTime),
-      serviceAddress: validated.serviceAddress,
-      content: validated.content,
-      requirements: validated.requirements,
-      
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    res.status(201).json({
-      code: 0,
-      message: '定制订单创建成功',
-      data: {
-        orderId: result.insertId,
-        orderNumber,
-        status: 'pending',
-        amount: totalAmount, // Cents
-        pricePerHour: priceInCents, // Cents
-        duration: validated.duration
-      }
-    });
-
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(new ValidationError('参数校验失败: ' + error.message));
-    }
-    next(error);
-  }
-};
-
+/**
+ * 指派地陪 (Admin Assign Guide)
+ * 
+ * Spec (V2):
+ * - 仅适用于 `custom` (定制) 订单。
+ * - 必须在 `pending` 或 `paid` 状态下操作。
+ * - 管理员手动选择一个 `guideId` 进行指派。
+ * - 指派成功后，状态流转为 `waiting_service` (待服务)。
+ */
 export const assignGuide = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { guideIds } = req.body; // V2: Array of guide IDs (but only 1 allowed for custom now)
+    const { guideIds } = req.body; 
     
     const orderId = parseInt(id);
     
@@ -358,35 +321,28 @@ export const assignGuide = async (req: Request, res: Response) => {
     }
 
     // 2. 检查地陪有效性
-    if (!guideIds || !Array.isArray(guideIds) || guideIds.length === 0) {
-        throw new ValidationError('请选择至少一个地陪');
+    if (!guideIds || !Array.isArray(guideIds) || guideIds.length !== 1) {
+        throw new ValidationError('V2 定制订单只能指派一个地陪');
     }
-
-    const validGuides = await db.select({ id: guides.userId }).from(guides).where(inArray(guides.userId, guideIds));
-    if (validGuides.length !== guideIds.length) {
-        throw new ValidationError('部分地陪不存在或无效');
+    
+    const guideId = guideIds[0];
+    const [guide] = await db.select({ id: guides.userId }).from(guides).where(eq(guides.userId, guideId));
+    if (!guide) {
+        throw new ValidationError('指定的地陪不存在');
     }
 
     // 3. 状态校验
+    // 允许从 pending 或 paid 状态指派
     if (order.status !== 'pending' && order.status !== 'paid') {
-        // Allow assigning if paid or pending (depending on flow)
-        // For custom orders, usually assigned by admin after user requirement submission (pending)
+         // In strict V2, maybe only allow if not cancelled/completed
     }
 
-    // 4. 根据订单类型处理
+    // 4. 执行指派
     if (order.type === 'custom') {
-        // 定制单：V2 直接指派地陪 (废弃候选人模式)
-        if (guideIds.length !== 1) {
-            throw new ValidationError('V2 定制订单只能指派一个地陪');
-        }
-        
-        const guideId = guideIds[0];
-
-        // 更新状态
         await db.update(orders)
             .set({ 
                 guideId: guideId,
-                status: 'waiting_service', // V2 status
+                status: 'waiting_service', // 明确流转状态
                 updatedAt: new Date(),
             })
             .where(eq(orders.id, orderId));

@@ -1,8 +1,27 @@
 import { db } from '../db';
-import { guides, users } from '../db/schema';
-import { eq, and, isNull, sql, desc, or, like, count, getTableColumns } from 'drizzle-orm';
+import { guides, users, attachments } from '../db/schema';
+import { eq, and, isNull, sql, desc, or, like, count, getTableColumns, inArray } from 'drizzle-orm';
 import { Guide } from '../types';
 import { parseJsonField } from '../utils/jsonHelper';
+
+/**
+ * Helper to resolve photo URLs from IDs
+ */
+export async function resolvePhotoUrls(photoIds: number[]): Promise<{ id: number; url: string }[]> {
+  if (!photoIds || photoIds.length === 0) return [];
+  
+  const photos = await db
+    .select({ id: attachments.id, url: attachments.url })
+    .from(attachments)
+    .where(inArray(attachments.id, photoIds));
+    
+  // Map back to maintain order if possible
+  const photoMap = new Map(photos.map(p => [p.id, p.url]));
+  
+  return photoIds
+    .map(id => ({ id, url: photoMap.get(id) || '' }))
+    .filter(p => p.url !== '');
+}
 
 /**
  * Helper: Map DB row to Guide entity
@@ -61,7 +80,7 @@ export async function findGuideByIdNumber(idNumber: string): Promise<Guide | nul
  */
 export async function createGuide(
   userId: number,
-  name: string,
+  stageName: string,
   idNumber: string,
   city: string,
   intro: string | null,
@@ -74,7 +93,7 @@ export async function createGuide(
 ): Promise<number> {
   await db.insert(guides).values({
     userId,
-    name,
+    stageName,
     idNumber,
     city,
     intro,
@@ -84,7 +103,7 @@ export async function createGuide(
     address,
     latitude: latitude ? String(latitude) : null,
     longitude: longitude ? String(longitude) : null,
-    idVerifiedAt: new Date(),
+    // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
   });
 
   return userId;
@@ -95,7 +114,7 @@ export async function createGuide(
  */
 export async function updateGuide(
   userId: number,
-  name: string,
+  stageName: string,
   idNumber: string,
   city: string,
   intro: string | null,
@@ -108,7 +127,7 @@ export async function updateGuide(
 ): Promise<boolean> {
   const result = await db.update(guides)
     .set({
-      name,
+      stageName,
       idNumber,
       city,
       intro,
@@ -118,7 +137,7 @@ export async function updateGuide(
       address,
       latitude: latitude ? String(latitude) : null,
       longitude: longitude ? String(longitude) : null,
-      idVerifiedAt: new Date(),
+      // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
     })
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)));
 
@@ -127,6 +146,7 @@ export async function updateGuide(
 
 /**
  * 获取所有地陪列表（支持分页和筛选）
+ * @param onlyVerified 如果为true，只返回已认证的地陪（前台使用）；如果为false，返回所有（后台使用）
  */
 export async function findAllGuides(
   page: number = 1,
@@ -134,10 +154,15 @@ export async function findAllGuides(
   city?: string,
   keyword?: string,
   userLat?: number,
-  userLng?: number
-): Promise<{ guides: (Guide & { distance?: number })[]; total: number }> {
+  userLng?: number,
+  onlyVerified: boolean = true
+): Promise<{ guides: (Guide & { distance?: number, isGuide?: boolean })[]; total: number }> {
   const offset = (page - 1) * pageSize;
   const conditions = [isNull(guides.deletedAt)];
+
+  if (onlyVerified) {
+    conditions.push(eq(users.isGuide, true));
+  }
 
   if (city) {
     conditions.push(eq(guides.city, city));
@@ -146,7 +171,7 @@ export async function findAllGuides(
   if (keyword) {
     conditions.push(
       or(
-        like(guides.name, `%${keyword}%`),
+        like(guides.stageName, `%${keyword}%`),
         like(guides.intro, `%${keyword}%`)
       )!
     );
@@ -169,6 +194,7 @@ export async function findAllGuides(
   const [countResult] = await db
     .select({ total: count() })
     .from(guides)
+    .leftJoin(users, eq(guides.userId, users.id)) // Join required for isGuide filter
     .where(and(...conditions));
     
   const total = countResult.total;
@@ -177,6 +203,7 @@ export async function findAllGuides(
     .select({
       ...getTableColumns(guides),
       userNickName: users.nickname,
+      isGuide: users.isGuide, // Include isGuide status
       distance: distanceField
     })
     .from(guides)
@@ -190,6 +217,7 @@ export async function findAllGuides(
     const guide = mapDbRowToGuide(row);
     return {
       ...guide,
+      isGuide: row.isGuide, // Pass through isGuide
       distance: row.distance ? Number(row.distance) : undefined
     };
   });

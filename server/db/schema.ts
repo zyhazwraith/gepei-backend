@@ -73,7 +73,7 @@ export const users = mysqlTable('users', {
 // 2.2 地陪表 (Guides) [V2 重构]
 export const guides = mysqlTable('guides', {
   userId: int('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 50 }).notNull(),
+  stageName: varchar('stage_name', { length: 50 }).notNull(), // V2: Renamed from name to stageName
   avatarId: int('avatar_id'), // V2: Moved from users
   idNumber: varchar('id_number', { length: 18 }).notNull().unique(),
   city: varchar('city', { length: 50 }).notNull(),
