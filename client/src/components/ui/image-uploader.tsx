@@ -6,8 +6,8 @@ import apiClient from "@/lib/api";
 
 interface ImageUploaderProps {
   value?: string;
-  onChange: (url: string) => void;
-  usage: "system" | "avatar" | "chat";
+  onChange: (url: string, id?: number) => void;
+  usage: "system" | "avatar" | "chat" | "guide_photo";
   slot?: string;
   className?: string;
 }
@@ -47,14 +47,14 @@ export function ImageUploader({
     try {
       // Use axios directly or via apiClient wrapper if it supports FormData
       // Assuming apiClient handles headers automatically
-      const res = await apiClient.post("/attachments/system", formData, {
+      const res = await apiClient.post(`/attachments/${usage}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
       if (res.code === 0 && res.data?.url) {
-        onChange(res.data.url);
+        onChange(res.data.url, res.data.id);
         toast.success("上传成功");
       } else {
         toast.error(res.message || "上传失败");

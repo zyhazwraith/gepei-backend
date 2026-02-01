@@ -5,11 +5,11 @@ import apiClient from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import CitySelector from '@/components/common/CitySelector';
 import { LocationPicker } from '@/components/common/LocationPicker';
-import { ImageUploader, ImageValue } from '@/components/ui/image-uploader';
+import { ImageUploader } from '@/components/ui/image-uploader';
 
 // 预定义的服务技能标签
 const SKILL_TAGS = [
@@ -31,9 +31,10 @@ export default function GuideEdit() {
   const [stageName, setStageName] = useState(''); // V2: Renamed from name
   const [city, setCity] = useState('');
   
-  // V2: Use ImageValue objects to track ID and URL
-  const [photos, setPhotos] = useState<ImageValue[]>([]);
-  const [avatar, setAvatar] = useState<ImageValue[]>([]);
+  // V2: Photos state (Array of objects with id and url)
+  const [photos, setPhotos] = useState<{ id: number; url: string }[]>([]);
+  // Avatar state (Single object or null)
+  const [avatar, setAvatar] = useState<{ id: number; url: string } | null>(null);
   
   const [hourlyPrice, setHourlyPrice] = useState('');
   const [realPrice, setRealPrice] = useState<number | undefined>(); // For display
@@ -77,9 +78,8 @@ export default function GuideEdit() {
 
         // Handle Avatar
         // Note: Backend might return avatarId and avatarUrl separately
-        // We construct ImageValue[]
         if (data.avatarUrl) {
-            setAvatar([{ url: data.avatarUrl, id: data.avatarId }]); // avatarId might be undefined in old response
+            setAvatar({ url: data.avatarUrl, id: data.avatarId || 0 });
         }
 
         // Map expectedPrice to input
@@ -154,7 +154,7 @@ export default function GuideEdit() {
         .map(p => p.id)
         .filter((id): id is number => id !== undefined);
     
-    const avatarId = avatar.length > 0 ? avatar[0].id : undefined;
+    const avatarId = avatar?.id;
 
     setIsSaving(true);
     try {
@@ -216,9 +216,9 @@ export default function GuideEdit() {
         <div className="flex flex-col items-center justify-center mb-6">
           <ImageUploader
              usage="avatar"
-             value={avatar}
-             onChange={setAvatar}
-             maxCount={1}
+             value={avatar?.url}
+             onChange={(url, id) => setAvatar(url ? { url, id: id || 0 } : null)}
+             className="w-24 h-24"
           />
           <p className="text-xs text-gray-500 mt-2">点击上传个人头像</p>
         </div>
@@ -270,12 +270,43 @@ export default function GuideEdit() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             我的照片（最多5张）
           </label>
-          <ImageUploader
-            usage="guide_photo"
-            value={photos}
-            onChange={setPhotos}
-            maxCount={5}
-          />
+          
+          <div className="grid grid-cols-3 gap-3">
+            {photos.map((photo, index) => (
+              <div key={photo.id || index} className="relative aspect-square group">
+                <img
+                  src={photo.url}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-full object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  onClick={() => {
+                    const newPhotos = [...photos];
+                    newPhotos.splice(index, 1);
+                    setPhotos(newPhotos);
+                  }}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
+                  type="button"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            
+            {photos.length < 5 && (
+              <div className="aspect-square">
+                <ImageUploader
+                  usage="guide_photo"
+                  onChange={(url, id) => {
+                    if (url && id) {
+                      setPhotos([...photos, { id, url }]);
+                    }
+                  }}
+                  className="w-full h-full"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 服务价格 */}

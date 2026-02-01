@@ -154,23 +154,8 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
       avatarId,
     } = req.body;
 
-    // Validation
-    if (latitude !== undefined && (isNaN(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的纬度');
-       return;
-    }
-    if (longitude !== undefined && (isNaN(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的经度');
-       return;
-    }
-    if (expectedPrice !== undefined && (isNaN(Number(expectedPrice)) || Number(expectedPrice) < 0)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '期望价格必须为非负数');
-       return;
-    }
+    const safePhotoIds = (photoIds && Array.isArray(photoIds)) ? photoIds : [];
 
-    const safePhotoIds = (Array.isArray(photoIds) ? photoIds : []).map((id: any) => Number(id)).filter((id: number) => !isNaN(id));
-
-    // Check Existence
     const currentGuide = await findGuideByUserId(user.id);
 
     if (currentGuide) {
@@ -245,6 +230,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Resolve photos
     const photos = await resolvePhotoUrls((guide.photoIds || []) as number[]);
     
     // Resolve Avatar

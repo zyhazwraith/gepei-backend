@@ -14,9 +14,6 @@ import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/ad
 
 const router = Router();
 
-// GET /api/v1/admin/dashboard
-router.get('/dashboard', asyncHandler(getDashboardStats));
-
 // GET /api/v1/admin/users
 router.get('/users', asyncHandler(getUsers));
 

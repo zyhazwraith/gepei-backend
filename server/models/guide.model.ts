@@ -39,9 +39,8 @@ function mapDbRowToGuide(row: any): Guide {
   };
 }
 
-/**
- * 根据用户ID查找地陪信息
- */
+// -------------------- Guide Profile Management --------------------
+
 export async function findGuideByUserId(userId: number): Promise<Guide | null> {
   const result = await db.select({
       ...getTableColumns(guides),
@@ -59,9 +58,6 @@ export async function findGuideByUserId(userId: number): Promise<Guide | null> {
   return mapDbRowToGuide(result[0]);
 }
 
-/**
- * 根据身份证号查找地陪
- */
 export async function findGuideByIdNumber(idNumber: string): Promise<Guide | null> {
   const result = await db.select()
     .from(guides)
