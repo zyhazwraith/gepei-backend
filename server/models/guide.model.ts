@@ -155,14 +155,13 @@ export async function findAllGuides(
   keyword?: string,
   userLat?: number,
   userLng?: number,
-  onlyVerified: boolean = true
+  isGuide?: boolean
 ): Promise<{ guides: (Guide & { distance?: number, isGuide?: boolean })[]; total: number }> {
   const offset = (page - 1) * pageSize;
   const conditions = [isNull(guides.deletedAt)];
 
-  if (onlyVerified) {
-    conditions.push(eq(users.isGuide, true));
-    conditions.push(sql`${guides.realPrice} > 0`);
+  if (isGuide !== undefined) {
+    conditions.push(eq(users.isGuide, isGuide));
   }
 
   if (city) {
@@ -204,6 +203,7 @@ export async function findAllGuides(
     .select({
       ...getTableColumns(guides),
       userNickName: users.nickname,
+      phone: users.phone, // Add phone
       isGuide: users.isGuide, // Include isGuide status
       distance: distanceField
     })
