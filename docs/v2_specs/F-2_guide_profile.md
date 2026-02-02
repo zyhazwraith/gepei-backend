@@ -11,23 +11,24 @@
 
 ### 2.1 Implementation Status (As of 2026-02-02)
 *   **Backend API**: ✅ **Completed & Verified**
-    *   `listPublicGuides`: Optimized with batch avatar resolution.
-    *   `getPublicGuideDetail`: Fully implemented with photos/avatar.
+    *   `listPublicGuides`: Optimized with `GuideService` batch enrichment.
+    *   `getPublicGuideDetail`: Returns enriched data (photos/avatar) without redundant `photoIds`.
     *   `getMyProfile`: Fully implemented.
     *   `updateMyProfile`: Implemented with clean input/output.
 *   **Database**: ✅ **Migrated**
     *   `guides` table schema updated (`stageName`, `avatarId`, `realPrice`...).
-*   **Admin Backend**: 🔄 **In Progress**
-    *   `AdminGuideService` & `AdminGuideController` refactor.
-*   **Frontend**: 🔄 **In Progress**
+*   **Admin Backend**: ✅ **Completed**
+    *   `AdminGuideService` implemented using `GuideService` for enrichment.
+    *   Supports `isGuide` filter and `phone` search.
+*   **Frontend**: ✅ **Completed**
     *   Guide Side: `GuideEdit.tsx` completed.
-    *   Admin Side: Pending implementation.
+    *   Admin Side: `GuideList.tsx` (with phone search & jump pagination) & `GuideAudit.tsx` completed.
 
 ### 2.2 API Design
 
 #### A. Public API (C-Side)
 *   **List Endpoint**: `GET /api/v1/guides`
-    *   **Logic**: Returns list of **Verified** guides (`isGuide=true` & `realPrice>0`).
+    *   **Logic**: Returns list of **Verified** guides (`isGuide=true`).
     *   **Response**:
         ```json
         [
@@ -83,6 +84,7 @@
           "idNumber": "310101...",
           "tags": ["Tag1"],
           "avatarUrl": "http://...",
+          "avatarId": 100,
           "photos": [
             { "id": 101, "url": "http://..." }
           ],
@@ -102,6 +104,7 @@
           "tags": ["tag1"],
           "expectedPrice": 2000, // User's desired price
           "photoIds": [101, 102], // IDs only
+          "avatarId": 100,
           "latitude": 30.12,
           "longitude": 120.12,
           "address": "West Lake District"
@@ -111,7 +114,7 @@
 
 #### C. Admin API (Management)
 *   **List Endpoint**: `GET /api/v1/admin/guides`
-    *   **Query**: `page`, `limit`, `status` ('pending' | 'verified' | 'all'), `keyword`, `city`.
+    *   **Query**: `page`, `limit`, `is_guide` (boolean), `keyword` (matches stageName/intro/phone), `city`.
     *   **Response** (Standard Pagination):
         ```json
         {
@@ -126,7 +129,8 @@
                 "realPrice": 300,        // System Price
                 "expectedPrice": 300,    // User Price
                 "isGuide": true,         // Status
-                "updatedAt": "2023-10-01T12:00:00Z"
+                "avatarUrl": "...",
+                "photos": [{ "id": 1, "url": "..." }] // Enriched
               }
             ],
             "pagination": {
@@ -139,7 +143,7 @@
         }
         ```
 *   **Detail Endpoint**: `GET /api/v1/admin/guides/:userId`
-    *   **Returns**: Full profile + `isGuide` status + Sensitive info.
+    *   **Returns**: Full profile + `isGuide` status + Sensitive info (phone).
     *   **Response**:
         ```json
         {
@@ -205,23 +209,24 @@ The page will maintain its current layout but with updated components:
 ## 4. Frontend Design (Admin Side)
 
 ### 4.1 Guide List Page (`client/src/pages/admin/GuideList.tsx`)
-*   **Layout**: Standard Table.
-*   **Filters**: Status (All/Pending/Verified), City, Keyword.
+*   **Layout**: Standard Table with Pagination (Jump support).
+*   **Filters**: Status Tabs (All/Pending/Verified), Keyword (Phone/Name/Intro).
 *   **Columns**:
-    1.  **Stage Name** (艺名)
-    2.  **Phone** (手机号)
-    3.  **City** (城市)
-    4.  **Price** (System/Expected)
-    5.  **Status** (Pending/Verified)
-    6.  **Action** (Audit Button)
+    1.  **ID**
+    2.  **Stage Name** (艺名)
+    3.  **Phone** (手机号)
+    4.  **City** (城市)
+    5.  **Price** (System/Expected)
+    6.  **Status** (Pending/Verified)
+    7.  **Action** (Audit/View Button)
 
 ### 4.2 Guide Audit Page (`client/src/pages/admin/GuideAudit.tsx`)
 *   **Layout**: Two Columns.
 *   **Left Panel (Profile)**:
-    *   Avatar, Stage Name, ID Number.
-    *   City, Address (Text only, no map).
+    *   Avatar, Stage Name, ID Number, Phone.
+    *   City, Address (Text only).
     *   Intro, Tags.
-    *   Photos Grid (5 slots).
+    *   Photos Grid.
 *   **Right Panel (Action)**:
     *   **Pricing**: Display `Expected Price`, Input `Real Price`.
     *   **Status**: Switch `Enable Guide Identity` (isGuide).
@@ -230,12 +235,12 @@ The page will maintain its current layout but with updated components:
 ## 5. Implementation Checklist
 
 ### Phase 1: Backend Implementation
-- [ ] **Service**: Create `AdminGuideService` with `listGuides`, `getGuideDetail`, `updateGuideStatus`.
-- [ ] **Model**: Update `findAllGuides` to support `status` enum filter.
-- [ ] **Controller**: Refactor `AdminGuideController` to use Service.
-- [ ] **Verification**: Script `scripts/verify-admin-guides.ts`.
+- [x] **Service**: Create `AdminGuideService` with `listGuides`, `getGuideDetail`, `updateGuideStatus`.
+- [x] **Optimization**: Create `GuideService` for batch data enrichment (N+1 fix).
+- [x] **Model**: Update `findAllGuides` to support `isGuide` filter and `phone` search.
+- [x] **Cleanup**: Remove `photoIds` from responses and deprecated methods.
 
 ### Phase 2: Frontend Implementation
-- [ ] **Page**: `GuideList.tsx` (Admin List).
-- [ ] **Page**: `GuideAudit.tsx` (Admin Detail).
-- [ ] **Integration**: Connect to Admin API.
+- [x] **Page**: `GuideList.tsx` (Admin List with Search & Pagination).
+- [x] **Page**: `GuideAudit.tsx` (Admin Detail with Actions).
+- [x] **Integration**: Connect to Admin API.
