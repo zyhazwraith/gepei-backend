@@ -280,6 +280,55 @@ export async function login(data: LoginRequest): Promise<ApiResponse<LoginRespon
   return apiClient.post('/auth/login', data);
 }
 
+export interface AdminGuide extends Guide {
+  phone?: string;
+  isGuide: boolean;
+  updatedAt?: string;
+}
+
+export interface GetAdminGuidesResponse {
+  list: AdminGuide[];
+  pagination: Pagination;
+}
+
+/**
+ * 获取地陪列表 (Admin)
+ * @param isGuide undefined=All, true=Verified, false=Pending
+ */
+export async function getAdminGuides(
+  page: number = 1, 
+  pageSize: number = 20, 
+  keyword?: string,
+  city?: string,
+  isGuide?: boolean
+): Promise<ApiResponse<GetAdminGuidesResponse>> {
+  const params: any = { page, page_size: pageSize };
+  if (keyword) params.keyword = keyword;
+  if (city) params.city = city;
+  if (isGuide !== undefined) params.is_guide = isGuide;
+  
+  return apiClient.get('/admin/guides', { params });
+}
+
+/**
+ * 获取地陪详情 (Admin)
+ */
+export async function getAdminGuideDetail(userId: number): Promise<ApiResponse<AdminGuide>> {
+  return apiClient.get(`/admin/guides/${userId}`);
+}
+
+/**
+ * 审核地陪 (Admin)
+ */
+export async function updateAdminGuideStatus(userId: number, data: { isGuide?: boolean; realPrice?: number }): Promise<ApiResponse<AdminGuide>> {
+  // Map camelCase to snake_case for backend
+  const payload: any = {};
+  if (data.isGuide !== undefined) payload.is_guide = data.isGuide;
+  if (data.realPrice !== undefined) payload.real_price = data.realPrice;
+  
+  return apiClient.put(`/admin/guides/${userId}`, payload);
+}
+
 export interface AdminOrder extends OrderDetailResponse {
   userPhone?: string;
   userNickname?: string;

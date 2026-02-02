@@ -5,25 +5,6 @@ import { Guide } from '../types';
 import { parseJsonField } from '../utils/jsonHelper';
 
 /**
- * Helper to resolve photo URLs from IDs
- */
-export async function resolvePhotoUrls(photoIds: number[]): Promise<{ id: number; url: string }[]> {
-  if (!photoIds || photoIds.length === 0) return [];
-  
-  const photos = await db
-    .select({ id: attachments.id, url: attachments.url })
-    .from(attachments)
-    .where(inArray(attachments.id, photoIds));
-    
-  // Map back to maintain order if possible
-  const photoMap = new Map(photos.map(p => [p.id, p.url]));
-  
-  return photoIds
-    .map(id => ({ id, url: photoMap.get(id) || '' }))
-    .filter(p => p.url !== '');
-}
-
-/**
  * Helper: Map DB row to Guide entity
  * Handles type conversions (decimal -> number, json -> object)
  */
@@ -172,7 +153,8 @@ export async function findAllGuides(
     conditions.push(
       or(
         like(guides.stageName, `%${keyword}%`),
-        like(guides.intro, `%${keyword}%`)
+        like(guides.intro, `%${keyword}%`),
+        like(users.phone, `%${keyword}%`) // Add phone search
       )!
     );
   }
