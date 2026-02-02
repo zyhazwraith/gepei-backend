@@ -214,7 +214,10 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
 
       // 3.2 更新订单状态
       await tx.update(orders)
-        .set({ status: 'paid' }) // 支付后变为 paid (待接单)
+        .set({ 
+          status: 'waiting_service', // 支付后变为 waiting_service (待服务)
+          paidAt: new Date(),
+        })
         .where(eq(orders.id, orderId));
     });
 

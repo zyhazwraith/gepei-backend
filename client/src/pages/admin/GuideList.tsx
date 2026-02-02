@@ -19,6 +19,7 @@ export default function GuideList() {
   const [keyword, setKeyword] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all"); // all, pending, verified
   const [searchTrigger, setSearchTrigger] = useState(0);
+  const [jumpPage, setJumpPage] = useState("");
 
   useEffect(() => {
     fetchGuides(page);
@@ -36,6 +37,7 @@ export default function GuideList() {
       if (res.code === 0 && res.data) {
         setGuides(res.data.list);
         setPagination(res.data.pagination);
+        setJumpPage(""); // Reset jump input on successful fetch
       }
     } catch (error) {
       toast.error("获取向导列表失败");
@@ -55,9 +57,19 @@ export default function GuideList() {
     }
   };
 
+  const handleJumpPage = () => {
+    if (!pagination) return;
+    const p = parseInt(jumpPage);
+    if (isNaN(p) || p < 1 || p > pagination.total_pages) {
+      toast.error("请输入有效的页码");
+      return;
+    }
+    setPage(p);
+  };
+
   return (
     <AdminLayout title="向导管理">
-      <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
+      <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full min-h-[600px]">
         {/* 工具栏 */}
         <div className="p-4 border-b flex flex-col gap-4">
           <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setPage(1); }}>
@@ -142,11 +154,24 @@ export default function GuideList() {
         </div>
 
         {/* 分页器 */}
-        {pagination && pagination.total_pages > 1 && (
-          <div className="p-4 border-t flex items-center justify-between bg-gray-50">
-            <span className="text-sm text-gray-500">
-              共 {pagination.total} 条，第 {pagination.page} / {pagination.total_pages} 页
-            </span>
+        {pagination && (
+          <div className="p-4 border-t flex items-center justify-between bg-gray-50 mt-auto">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">
+                共 {pagination.total} 条，第 {pagination.page} / {pagination.total_pages} 页
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">跳转到</span>
+                <Input 
+                  className="w-16 h-8 text-center" 
+                  value={jumpPage}
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleJumpPage()}
+                />
+                <Button variant="outline" size="sm" onClick={handleJumpPage} className="h-8">Go</Button>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"

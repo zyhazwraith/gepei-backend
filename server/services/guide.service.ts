@@ -56,8 +56,12 @@ export class GuideService {
           .filter(p => p.url !== '');
       }
 
+      // Remove photoIds from enriched object to avoid redundancy in API response
+      // But keep it internally if needed? Better to remove it here for clean objects.
+      const { photoIds, ...rest } = g;
+
       return {
-        ...g,
+        ...rest,
         avatarUrl,
         photos
       };

@@ -75,8 +75,11 @@ export class AdminGuideService {
     // Enrich
     const enriched = await GuideService.enrichGuide(baseGuide as any);
 
+    // Remove photoIds from response as photos contains full info
+    const { photoIds: _, ...cleanEnriched } = enriched;
+
     return {
-        ...enriched,
+        ...cleanEnriched,
         phone: fullProfile.userPhone, // Map userPhone to phone
     };
   }
