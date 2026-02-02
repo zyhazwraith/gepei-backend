@@ -21,7 +21,7 @@ export async function registerUser(user = generateUser()) {
     if (res.data.code === 0) {
       return {
         token: res.data.data.token,
-        userId: res.data.data.user_id,
+        userId: res.data.data.userId, // Fixed: backend returns camelCase userId
         user
       };
     }

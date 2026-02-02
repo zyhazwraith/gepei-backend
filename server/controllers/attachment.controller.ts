@@ -62,7 +62,7 @@ export const uploadAttachment = async (req: Request, res: Response) => {
       usage,
       contextId: finalContextId,
       slot,
-      uploaderId: userId
+      uploaderId: userId!
     });
 
     res.json({

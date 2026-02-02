@@ -28,8 +28,9 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
 
     const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng);
 
-    // Filter Verified Only (Business Rule)
-    const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
+    // Filter Verified Only (Business Rule) - MOVED TO MODEL
+    // const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
+    const verifiedGuides = guides;
 
     // Batch resolve avatars
     // 1. Collect non-null avatar IDs directly from guide objects
@@ -79,13 +80,13 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
  */
 export async function getPublicGuideDetail(req: Request, res: Response): Promise<void> {
   try {
-    const guideId = parseInt(req.params.id);
-    if (isNaN(guideId)) {
+    const userId = parseInt(req.params.id); // guideId -> userId
+    if (isNaN(userId)) {
       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的地陪ID');
       return;
     }
 
-    const guide = await findGuideByUserId(guideId);
+    const guide = await findGuideByUserId(userId);
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
@@ -150,25 +151,11 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
       latitude,
       longitude,
       address, 
+      avatarId,
     } = req.body;
 
-    // Validation
-    if (latitude !== undefined && (isNaN(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的纬度');
-       return;
-    }
-    if (longitude !== undefined && (isNaN(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的经度');
-       return;
-    }
-    if (expectedPrice !== undefined && (isNaN(Number(expectedPrice)) || Number(expectedPrice) < 0)) {
-       errorResponse(res, ErrorCodes.INVALID_PARAMS, '期望价格必须为非负数');
-       return;
-    }
+    const safePhotoIds = (photoIds && Array.isArray(photoIds)) ? photoIds : [];
 
-    const safePhotoIds = (Array.isArray(photoIds) ? photoIds : []).map((id: any) => Number(id)).filter((id: number) => !isNaN(id));
-
-    // Check Existence
     const currentGuide = await findGuideByUserId(user.id);
 
     if (currentGuide) {
@@ -184,12 +171,13 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         safePhotoIds.length > 0 ? safePhotoIds : null,
         address || null, 
         latitude || null,
-        longitude || null
+        longitude || null,
+        avatarId ? Number(avatarId) : null
       );
     } else {
       // Create
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      const idToSave = ""; 
+      const idToSave = `PENDING_ID_${user.id}`;
       const cityToSave = city || "未知";
 
       await createGuide(
@@ -203,15 +191,24 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         safePhotoIds.length > 0 ? safePhotoIds : null,
         address || null, 
         latitude || null,
-        longitude || null
+        longitude || null,
+        avatarId ? Number(avatarId) : null
       );
     }
 
-    // Success Response (Simple)
-    successResponse(res, { message: '更新成功' });
+    // Return the guideId (and other essential info)
+    const updatedGuide = await findGuideByUserId(user.id);
+    successResponse(res, { 
+      message: '更新成功',
+      userId: user.id, // guideId -> userId
+      data: updatedGuide
+    });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('更新地陪资料失败:', error);
+    if (error instanceof Error) {
+        console.error('Error stack:', error.stack);
+    }
     errorResponse(res, ErrorCodes.INTERNAL_ERROR);
   }
 }
@@ -236,10 +233,18 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Resolve photos
     const photos = await resolvePhotoUrls((guide.photoIds || []) as number[]);
     
     // Resolve Avatar
-    const avatarUrl = await resolveUserAvatar(guide.userId);
+    let avatarUrl = '';
+    let avatarId = guide.avatarId;
+    if (guide.avatarId) {
+        const resolved = await resolvePhotoUrls([guide.avatarId]);
+        if (resolved.length > 0) {
+            avatarUrl = resolved[0].url;
+        }
+    }
 
     const response = {
       userId: guide.userId,
@@ -252,8 +257,9 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       realPrice: guide.realPrice, // Show verified price
       expectedPrice: guide.expectedPrice, // Show my input price
       tags: guide.tags,
-      photos: photos, 
+      photos: photos, // Now returns {id, url}[]
       avatarUrl: avatarUrl,
+      avatarId: avatarId,
       idVerifiedAt: guide.idVerifiedAt,
       latitude: guide.latitude ? Number(guide.latitude) : undefined,
       longitude: guide.longitude ? Number(guide.longitude) : undefined,

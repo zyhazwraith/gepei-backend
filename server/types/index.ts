@@ -35,7 +35,8 @@ export interface LoginRequest {
 // 地陪信息接口 (V2) - CamelCase
 export interface Guide {
   userId: number;
-  name: string;
+  stageName: string; // V2: Renamed from name
+  avatarId: number | null; // V2: Added
   idNumber: string;
   city: string;
   address: string | null;

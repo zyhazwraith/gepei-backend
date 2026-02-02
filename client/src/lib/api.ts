@@ -109,22 +109,38 @@ export interface LoginResponse {
 }
 
 export interface Guide {
-  guideId: number;
-  userId: number;
-  nickName: string;
-  idNumber: string;
+  userId: number; // Primary ID (same as User ID)
+  nickName?: string; // Fallback
+  stageName: string; // V2: Main Display Name (花名)
+  avatarUrl: string;
+  avatarId?: number; // Attachment ID
   city: string;
-  intro: string | null;
-  hourlyPrice: number | null;
-  tags: string[] | null;
-  photos: string[] | null;
-  avatarUrl: string; // Ensure this is present
-  idVerifiedAt: string;
-  createdAt: string;
+  intro?: string;
+  expectedPrice?: number; // Guide's input
+  realPrice?: number; // Verified price
+  price?: number; // Display price (usually same as realPrice)
+  tags?: string[];
+  photos: { id: number; url: string }[]; // V2: Object array
+  distance?: number;
+  idNumber?: string; // Sensitive
+  idVerifiedAt?: string;
   latitude?: number;
   longitude?: number;
-  distance?: number;
+  address?: string;
 }
+
+export const uploadAttachment = async (file: File, usage: 'avatar' | 'guide_photo' | 'id_card_front' | 'id_card_back') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post(`/attachments/${usage}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+// Removed deprecated uploadFile
+// export const uploadFile = async (file: File) => { ... }
 
 export interface Pagination {
   total: number;

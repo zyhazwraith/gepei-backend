@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '../db';
-import { orders, users, guides } from '../db/schema';
+import { db } from '../db/index.js';
+import { orders, users, guides } from '../db/schema.js';
 import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
@@ -236,9 +236,9 @@ export async function updateOrderStatus(req: Request, res: Response, next: NextF
 
 
 /**
- * 获取所有用户列表 (管理员)
+ * 管理员获取用户列表
  */
-export async function getUsers(req: Request, res: Response) {
+export async function listUsers(req: Request, res: Response) {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const keyword = req.query.keyword as string;

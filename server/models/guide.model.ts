@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { guides, users, attachments } from '../db/schema';
-import { eq, and, isNull, sql, desc, or, like, count, getTableColumns, inArray } from 'drizzle-orm';
+import { eq, and, isNull, sql, desc, or, like, count, getTableColumns, inArray, gt } from 'drizzle-orm';
 import { Guide } from '../types';
 import { parseJsonField } from '../utils/jsonHelper';
 
@@ -39,9 +39,8 @@ function mapDbRowToGuide(row: any): Guide {
   };
 }
 
-/**
- * 根据用户ID查找地陪信息
- */
+// -------------------- Guide Profile Management --------------------
+
 export async function findGuideByUserId(userId: number): Promise<Guide | null> {
   const result = await db.select({
       ...getTableColumns(guides),
@@ -59,9 +58,6 @@ export async function findGuideByUserId(userId: number): Promise<Guide | null> {
   return mapDbRowToGuide(result[0]);
 }
 
-/**
- * 根据身份证号查找地陪
- */
 export async function findGuideByIdNumber(idNumber: string): Promise<Guide | null> {
   const result = await db.select()
     .from(guides)
@@ -89,7 +85,8 @@ export async function createGuide(
   photoIds: number[] | null,
   address: string | null = null,
   latitude: number | null = null,
-  longitude: number | null = null
+  longitude: number | null = null,
+  avatarId: number | null = null
 ): Promise<number> {
   await db.insert(guides).values({
     userId,
@@ -103,6 +100,7 @@ export async function createGuide(
     address,
     latitude: latitude ? String(latitude) : null,
     longitude: longitude ? String(longitude) : null,
+    avatarId,
     // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
   });
 
@@ -123,7 +121,8 @@ export async function updateGuide(
   photoIds: number[] | null,
   address: string | null = null,
   latitude: number | null = null,
-  longitude: number | null = null
+  longitude: number | null = null,
+  avatarId: number | null = null
 ): Promise<boolean> {
   const result = await db.update(guides)
     .set({
@@ -137,6 +136,7 @@ export async function updateGuide(
       address,
       latitude: latitude ? String(latitude) : null,
       longitude: longitude ? String(longitude) : null,
+      avatarId,
       // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
     })
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)));
@@ -162,6 +162,7 @@ export async function findAllGuides(
 
   if (onlyVerified) {
     conditions.push(eq(users.isGuide, true));
+    conditions.push(sql`${guides.realPrice} > 0`);
   }
 
   if (city) {
@@ -217,7 +218,7 @@ export async function findAllGuides(
     const guide = mapDbRowToGuide(row);
     return {
       ...guide,
-      isGuide: row.isGuide, // Pass through isGuide
+      isGuide: row.isGuide ?? false, // Pass through isGuide
       distance: row.distance ? Number(row.distance) : undefined
     };
   });

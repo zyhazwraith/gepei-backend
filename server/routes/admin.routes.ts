@@ -1,22 +1,19 @@
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.middleware';
-import { asyncHandler } from '../utils/asyncHandler';
-import { getDashboardStats } from '../controllers/admin.controller';
-import { getUsers, updateUserStatus } from '../controllers/admin.user.controller';
-import { getOrders, updateOrderStatus, assignGuide } from '../controllers/admin.controller'; // Merged admin controller
-import { updateConfigs } from '../controllers/systemConfig.controller';
-import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller';
+import { asyncHandler } from '../middleware/errorHandler';
+import { 
+  listUsers, 
+  getOrders, 
+  updateOrderStatus, 
+  assignGuide 
+} from '../controllers/admin.controller.js';
+import { updateConfigs } from '../controllers/system-config.controller.js';
+import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
 
 const router = Router();
 
-// GET /api/v1/admin/dashboard
-router.get('/dashboard', asyncHandler(getDashboardStats));
-
 // GET /api/v1/admin/users
-router.get('/users', asyncHandler(getUsers));
-
-// PUT /api/v1/admin/users/:id/status
-router.put('/users/:id/status', asyncHandler(updateUserStatus));
+router.get('/users', asyncHandler(listUsers));
 
 // GET /api/v1/admin/orders
 router.get('/orders', asyncHandler(getOrders));

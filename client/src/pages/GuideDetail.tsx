@@ -145,7 +145,7 @@ export default function GuideDetail() {
           </Carousel>
         ) : (
           <img 
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 
+            src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 
             className="w-full h-full object-cover"
             alt="Default Avatar" 
           />
@@ -157,15 +157,15 @@ export default function GuideDetail() {
         {/* 标题信息 */}
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              {guide.nickName}
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-testid="guide-detail-name">
+              {guide.stageName || guide.nickName}
               <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
                 <ShieldCheck className="w-3 h-3 mr-1" /> 已认证
               </Badge>
             </h1>
             <div className="flex items-center text-gray-500 mt-1 text-sm">
               <MapPin className="w-4 h-4 mr-1" />
-              {guide.city}
+              <span data-testid="guide-detail-city">{guide.city}</span>
               {displayDistance !== undefined && (
                 <>
                   <span className="mx-2">•</span>
@@ -178,8 +178,8 @@ export default function GuideDetail() {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-orange-500">
-              {guide.hourlyPrice ? `¥${guide.hourlyPrice}` : "面议"}
+            <div className="text-2xl font-bold text-orange-500" data-testid="guide-detail-price">
+              {guide.price ? `¥${guide.price}` : "面议"}
               <span className="text-sm text-gray-400 font-normal">/小时</span>
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function GuideDetail() {
         <Button 
           size="lg" 
           className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg shadow-orange-200"
-          onClick={() => setLocation(`/orders/create?guide_id=${guide.guideId}`)}
+          onClick={() => setLocation(`/orders/create?guideId=${guide.userId}`)}
         >
           立即预订
         </Button>
