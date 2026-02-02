@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAdmin, authenticate } from '../middleware/auth.middleware';
+import { requireAdmin, authenticate, authorize } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/errorHandler';
 import { 
   listUsers, 
@@ -12,33 +12,39 @@ import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/ad
 
 const router = Router();
 
-// Apply authentication and admin check to all routes
+// Apply authentication to all routes
 router.use(authenticate);
-router.use(requireAdmin);
+
+// 1. Shared Admin/CS Routes
+// ----------------------------------------------------------------
 
 // GET /api/v1/admin/users
-router.get('/users', asyncHandler(listUsers));
+router.get('/users', authorize(['admin', 'cs']), asyncHandler(listUsers));
 
 // GET /api/v1/admin/orders
-router.get('/orders', asyncHandler(getOrders));
+router.get('/orders', authorize(['admin', 'cs']), asyncHandler(getOrders));
 
 // PUT /api/v1/admin/orders/:id/status
-router.put('/orders/:id/status', asyncHandler(updateOrderStatus));
+router.put('/orders/:id/status', authorize(['admin', 'cs']), asyncHandler(updateOrderStatus));
 
 // POST /api/v1/admin/orders/:id/assign
-router.post('/orders/:id/assign', asyncHandler(assignGuide));
+router.post('/orders/:id/assign', authorize(['admin', 'cs']), asyncHandler(assignGuide));
 
-// PUT /api/v1/admin/system-configs - 更新系统配置 (Admin Only)
-router.put('/system-configs', asyncHandler(updateConfigs));
-
-// Guide Management
+// Guide Management (Admin & CS can view/audit)
 // GET /api/v1/admin/guides - 获取地陪列表
-router.get('/guides', asyncHandler(listGuides));
+router.get('/guides', authorize(['admin', 'cs']), asyncHandler(listGuides));
 
 // GET /api/v1/admin/guides/:userId - 获取地陪详情
-router.get('/guides/:userId', asyncHandler(getGuideDetail));
+router.get('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(getGuideDetail));
 
-// PUT /api/v1/admin/guides/:userId - 更新地陪状态与定价 (Admin Only)
-router.put('/guides/:userId', asyncHandler(updateGuideStatus));
+// PUT /api/v1/admin/guides/:userId - 更新地陪状态与定价 (Audit)
+router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGuideStatus));
+
+
+// 2. Admin Only Routes
+// ----------------------------------------------------------------
+
+// PUT /api/v1/admin/system-configs - 更新系统配置
+router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));
 
 export default router;

@@ -14,15 +14,13 @@ export class AdminGuideService {
     keyword?: string;
     status?: string;
   }) {
-    // V2: Reuse findAllGuides but allow fetching all users including pending ones.
-    // Currently findAllGuides(onlyVerified=false) fetches all.
-    // We need to implement 'pending' filter if requested.
-    // But for MVP, fetching all and filtering in memory or improving model is acceptable.
-    // Given findAllGuides complexity, we will reuse it.
-    
-    // Note: 'status' filter is not yet fully supported in findAllGuides SQL.
-    // But the response contains 'isGuide'.
-    
+    let isGuideFilter: boolean | undefined = undefined;
+    if (params.status === 'pending') {
+      isGuideFilter = false;
+    } else if (params.status === 'verified') {
+      isGuideFilter = true;
+    }
+
     const { guides: list, total } = await findAllGuides(
       params.page, 
       params.pageSize, 
@@ -30,14 +28,9 @@ export class AdminGuideService {
       params.keyword, 
       undefined, 
       undefined, 
-      false // onlyVerified = false means fetch all
+      false, 
+      isGuideFilter
     );
-
-    // If strictly filtering by status 'pending'/'verified' is needed at DB level,
-    // we should update findAllGuides.
-    // Current implementation of findAllGuides(onlyVerified=false) returns both.
-    // The frontend can filter visually, or we rely on 'status' param passed to findAllGuides 
-    // (which we plan to update in GuideModel).
     
     return {
       list,

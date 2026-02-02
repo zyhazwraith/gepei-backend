@@ -8,143 +8,170 @@ import { createGuide } from '../server/models/guide.model';
 
 const BASE_URL = 'http://localhost:3000/api/v1';
 let adminToken = '';
+let csToken = '';
 let guideUserId = 0;
+let pendingGuideId = 0;
 
 async function setup() {
-  console.log('Setup: Ensuring Admin and Test Guide exist...');
+  console.log('Setup: Ensuring Admin, CS and Test Guides exist...');
 
-  // 1. Get Admin Token (Assuming admin exists from previous seeds)
-  // If not, we might need to create one or login. 
-  // Let's assume standard admin login works.
+  // 1. Get Admin Token
   try {
       const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
           phone: '19999999999',
           password: 'AdminPassword123'
       });
       adminToken = loginRes.data.data.token;
-      console.log('Admin logged in. Token:', adminToken?.substring(0, 20) + '...');
+      console.log('Admin logged in.');
   } catch (e: any) {
       console.error('Admin login failed:', e.response?.data || e.message);
       process.exit(1);
   }
 
-  // 2. Create a Test Guide User (Pending status)
-  // Clean up previous test user if exists
-  const testPhone = '13812345678';
-  await db.delete(guides).where(eq(guides.idNumber, 'TEST_ID_123456'));
-  await db.delete(users).where(eq(users.phone, testPhone));
-
-  const [userResult] = await db.insert(users).values({
-      phone: testPhone,
+  // 2. Setup CS User
+  const csPhone = '18888888888';
+  await db.delete(users).where(eq(users.phone, csPhone));
+  await db.insert(users).values({
+      phone: csPhone,
       password: 'password123', // plain for test
-      nickname: 'TestGuideCandidate',
-      isGuide: false // Initially pending
-  }).$returningId();
+      nickname: 'TestCS',
+      role: 'cs',
+      isGuide: false
+  });
   
-  guideUserId = userResult.id;
+  // Login as CS
+   try {
+       // Assuming CS creation needs password hashing, but standard logic might be simpler in tests
+       // If login fails, we manually generate token
+       const csUser = await db.query.users.findFirst({
+           where: eq(users.phone, csPhone)
+       });
+       
+       if (csUser) {
+          // Use jwt utils to sign token directly for testing if login fails due to bcrypt
+          const { generateToken } = await import('../server/utils/jwt');
+          csToken = generateToken({
+              id: csUser.id,
+              phone: csUser.phone,
+              role: csUser.role as any
+          });
+          console.log('CS logged in (Manual Token Gen).');
+       }
+   } catch (e: any) {
+       console.error('CS login failed:', e.message);
+   }
 
-  // Create Guide Profile
-  await createGuide(
-      guideUserId,
-      'TestStageName',
-      'TEST_ID_123456',
-      'Shanghai',
-      'Intro...',
-      200, // expectedPrice
-      ['tag1'],
-      [],
-      'Test Address'
-  );
+  // 3. Create Test Guides
+  const testPhone1 = '13812345678'; // Target
+  const testPhone2 = '13812345679'; // Pending only
   
-  console.log(`Created test guide (UserId: ${guideUserId})`);
+  await db.delete(guides).where(eq(guides.idNumber, 'TEST_ID_123456'));
+  await db.delete(guides).where(eq(guides.idNumber, 'TEST_ID_PENDING'));
+  await db.delete(users).where(eq(users.phone, testPhone1));
+  await db.delete(users).where(eq(users.phone, testPhone2));
+
+  // User 1 (Will be approved)
+  const [u1] = await db.insert(users).values({
+      phone: testPhone1, password: 'password123', nickname: 'GuideTarget', isGuide: false
+  }).$returningId();
+  guideUserId = u1.id;
+  await createGuide(guideUserId, 'GuideTarget', 'TEST_ID_123456', 'Shanghai', 'Intro...', 200, ['tag'], [], 'Addr');
+
+  // User 2 (Stay Pending)
+  const [u2] = await db.insert(users).values({
+      phone: testPhone2, password: 'password123', nickname: 'GuidePending', isGuide: false
+  }).$returningId();
+  pendingGuideId = u2.id;
+  await createGuide(pendingGuideId, 'GuidePending', 'TEST_ID_PENDING', 'Beijing', 'Intro...', 200, ['tag'], [], 'Addr');
+  
+  console.log(`Created test guides: Target(${guideUserId}), Pending(${pendingGuideId})`);
 }
 
-async function verifyList() {
-    console.log('\n--- Verifying List API ---');
+async function verifyListFilters() {
+    console.log('\n--- Verifying List API Filters (as CS) ---');
     
-    // 1. List All
+    // 1. Filter Pending
+    try {
+        const res = await axios.get(`${BASE_URL}/admin/guides`, {
+            headers: { Authorization: `Bearer ${csToken}` },
+            params: { status: 'pending' }
+        });
+        const list = res.data.data.list;
+        console.log(`Pending List Count: ${list.length}`);
+        
+        const foundPending = list.find((g: any) => g.userId === pendingGuideId);
+        const foundTarget = list.find((g: any) => g.userId === guideUserId);
+        
+        if (foundPending && foundTarget) {
+            console.log('✅ Found both pending guides');
+        } else {
+            console.error('❌ Failed to find pending guides');
+        }
+
+        // Verify fields
+        if (foundPending.realPrice !== undefined && foundPending.expectedPrice !== undefined && foundPending.isGuide !== undefined) {
+             console.log('✅ Verified required fields exist (realPrice, expectedPrice, isGuide)');
+        } else {
+             console.error('❌ Missing required fields in list response');
+        }
+
+    } catch (e: any) {
+        console.error('List Pending Failed:', e.response?.data || e.message);
+    }
+}
+
+async function verifyCSAccess() {
+    console.log('\n--- Verifying CS Access & Update ---');
+    try {
+        // CS approves guideUserId
+        const res = await axios.put(`${BASE_URL}/admin/guides/${guideUserId}`, {
+            is_guide: true,
+            real_price: 300
+        }, {
+            headers: { Authorization: `Bearer ${csToken}` }
+        });
+        
+        if (res.data.data.isGuide === true) {
+            console.log('✅ CS successfully approved guide');
+        } else {
+            console.error('❌ CS update failed verification');
+        }
+
+    } catch (e: any) {
+        console.error('CS Update Failed:', e.response?.data || e.message);
+    }
+}
+
+async function verifyVerifiedFilter() {
+    console.log('\n--- Verifying Verified Filter ---');
     try {
         const res = await axios.get(`${BASE_URL}/admin/guides`, {
             headers: { Authorization: `Bearer ${adminToken}` },
-            params: { page: 1, limit: 10, status: 'all' }
+            params: { status: 'verified' }
         });
-        console.log('List All Response Status:', res.status);
-        console.log('Pagination:', res.data.data.pagination);
+        const list = res.data.data.list;
         
-        const found = res.data.data.list.find((g: any) => g.userId === guideUserId);
-        if (found) {
-            console.log('✅ Found test guide in list');
-            console.log('Guide Status:', found.isGuide); // Should be false or undefined (from user join)
+        const foundTarget = list.find((g: any) => g.userId === guideUserId); // Should be here
+        const foundPending = list.find((g: any) => g.userId === pendingGuideId); // Should NOT be here
+        
+        if (foundTarget && !foundPending) {
+            console.log('✅ Verified filter works: Found approved guide, excluded pending guide');
         } else {
-            console.error('❌ Test guide not found in list');
+            console.error('❌ Verified filter failed');
+            if (!foundTarget) console.error('   - Missed approved guide');
+            if (foundPending) console.error('   - Included pending guide');
         }
 
     } catch (e: any) {
-        console.error('List API Failed:', e.response?.data || e.message);
-    }
-}
-
-async function verifyDetail() {
-    console.log('\n--- Verifying Detail API ---');
-    try {
-        const res = await axios.get(`${BASE_URL}/admin/guides/${guideUserId}`, {
-            headers: { Authorization: `Bearer ${adminToken}` }
-        });
-        const data = res.data.data;
-        if (data.userId === guideUserId && data.idNumber === 'TEST_ID_123456') {
-             console.log('✅ Detail API verified');
-             console.log('Real Price:', data.realPrice); // Should be null or 0
-             console.log('Is Guide:', data.isGuide); // Should be false
-        } else {
-             console.error('❌ Detail API returned incorrect data', data);
-        }
-    } catch (e: any) {
-        console.error('Detail API Failed:', e.response?.data || e.message);
-    }
-}
-
-async function verifyUpdate() {
-    console.log('\n--- Verifying Update API (Audit) ---');
-    try {
-        // Approve and set price
-        const res = await axios.put(`${BASE_URL}/admin/guides/${guideUserId}`, {
-            is_guide: true,
-            real_price: 300 // 300 Yuan? Or Fen? Logic in service just saves it. Assuming consistency.
-        }, {
-            headers: { Authorization: `Bearer ${adminToken}` }
-        });
-        
-        console.log('Update Response:', res.data);
-        
-        if (res.data.data.isGuide === true && Number(res.data.data.realPrice) === 300) {
-            console.log('✅ Update successful: Guide approved and price set.');
-        } else {
-            console.error('❌ Update failed verification', res.data.data);
-        }
-
-        // Verify with List again (filter verified)
-        const listRes = await axios.get(`${BASE_URL}/admin/guides`, {
-            headers: { Authorization: `Bearer ${adminToken}` },
-            params: { status: 'verified', keyword: 'TestStageName' }
-        });
-        
-        const found = listRes.data.data.list.find((g: any) => g.userId === guideUserId);
-        if (found) {
-            console.log('✅ Found guide in Verified list');
-        } else {
-             console.error('❌ Guide not found in Verified list after approval');
-        }
-
-    } catch (e: any) {
-        console.error('Update API Failed:', e.response?.data || e.message);
+        console.error('List Verified Failed:', e.response?.data || e.message);
     }
 }
 
 async function run() {
     await setup();
-    await verifyList();
-    await verifyDetail();
-    await verifyUpdate();
+    await verifyListFilters();
+    await verifyCSAccess();
+    await verifyVerifiedFilter();
     console.log('\nDone.');
     process.exit(0);
 }

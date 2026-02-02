@@ -155,14 +155,19 @@ export async function findAllGuides(
   keyword?: string,
   userLat?: number,
   userLng?: number,
-  onlyVerified: boolean = true
+  onlyVerified: boolean = true,
+  isGuideFilter?: boolean // New strict filter for admin
 ): Promise<{ guides: (Guide & { distance?: number, isGuide?: boolean })[]; total: number }> {
   const offset = (page - 1) * pageSize;
   const conditions = [isNull(guides.deletedAt)];
 
   if (onlyVerified) {
+    // Public API logic: Must be guide AND have price
     conditions.push(eq(users.isGuide, true));
     conditions.push(sql`${guides.realPrice} > 0`);
+  } else if (isGuideFilter !== undefined) {
+    // Admin API logic: Strict boolean filter
+    conditions.push(eq(users.isGuide, isGuideFilter));
   }
 
   if (city) {
