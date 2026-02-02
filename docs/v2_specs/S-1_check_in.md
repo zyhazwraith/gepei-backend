@@ -77,5 +77,20 @@
 *   **Guide**:
     *   Text: "订单已结算"
     *   Info: 资金状态: **已入账** (可提现)
-*   **Customer**:
-    *   Text: "服务已完成" (UI similar to Ended)
+## 4. Order List View (Double Perspective)
+### 4.1 Concept
+Since Guide and Customer share the same App, the "Order List" must separate "Orders I Bought" from "Orders I Serve".
+
+### 4.2 UI Design (Tab Layout)
+*   **Default View (Customer Role)**: Tab "我预订的" (My Orders)
+    *   API Param: `role=user` (Default)
+    *   Content: Orders where `userId` = Me.
+*   **Guide View (Guide Role)**: Tab "我服务的" (My Tasks)
+    *   **Visibility**: Only visible if `user.isGuide === 1`.
+    *   API Param: `role=guide`
+    *   Content: Orders where `guideId` = Me.
+
+### 4.3 Interaction
+*   Clicking an order card navigates to the **same** Order Detail Page (`/orders/:id`).
+*   The Detail Page internally adapts its view (Action Buttons) based on whether `currentUser.id === order.guideId`.
+

@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getOrderById, getCandidates, selectGuide, OrderDetailResponse, Candidate } from "@/lib/api";
+import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
 
@@ -17,16 +17,117 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   
+  // User & Guide Status
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // Check-in State
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [uploadedAttachmentId, setUploadedAttachmentId] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // 候选地陪状态
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [selectingGuideId, setSelectingGuideId] = useState<number | null>(null);
 
   useEffect(() => {
+    // Load current user
+    getCurrentUser().then(res => {
+      if(res.code === 0) setCurrentUser(res.data || null);
+    });
+
     if (params?.id) {
       fetchOrder(parseInt(params.id));
     }
   }, [params?.id]);
+
+  // Check-in Logic
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !order) return;
+
+    setIsUploading(true);
+    const toastId = toast.loading("正在上传图片...");
+
+    try {
+      // 1. Upload Photo with contextId
+      // Determine slot based on status
+      const slot = order.status === 'waiting_service' ? 'start' : 'end';
+      const uploadRes = await uploadAttachment(file, 'check_in', order.id.toString(), slot);
+      if (uploadRes.code !== 0) throw new Error(uploadRes.message || '图片上传失败');
+      
+      setUploadedAttachmentId(uploadRes.data.id);
+      setPreviewUrl(uploadRes.data.url);
+      toast.success("图片上传成功", { id: toastId });
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "上传失败", { id: toastId });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCheckInSubmit = async () => {
+    if (!order || !uploadedAttachmentId) {
+      toast.error("请先上传打卡照片");
+      return;
+    }
+
+    setCheckingIn(true);
+    const toastId = toast.loading("正在获取位置并提交打卡...");
+
+    try {
+      // 2. Get Location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) reject(new Error('浏览器不支持定位'));
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      });
+
+      // 3. Submit Check-in
+      const type = order.status === 'waiting_service' ? 'start' : 'end';
+      const checkInRes = await checkInOrder(order.id, {
+        type,
+        attachmentId: uploadedAttachmentId,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      });
+
+      if (checkInRes.code === 0) {
+        toast.success(type === 'start' ? '开始服务打卡成功' : '结束服务打卡成功', { id: toastId });
+        // Reset state
+        setUploadedAttachmentId(null);
+        setPreviewUrl(null);
+        fetchOrder(order.id);
+      } else {
+        throw new Error(checkInRes.message || '打卡提交失败');
+      }
+
+    } catch (error: any) {
+      console.error(error);
+      let msg = error.message;
+      if (error instanceof GeolocationPositionError) {
+        msg = "无法获取位置信息，请确保已授权定位权限";
+      }
+      toast.error(msg, { id: toastId });
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  const isGuideView = currentUser && order && currentUser.userId === order.guideId;
+  const canStartService = isGuideView && order?.status === 'waiting_service';
+  const canEndService = isGuideView && order?.status === 'in_service';
+  const isServiceEnded = isGuideView && order?.status === 'service_ended'; // Or completed
 
   const fetchOrder = async (id: number) => {
     try {
@@ -96,6 +197,12 @@ export default function OrderDetail() {
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">待接单</Badge>;
       case 'waiting_for_user':
         return <Badge variant="secondary" className="bg-purple-100 text-purple-800">待确认地陪</Badge>;
+      case 'waiting_service':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">待服务</Badge>;
+      case 'in_service':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">服务中</Badge>;
+      case 'service_ended':
+        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">服务结束</Badge>;
       case 'in_progress':
         return <Badge variant="secondary" className="bg-green-100 text-green-800">进行中</Badge>;
       case 'completed':
@@ -124,7 +231,7 @@ export default function OrderDetail() {
   const customReq = order.customRequirements;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-64">
       {/* 顶部导航 */}
       <div className="bg-white sticky top-0 z-10 px-4 py-3 border-b flex items-center">
         <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => setLocation("/")}>
@@ -141,18 +248,27 @@ export default function OrderDetail() {
                {order.status === 'paid' ? <Clock className="w-8 h-8 text-orange-600" /> : 
                 order.status === 'pending' ? <CreditCard className="w-8 h-8 text-orange-600" /> :
                 order.status === 'waiting_for_user' ? <Users className="w-8 h-8 text-purple-600" /> :
+                order.status === 'waiting_service' ? <Calendar className="w-8 h-8 text-blue-600" /> :
+                order.status === 'in_service' ? <Clock className="w-8 h-8 text-green-600 animate-pulse" /> :
+                order.status === 'service_ended' ? <CheckCircle2 className="w-8 h-8 text-gray-600" /> :
                 <CheckCircle2 className="w-8 h-8 text-orange-600" />}
             </div>
             <h2 className="text-xl font-bold text-orange-900">
               {order.status === 'pending' ? '等待支付' : 
                order.status === 'paid' ? '等待地陪接单' : 
                order.status === 'waiting_for_user' ? '请选择地陪' :
+               order.status === 'waiting_service' ? '等待服务开始' :
+               order.status === 'in_service' ? '服务进行中' :
+               order.status === 'service_ended' ? '服务结束，待结算' :
                '订单进行中'}
             </h2>
             <p className="text-sm text-orange-800/80">
               {order.status === 'pending' ? '请在 30 分钟内完成支付' : 
                order.status === 'paid' ? '系统正在为您匹配合适的地陪' : 
                order.status === 'waiting_for_user' ? '已有地陪报名，请选择一位为您服务' :
+               order.status === 'waiting_service' ? (isGuideView ? '请在到达约定地点后开始服务' : '地陪将按时为您服务') :
+               order.status === 'in_service' ? '请享受您的旅程' :
+               order.status === 'service_ended' ? '服务已完成，系统正在进行资金结算（预计24小时内到账）' :
                '祝您旅途愉快'}
             </p>
           </CardContent>
@@ -278,18 +394,84 @@ export default function OrderDetail() {
           </CardContent>
         </Card>
 
-        {/* 底部操作栏 (仅在待支付时显示) */}
+      {/* 底部操作栏 */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t safe-area-bottom z-50">
         {order.status === 'pending' && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t safe-area-bottom">
+          <Button 
+            className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
+            size="lg"
+            onClick={() => setShowPayment(true)}
+          >
+            微信支付 ¥{order.amount}
+          </Button>
+        )}
+
+        {/* 地陪打卡操作栏 */}
+        {(canStartService || canEndService) && (
+          <div className="space-y-4">
+            {/* 1. 照片上传区域 */}
+            <div className="flex justify-center">
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                capture="environment" 
+              />
+              
+              <div 
+                className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors relative overflow-hidden"
+                onClick={handlePhotoClick}
+              >
+                {isUploading ? (
+                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                ) : previewUrl ? (
+                   <>
+                     <img src={previewUrl} alt="Check-in" className="w-full h-full object-cover" />
+                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                       <Camera className="w-8 h-8 text-white" />
+                     </div>
+                   </>
+                ) : (
+                   <div className="flex flex-col items-center text-gray-400">
+                     <Camera className="w-8 h-8 mb-2" />
+                     <span className="text-xs">点击拍摄/上传</span>
+                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2. 确认按钮 */}
             <Button 
-              className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
+              className={`w-full ${canStartService ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
               size="lg"
-              onClick={() => setShowPayment(true)}
+              onClick={handleCheckInSubmit}
+              disabled={checkingIn || !uploadedAttachmentId}
             >
-              微信支付 ¥{order.amount}
+              {checkingIn ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  正在提交...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  {canStartService ? '确认开始服务' : '确认结束服务'}
+                </>
+              )}
             </Button>
           </div>
         )}
+
+        {/* 服务已结束 (地陪视角) */}
+        {isServiceEnded && (
+           <Button className="w-full" variant="secondary" disabled>
+              等待系统结算中...
+           </Button>
+        )}
+      </div>
+      
       </div>
 
       <PaymentSheet 
@@ -300,7 +482,7 @@ export default function OrderDetail() {
         onSuccess={handlePaymentSuccess}
       />
 
-      {order.status !== 'pending' && <BottomNav />}
+      {order.status !== 'pending' && !canStartService && !canEndService && <BottomNav />}
     </div>
   );
 }

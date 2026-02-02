@@ -23,6 +23,8 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 };
 
 export default function OrderList() {
+  // Role Tab: "user" (我预订的) | "guide" (我服务的)
+  const [roleTab, setRoleTab] = useState<'user' | 'guide'>('user');
   const [activeTab, setActiveTab] = useState("all");
   const [orders, setOrders] = useState<OrderDetailResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,12 +33,13 @@ export default function OrderList() {
 
   useEffect(() => {
     fetchOrders();
-  }, [activeTab]);
+  }, [activeTab, roleTab]);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await getOrders(activeTab);
+      // Pass both status (activeTab) and role (roleTab)
+      const res = await getOrders(activeTab, roleTab);
       if (res.code === 0 && res.data) {
         setOrders(res.data);
       } else {
@@ -111,20 +114,49 @@ export default function OrderList() {
     );
   }
 
+  const isGuide = user.isGuide; // Check if user is guide
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 顶部标题 */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-3 border-b flex items-center justify-center">
-        <h1 className="text-lg font-bold">我的订单</h1>
+      {/* 顶部标题 & 角色切换 */}
+      <div className="bg-white sticky top-0 z-10 border-b flex flex-col items-center justify-center">
+        <div className="w-full px-4 py-3 flex items-center justify-center relative">
+            <h1 className="text-lg font-bold">我的订单</h1>
+        </div>
+        
+        {/* Role Switcher (Only for Guides) */}
+        {isGuide && (
+            <div className="w-full px-4 pb-2">
+                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-lg">
+                    <button
+                        className={`py-1.5 text-sm font-medium rounded-md transition-all ${
+                            roleTab === 'user' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        onClick={() => setRoleTab('user')}
+                    >
+                        我预订的
+                    </button>
+                    <button
+                        className={`py-1.5 text-sm font-medium rounded-md transition-all ${
+                            roleTab === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                        onClick={() => setRoleTab('guide')}
+                    >
+                        我服务的
+                    </button>
+                </div>
+            </div>
+        )}
       </div>
 
       {/* 状态筛选 Tabs */}
-      <div className="sticky top-[53px] z-10 bg-gray-50 px-4 pt-2 pb-2">
+      <div className={`sticky ${isGuide ? 'top-[97px]' : 'top-[53px]'} z-10 bg-gray-50 px-4 pt-2 pb-2 transition-all`}>
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-5 bg-white border">
             <TabsTrigger value="all">全部</TabsTrigger>
             <TabsTrigger value="pending">待支付</TabsTrigger>
             <TabsTrigger value="paid">待服务</TabsTrigger>
+            {/* 不同角色显示不同状态名可能更好，但 MVP 先复用 */}
             <TabsTrigger value="waiting_for_user">待确认</TabsTrigger>
             <TabsTrigger value="completed">已完成</TabsTrigger>
           </TabsList>

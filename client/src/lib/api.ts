@@ -75,8 +75,8 @@ export interface User {
   nickName: string;
   avatarUrl: string;
   role: 'user' | 'admin';
-  isGuide: number;
-  balance: string;
+  isGuide: boolean;
+  balance?: string;
 }
 
 export interface RegisterRequest {
@@ -90,7 +90,7 @@ export interface RegisterResponse {
   phone: string;
   nickName: string;
   token: string;
-  isGuide: number;
+  isGuide: boolean;
   role: 'user' | 'admin';
 }
 
@@ -104,7 +104,7 @@ export interface LoginResponse {
   phone: string;
   nickName: string;
   token: string;
-  isGuide: number;
+  isGuide: boolean;
   role: 'user' | 'admin';
 }
 
@@ -129,18 +129,40 @@ export interface Guide {
   address?: string;
 }
 
-export const uploadAttachment = async (file: File, usage: 'avatar' | 'guide_photo' | 'id_card_front' | 'id_card_back') => {
+export const uploadAttachment = async (file: File, usage: 'avatar' | 'guide_photo' | 'id_card_front' | 'id_card_back' | 'check_in', contextId?: string, slot?: string) => {
   const formData = new FormData();
   formData.append('file', file);
+  if (contextId) {
+    formData.append('contextId', contextId);
+  }
+  if (slot) {
+    formData.append('slot', slot);
+  }
+  // Add usage to form data as well if backend needs it, or just path param
+  // Backend route is /attachments/:usage, so path param handles it.
   const response = await apiClient.post(`/attachments/${usage}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return response;
 };
-// Removed deprecated uploadFile
-// export const uploadFile = async (file: File) => { ... }
+
+// ... existing code ...
+
+/**
+ * 订单打卡 (S-1)
+ */
+export async function checkInOrder(orderId: number, data: {
+  type: 'start' | 'end';
+  attachmentId: number;
+  lat: number;
+  lng: number;
+}): Promise<ApiResponse<any>> {
+  return apiClient.post(`/orders/${orderId}/check-in`, data);
+}
+
+// ==================== F-3: System Config API ====================
 
 export interface Pagination {
   total: number;
@@ -217,9 +239,10 @@ export interface OrderDetailResponse {
 
 /**
  * 获取订单列表
+ * @param role 'user' | 'guide' (optional, default 'user')
  */
-export async function getOrders(status?: string): Promise<ApiResponse<OrderDetailResponse[]>> {
-  const params: { status?: string } = {};
+export async function getOrders(status?: string, role: 'user' | 'guide' = 'user'): Promise<ApiResponse<OrderDetailResponse[]>> {
+  const params: { status?: string; role?: string } = { role };
   if (status && status !== 'all') {
     params.status = status;
   }
@@ -351,7 +374,7 @@ export interface AdminUser {
   phone: string;
   nickName: string;
   role: 'user' | 'admin';
-  isGuide: number;
+  isGuide: boolean;
   balance: string;
   createdAt: string;
 }
