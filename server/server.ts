@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
 import { testConnection } from './config/database.js';
+import { startScheduler } from './jobs/scheduler';
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -25,6 +26,9 @@ async function startServer() {
       console.log(`📝 Environment: ${NODE_ENV}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log('='.repeat(50));
+
+      // 启动调度器
+      startScheduler();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

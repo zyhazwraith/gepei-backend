@@ -60,12 +60,12 @@
 ## **Level 3: 服务与调度 (Service)**
 *实现自动化流转。*
 
-- [ ] **[S-1] 打卡接口 (Check-in)** `[PRD 3.1]` `Status: In Progress`
+- [x] **[S-1] 打卡接口 (Check-in)** `[PRD 3.1]` `Status: Completed`
     - *User Story*: 地陪上传开始/结束照片，驱动订单状态流转。
     - *Tech*: New API (`POST /orders/:id/check-in`).
-- [ ] **[S-2] 调度器: 超时关单 (Auto Cancel)** `[PRD 1.1]`
-    - *User Story*: 系统自动关闭创建 > 60m 未支付的订单。
-    - *Tech*: Node-cron job (1 min).
+- [x] **[S-2] 调度器: 超时关单 (Auto Cancel)** `[PRD 1.1]` `Status: Completed`
+    - *User Story*: 系统自动关闭创建 > 60m 未支付的订单 (实际执行: >75m)。
+    - *Tech*: Node-cron job (5 min).
 - [ ] **[S-3] 加时下单接口 (Overtime)** `[PRD 2.4, 3.1]`
     - *User Story*: 用户在服务中发起加时，按实时费率支付。订单列表需展示聚合金额。
     - *Tech*: New API (`POST /orders/:id/overtime`). Update Order List API for aggregation.
