@@ -1,7 +1,8 @@
 import { db } from '../db';
 import { users, guides } from '../db/schema';
 import { eq, sql, desc, count, getTableColumns, isNull } from 'drizzle-orm';
-import { findAllGuides, findGuideByUserId, resolvePhotoUrls } from '../models/guide.model';
+import { findAllGuides, findGuideByUserId } from '../models/guide.model';
+import { GuideService } from './guide.service';
 
 export class AdminGuideService {
   /**
@@ -24,8 +25,11 @@ export class AdminGuideService {
       params.isGuide
     );
     
+    // Enrich with photos/avatar (Batch)
+    const enrichedList = await GuideService.enrichGuides(list);
+
     return {
-      list,
+      list: enrichedList,
       pagination: {
         total,
         page: params.page,
@@ -57,20 +61,23 @@ export class AdminGuideService {
     const tags = typeof fullProfile.tags === 'string' ? JSON.parse(fullProfile.tags) : fullProfile.tags;
     const photoIds = typeof fullProfile.photoIds === 'string' ? JSON.parse(fullProfile.photoIds) : fullProfile.photoIds;
 
-    // Resolve Photos
-    const photoObjects = await resolvePhotoUrls(photoIds as number[]);
-    const photos = photoObjects.map(p => p.url);
-
-    return {
+    // Construct base object
+    const baseGuide = {
         ...fullProfile,
+        tags,
+        photoIds,
         expectedPrice: fullProfile.expectedPrice ? Number(fullProfile.expectedPrice) : 0,
         realPrice: fullProfile.realPrice ? Number(fullProfile.realPrice) : 0,
         latitude: fullProfile.latitude ? Number(fullProfile.latitude) : null,
         longitude: fullProfile.longitude ? Number(fullProfile.longitude) : null,
-        tags,
-        photoIds,
-        photos,
-        photoObjects
+    };
+
+    // Enrich
+    const enriched = await GuideService.enrichGuide(baseGuide as any);
+
+    return {
+        ...enriched,
+        phone: fullProfile.userPhone, // Map userPhone to phone
     };
   }
 

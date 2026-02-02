@@ -7,8 +7,8 @@ import {
   findAllGuides,
   createGuide,
   updateGuide,
-  resolvePhotoUrls,
 } from '../models/guide.model.js';
+import { GuideService } from '../services/guide.service.js';
 import { db } from '../db/index.js';
 import { users, attachments } from '../db/schema.js';
 import { inArray, eq } from 'drizzle-orm';
@@ -29,22 +29,10 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     // Public API: Always force isGuide=true
     const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true);
 
-    const verifiedGuides = guides;
+    // Enrich guides (Batch)
+    const enrichedGuides = await GuideService.enrichGuides(guides);
 
-    // Batch resolve avatars
-    // 1. Collect non-null avatar IDs directly from guide objects
-    const avatarIds = verifiedGuides
-      .map(g => g.avatarId)
-      .filter((id): id is number => id !== null && id !== undefined);
-      
-    // 2. Resolve URLs for these avatar IDs
-    const avatarMap = new Map<number, string>();
-    if (avatarIds.length > 0) {
-       const resolved = await resolvePhotoUrls(avatarIds);
-       resolved.forEach(p => avatarMap.set(p.id, p.url));
-    }
-    
-    const list = verifiedGuides.map(g => ({
+    const list = enrichedGuides.map(g => ({
           userId: g.userId,
           stageName: g.stageName || g.userNickName || '匿名地陪', 
           nickName: g.userNickName || '匿名用户', 
@@ -52,7 +40,7 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
           intro: g.intro ? g.intro.substring(0, 100) : '', 
           tags: g.tags,
           price: g.realPrice, 
-          avatarUrl: (g.avatarId && avatarMap.has(g.avatarId)) ? avatarMap.get(g.avatarId)! : '', 
+          avatarUrl: g.avatarUrl || '', // From enrichment
           latitude: g.latitude ? Number(g.latitude) : undefined,
           longitude: g.longitude ? Number(g.longitude) : undefined,
           distance: g.distance !== undefined ? Number(g.distance.toFixed(2)) : undefined,
@@ -91,33 +79,23 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
       return;
     }
 
-    // Resolve Photos
-    const photoIds = (guide.photoIds || []) as number[];
-    const photos = await resolvePhotoUrls(photoIds);
-    
-    // Resolve Avatar
-    let avatarUrl = '';
-    if (guide.avatarId) {
-        const resolved = await resolvePhotoUrls([guide.avatarId]);
-        if (resolved.length > 0) {
-            avatarUrl = resolved[0].url;
-        }
-    }
+    // Enrich guide
+    const enriched = await GuideService.enrichGuide(guide);
 
     const response = {
-      userId: guide.userId,
-      stageName: guide.stageName || guide.userNickName || '匿名地陪',
-      nickName: guide.userNickName || '匿名用户',
-      city: guide.city,
-      intro: guide.intro,
-      price: guide.realPrice || 0, // Public sees Real Price
-      expectedPrice: guide.expectedPrice || 0, // Optional
-      tags: guide.tags,
-      photos: photos,
-      avatarUrl: avatarUrl,
-      createdAt: guide.createdAt,
-      latitude: guide.latitude ? Number(guide.latitude) : undefined,
-      longitude: guide.longitude ? Number(guide.longitude) : undefined,
+      userId: enriched.userId,
+      stageName: enriched.stageName || enriched.userNickName || '匿名地陪',
+      nickName: enriched.userNickName || '匿名用户',
+      city: enriched.city,
+      intro: enriched.intro,
+      price: enriched.realPrice || 0, // Public sees Real Price
+      expectedPrice: enriched.expectedPrice || 0, // Optional
+      tags: enriched.tags,
+      photos: enriched.photos, // From enrichment {id, url}[]
+      avatarUrl: enriched.avatarUrl, // From enrichment
+      createdAt: enriched.createdAt,
+      latitude: enriched.latitude ? Number(enriched.latitude) : undefined,
+      longitude: enriched.longitude ? Number(enriched.longitude) : undefined,
     };
 
     successResponse(res, response);
@@ -232,36 +210,26 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Resolve photos
-    const photos = await resolvePhotoUrls((guide.photoIds || []) as number[]);
-    
-    // Resolve Avatar
-    let avatarUrl = '';
-    let avatarId = guide.avatarId;
-    if (guide.avatarId) {
-        const resolved = await resolvePhotoUrls([guide.avatarId]);
-        if (resolved.length > 0) {
-            avatarUrl = resolved[0].url;
-        }
-    }
+    // Enrich guide
+    const enriched = await GuideService.enrichGuide(guide);
 
     const response = {
-      userId: guide.userId,
-      stageName: guide.stageName,
+      userId: enriched.userId,
+      stageName: enriched.stageName,
       // idNumber: guide.idNumber, // Keep hidden or show if needed? Spec says "全量". Let's show it if it exists.
-      idNumber: guide.idNumber,
-      city: guide.city,
-      address: guide.address,
-      intro: guide.intro,
-      realPrice: guide.realPrice, // Show verified price
-      expectedPrice: guide.expectedPrice, // Show my input price
-      tags: guide.tags,
-      photos: photos, // Now returns {id, url}[]
-      avatarUrl: avatarUrl,
-      avatarId: avatarId,
-      idVerifiedAt: guide.idVerifiedAt,
-      latitude: guide.latitude ? Number(guide.latitude) : undefined,
-      longitude: guide.longitude ? Number(guide.longitude) : undefined,
+      idNumber: enriched.idNumber,
+      city: enriched.city,
+      address: enriched.address,
+      intro: enriched.intro,
+      realPrice: enriched.realPrice, // Show verified price
+      expectedPrice: enriched.expectedPrice, // Show my input price
+      tags: enriched.tags,
+      photos: enriched.photos, // Now returns {id, url}[]
+      avatarUrl: enriched.avatarUrl,
+      avatarId: enriched.avatarId,
+      idVerifiedAt: enriched.idVerifiedAt,
+      latitude: enriched.latitude ? Number(enriched.latitude) : undefined,
+      longitude: enriched.longitude ? Number(enriched.longitude) : undefined,
     };
 
     successResponse(res, response);

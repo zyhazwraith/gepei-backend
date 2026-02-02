@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Menu,
+  Contact,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
     { label: "控制台", icon: LayoutDashboard, path: "/admin/dashboard" },
     { label: "订单管理", icon: ShoppingBag, path: "/admin/orders" },
     { label: "用户管理", icon: Users, path: "/admin/users" },
+    { label: "向导审核", icon: Contact, path: "/admin/guides" },
     { label: "系统设置", icon: Settings, path: "/admin/settings" },
   ];
 
