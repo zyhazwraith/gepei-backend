@@ -24,6 +24,9 @@ router.get('/users', authorize(['admin', 'cs']), asyncHandler(listUsers));
 // GET /api/v1/admin/orders
 router.get('/orders', authorize(['admin', 'cs']), asyncHandler(getOrders));
 
+// GET /api/v1/admin/orders/:id
+router.get('/orders/:id', authorize(['admin', 'cs']), asyncHandler(getOrderDetails));
+
 // PUT /api/v1/admin/orders/:id/status
 router.put('/orders/:id/status', authorize(['admin', 'cs']), asyncHandler(updateOrderStatus));
 
