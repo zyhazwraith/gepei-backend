@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { orders, checkInRecords, attachments } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 
 interface CheckInPayload {
@@ -80,6 +80,27 @@ export class OrderService {
         checkInTime: new Date()
       };
     });
+
+    return result;
+  }
+
+  /**
+   * Cancel Expired Orders (Scheduled Task)
+   * Rule: Created > 60m ago + 15m Grace Period = 75m Threshold
+   */
+  static async cancelExpiredOrders() {
+    const GRACE_PERIOD_MINUTES = 75;
+    const deadline = new Date(Date.now() - GRACE_PERIOD_MINUTES * 60 * 1000);
+
+    const result = await db.update(orders)
+      .set({ 
+        status: 'cancelled',
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(orders.status, 'pending'),
+        lt(orders.createdAt, deadline)
+      ));
 
     return result;
   }
