@@ -172,8 +172,35 @@
         ```
 
 ## 3. Frontend Design (Guide Side)
-*   **Page**: `GuideEdit.tsx` (Completed).
-*   **Features**: StageName, City, Photos (5 Slots), Price, Intro.
+
+### 3.1 Page Structure (`GuideEdit.tsx`)
+The page will maintain its current layout but with updated components:
+
+1.  **Avatar Section (Updated)**:
+    *   **Component**: `ImageUploader` (Unified component).
+    *   **Action**: Click to upload/replace avatar.
+
+2.  **Basic Info Section**:
+    *   **Stage Name**: New input for `stageName`.
+    *   **Removed**: Real Name, ID Number inputs.
+    *   **City Selector** (Existing).
+
+3.  **LBS / Residence Section (Updated)**:
+    *   **Label**: "常住地 (用于推荐)"
+    *   **Component**: `LocationPicker` (Existing `client/src/components/common/LocationPicker.tsx`).
+    *   **Interaction**: Open Map -> Select Residence.
+    *   **Display**: Show selected address text below the input.
+
+4.  **Photos Section (Updated)**:
+    *   **Component**: `ImageUploader` (Unified component, supports multi-upload).
+
+5.  **Price Section (Updated)**:
+    *   **Input Label**: "期望时薪 (¥/小时)"
+    *   **Helper Text**: "最终展示价格由平台审核决定"
+    *   **Read-only Display**: If `realPrice` exists and differs from `expectedPrice`, show: "当前展示价格: ¥{realPrice}" (with a lock icon).
+
+6.  **Age Confirmation (New)**:
+    *   **Checkbox**: "我确认已年满 18 周岁" (Mandatory).
 
 ## 4. Frontend Design (Admin Side)
 
