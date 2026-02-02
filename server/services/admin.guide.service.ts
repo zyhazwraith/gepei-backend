@@ -12,15 +12,8 @@ export class AdminGuideService {
     pageSize: number;
     city?: string;
     keyword?: string;
-    status?: string;
+    isGuide?: boolean;
   }) {
-    let isGuideFilter: boolean | undefined = undefined;
-    if (params.status === 'pending') {
-      isGuideFilter = false;
-    } else if (params.status === 'verified') {
-      isGuideFilter = true;
-    }
-
     const { guides: list, total } = await findAllGuides(
       params.page, 
       params.pageSize, 
@@ -28,8 +21,7 @@ export class AdminGuideService {
       params.keyword, 
       undefined, 
       undefined, 
-      false, 
-      isGuideFilter
+      params.isGuide
     );
     
     return {

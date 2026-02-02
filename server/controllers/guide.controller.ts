@@ -26,10 +26,9 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng);
+    // Public API: Always force isGuide=true
+    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true);
 
-    // Filter Verified Only (Business Rule) - MOVED TO MODEL
-    // const verifiedGuides = guides.filter(g => g.realPrice && g.realPrice > 0);
     const verifiedGuides = guides;
 
     // Batch resolve avatars

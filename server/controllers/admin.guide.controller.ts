@@ -13,14 +13,18 @@ export async function listGuides(req: Request, res: Response): Promise<void> {
     const pageSize = parseInt(req.query.page_size as string) || 20;
     const city = req.query.city as string;
     const keyword = req.query.keyword as string;
-    const status = req.query.status as string;
+    
+    // Parse is_guide param directly
+    let isGuide: boolean | undefined = undefined;
+    if (req.query.is_guide === 'true') isGuide = true;
+    if (req.query.is_guide === 'false') isGuide = false;
 
     const result = await AdminGuideService.listGuides({
       page,
       pageSize,
       city,
       keyword,
-      status
+      isGuide
     });
 
     successResponse(res, {
@@ -45,10 +49,6 @@ export async function listGuides(req: Request, res: Response): Promise<void> {
 export async function getGuideDetail(req: Request, res: Response): Promise<void> {
   try {
     const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, 'Invalid User ID');
-      return;
-    }
 
     const guide = await AdminGuideService.getGuideDetail(userId);
 
@@ -72,16 +72,6 @@ export async function updateGuideStatus(req: Request, res: Response): Promise<vo
   try {
     const userId = parseInt(req.params.userId);
     const { is_guide, real_price } = req.body;
-
-    if (isNaN(userId)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, 'Invalid User ID');
-      return;
-    }
-
-    if (is_guide === undefined && real_price === undefined) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, 'At least one field (is_guide, real_price) is required');
-      return;
-    }
 
     const updated = await AdminGuideService.updateGuideStatus(userId, {
       isGuide: is_guide,

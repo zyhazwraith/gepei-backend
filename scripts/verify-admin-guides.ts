@@ -90,11 +90,11 @@ async function setup() {
 async function verifyListFilters() {
     console.log('\n--- Verifying List API Filters (as CS) ---');
     
-    // 1. Filter Pending
+    // 1. Filter Pending (is_guide=false)
     try {
         const res = await axios.get(`${BASE_URL}/admin/guides`, {
             headers: { Authorization: `Bearer ${csToken}` },
-            params: { status: 'pending' }
+            params: { is_guide: false }
         });
         const list = res.data.data.list;
         console.log(`Pending List Count: ${list.length}`);
@@ -103,16 +103,16 @@ async function verifyListFilters() {
         const foundTarget = list.find((g: any) => g.userId === guideUserId);
         
         if (foundPending && foundTarget) {
-            console.log('✅ Found both pending guides');
+            console.log('✅ Found both pending guides (before approval)');
         } else {
             console.error('❌ Failed to find pending guides');
         }
 
-        // Verify fields
-        if (foundPending.realPrice !== undefined && foundPending.expectedPrice !== undefined && foundPending.isGuide !== undefined) {
-             console.log('✅ Verified required fields exist (realPrice, expectedPrice, isGuide)');
+        // Verify fields (phone is now required)
+        if (foundPending.realPrice !== undefined && foundPending.expectedPrice !== undefined && foundPending.isGuide !== undefined && foundPending.phone !== undefined) {
+             console.log('✅ Verified required fields exist (realPrice, expectedPrice, isGuide, phone)');
         } else {
-             console.error('❌ Missing required fields in list response');
+             console.error('❌ Missing required fields in list response', foundPending);
         }
 
     } catch (e: any) {
@@ -143,15 +143,15 @@ async function verifyCSAccess() {
 }
 
 async function verifyVerifiedFilter() {
-    console.log('\n--- Verifying Verified Filter ---');
+    console.log('\n--- Verifying Verified Filter (is_guide=true) ---');
     try {
         const res = await axios.get(`${BASE_URL}/admin/guides`, {
             headers: { Authorization: `Bearer ${adminToken}` },
-            params: { status: 'verified' }
+            params: { is_guide: true }
         });
         const list = res.data.data.list;
         
-        const foundTarget = list.find((g: any) => g.userId === guideUserId); // Should be here
+        const foundTarget = list.find((g: any) => g.userId === guideUserId); // Should be here (Approved in verifyCSAccess)
         const foundPending = list.find((g: any) => g.userId === pendingGuideId); // Should NOT be here
         
         if (foundTarget && !foundPending) {
