@@ -344,10 +344,49 @@ export async function getCandidates(req: Request, res: Response) {
   });
 }
 
+import { OrderService } from '../services/order.service.js';
+
+// ... (existing imports)
+
+// ... (existing functions)
+
 /**
- * 用户选择地陪 (Deprecated in V2)
+ * Check-in (Start/End Service)
+ * POST /api/v1/orders/:id/check-in
  */
-export async function selectGuide(req: Request, res: Response, next: NextFunction) {
-  // V2: Deprecated. Custom orders are assigned by admin.
-  return next(new ValidationError('该接口已废弃'));
+export async function checkIn(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id; // This is the Guide's user ID
+  const orderId = parseInt(req.params.id);
+
+  if (isNaN(orderId)) {
+    return next(new ValidationError('无效的订单ID'));
+  }
+
+  try {
+    const { type, attachmentId, lat, lng } = req.body;
+    
+    // Basic Validation
+    if (!['start', 'end'].includes(type)) {
+       throw new ValidationError('无效的打卡类型');
+    }
+    if (!attachmentId || lat === undefined || lng === undefined) {
+       throw new ValidationError('参数不完整 (attachmentId, lat, lng)');
+    }
+
+    const result = await OrderService.checkIn(orderId, userId, {
+      type,
+      attachmentId,
+      lat,
+      lng
+    });
+
+    res.json({
+      code: 0,
+      message: type === 'start' ? '开始服务成功' : '结束服务成功',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
 }
+

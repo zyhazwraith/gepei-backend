@@ -51,7 +51,7 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   paid: ['in_service', 'cancelled', 'refunded', 'waiting_service'], // Added waiting_service
   waiting_service: ['in_service', 'cancelled'],
   in_service: ['service_ended', 'completed', 'cancelled'], 
-  service_ended: ['completed'],
+  service_ended: ['completed', 'cancelled'], // Added cancelled
   completed: [], 
   cancelled: ['pending'], 
   refunded: [], 

@@ -8,16 +8,18 @@ export const logPass = (msg: string) => console.log(`✅ [PASS] ${msg}`);
 export const logFail = (msg: string, err: any) => console.error(`❌ [FAIL] ${msg}`, err?.response?.data || err?.message || err);
 
 // Generate random user data
-export const generateUser = () => ({
-  phone: `13${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}`,
+export const generateUser = (overrides = {}) => ({
+  phone: `13${Math.floor(100000000 + Math.random() * 900000000).toString()}`, // Ensures 9 digits + 2 prefix = 11 digits
   password: 'Password123',
-  nickname: `User_${Math.floor(Math.random() * 1000)}`
+  nickname: `User_${Math.floor(Math.random() * 1000)}`,
+  ...overrides
 });
 
 // Auth Helpers
-export async function registerUser(user = generateUser()) {
+export async function registerUser(user?: any) {
+  const userData = user || generateUser();
   try {
-    const res = await axios.post(`${API_URL}/auth/register`, user);
+    const res = await axios.post(`${API_URL}/auth/register`, userData);
     if (res.data.code === 0) {
       return {
         token: res.data.data.token,

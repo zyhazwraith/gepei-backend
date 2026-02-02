@@ -288,7 +288,8 @@ export const checkInRecords = mysqlTable('check_in_records', {
   orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   type: mysqlEnum('type', ['start', 'end']).notNull(),
   time: timestamp('time').defaultNow(),
-  location: varchar('location', { length: 255 }), // LBS Address
+  latitude: decimal('latitude', { precision: 10, scale: 6 }),
+  longitude: decimal('longitude', { precision: 10, scale: 6 }),
   attachmentId: int('attachment_id'), // FK -> attachments.id (Photo)
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => {

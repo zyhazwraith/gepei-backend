@@ -23,4 +23,7 @@ router.get('/:id/candidates', asyncHandler(authenticate), asyncHandler(orderCont
 // POST /api/v1/orders/:id/select-guide - 用户选择地陪
 router.post('/:id/select-guide', asyncHandler(authenticate), asyncHandler(orderController.selectGuide));
 
+// POST /api/v1/orders/:id/check-in - 地陪打卡 (开始/结束服务)
+router.post('/:id/check-in', asyncHandler(authenticate), asyncHandler(orderController.checkIn));
+
 export default router;

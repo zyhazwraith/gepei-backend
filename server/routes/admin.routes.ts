@@ -5,7 +5,8 @@ import {
   listUsers, 
   getOrders, 
   updateOrderStatus, 
-  assignGuide 
+  assignGuide,
+  getOrderDetails
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
