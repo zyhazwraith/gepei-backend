@@ -9,7 +9,7 @@
 
 ## 2. Technical Specification
 
-### 2.1 Implementation Status (As of 2026-02-01)
+### 2.1 Implementation Status (As of 2026-02-02)
 *   **Backend API**: ✅ **Completed & Verified**
     *   `listPublicGuides`: Optimized with batch avatar resolution.
     *   `getPublicGuideDetail`: Fully implemented with photos/avatar.
@@ -17,10 +17,11 @@
     *   `updateMyProfile`: Implemented with clean input/output.
 *   **Database**: ✅ **Migrated**
     *   `guides` table schema updated (`stageName`, `avatarId`, `realPrice`...).
-*   **Admin Backend**: ✅ **Adapted**
-    *   Controllers updated to support V2 schema changes.
-*   **Frontend**: ❌ **Discarded / Pending**
-    *   Previous frontend branch is deprecated due to API misalignment. Needs rebuild based on current Spec.
+*   **Admin Backend**: 🔄 **In Progress**
+    *   `AdminGuideService` & `AdminGuideController` refactor.
+*   **Frontend**: 🔄 **In Progress**
+    *   Guide Side: `GuideEdit.tsx` completed.
+    *   Admin Side: Pending implementation.
 
 ### 2.2 API Design
 
@@ -110,88 +111,104 @@
 
 #### C. Admin API (Management)
 *   **List Endpoint**: `GET /api/v1/admin/guides`
-    *   **Query**: `page`, `page_size`, `status` (all, pending, verified), `keyword`.
-    *   **Returns**: List of guides including `isGuide` status.
-*   **Detail Endpoint**: `GET /api/v1/admin/guides/:userId` (New)
-    *   **Returns**: Full profile + `isGuide` status + Sensitive info (Real Name/ID if available).
+    *   **Query**: `page`, `limit`, `status` ('pending' | 'verified' | 'all'), `keyword`, `city`.
+    *   **Response** (Standard Pagination):
+        ```json
+        {
+          "code": 0,
+          "data": {
+            "list": [
+              {
+                "userId": 101,
+                "stageName": "Anna",
+                "phone": "13800000000",
+                "city": "Shanghai",
+                "realPrice": 300,        // System Price
+                "expectedPrice": 300,    // User Price
+                "isGuide": true,         // Status
+                "updatedAt": "2023-10-01T12:00:00Z"
+              }
+            ],
+            "pagination": {
+              "total": 50,
+              "page": 1,
+              "pageSize": 20,
+              "totalPages": 3
+            }
+          }
+        }
+        ```
+*   **Detail Endpoint**: `GET /api/v1/admin/guides/:userId`
+    *   **Returns**: Full profile + `isGuide` status + Sensitive info.
+    *   **Response**:
+        ```json
+        {
+          "code": 0,
+          "data": {
+            "userId": 101,
+            "stageName": "Anna",
+            "avatarUrl": "...",
+            "phone": "13800000000",
+            "nickname": "User_123",
+            "idNumber": "310101...",
+            "city": "Shanghai",
+            "address": "Detailed Address",
+            "intro": "...",
+            "tags": ["Tag1"],
+            "photos": [{ "id": 1, "url": "..." }],
+            "realPrice": 300,
+            "expectedPrice": 300,
+            "isGuide": true
+          }
+        }
+        ```
 *   **Update Endpoint**: `PUT /api/v1/admin/guides/:userId`
     *   **Payload**:
         ```json
         {
-          "is_guide": true,  // Enable/Disable (Updates `users` table)
-          "real_price": 2500 // Set Billing Price (Updates `guides` table)
+          "isGuide": true,  // Enable/Disable
+          "realPrice": 300  // Set Billing Price
         }
         ```
-*   **Logic**:
-    1.  **Transaction Required**: Update both `users` and `guides` tables.
-    2.  If `is_guide` becomes `true`, update `guides.id_verified_at = NOW()` (if currently null).
 
 ## 3. Frontend Design (Guide Side)
-
-### 3.1 Page Structure (`GuideEdit.tsx`)
-The page will maintain its current layout but with updated components:
-
-1.  **Avatar Section (Updated)**:
-    *   **Component**: `ImageUploader` (Unified component).
-    *   **Action**: Click to upload/replace avatar.
-
-2.  **Basic Info Section**:
-    *   **Stage Name**: New input for `stageName`.
-    *   **Removed**: Real Name, ID Number inputs.
-    *   **City Selector** (Existing).
-
-3.  **LBS / Residence Section (Updated)**:
-    *   **Label**: "常住地 (用于推荐)"
-    *   **Component**: `LocationPicker` (Existing `client/src/components/common/LocationPicker.tsx`).
-    *   **Interaction**: Open Map -> Select Residence.
-    *   **Display**: Show selected address text below the input.
-
-4.  **Photos Section (Updated)**:
-    *   **Component**: `ImageUploader` (Unified component, supports multi-upload).
-
-5.  **Price Section (Updated)**:
-    *   **Input Label**: "期望时薪 (¥/小时)"
-    *   **Helper Text**: "最终展示价格由平台审核决定"
-    *   **Read-only Display**: If `realPrice` exists and differs from `expectedPrice`, show: "当前展示价格: ¥{realPrice}" (with a lock icon).
-
-6.  **Age Confirmation (New)**:
-    *   **Checkbox**: "我确认已年满 18 周岁" (Mandatory).
+*   **Page**: `GuideEdit.tsx` (Completed).
+*   **Features**: StageName, City, Photos (5 Slots), Price, Intro.
 
 ## 4. Frontend Design (Admin Side)
 
 ### 4.1 Guide List Page (`client/src/pages/admin/GuideList.tsx`)
-*   **Entry**: From Admin Dashboard -> "地陪管理".
-*   **Features**:
-    *   Table listing all guide applications.
-    *   Columns: Avatar, Stage Name, City, Status (`isGuide`), Created At, Actions.
-    *   **Filters**: Status (All/Pending/Verified), City.
-    *   **Action**: "Audit" button -> Navigates to Audit Page.
+*   **Layout**: Standard Table.
+*   **Filters**: Status (All/Pending/Verified), City, Keyword.
+*   **Columns**:
+    1.  **Stage Name** (艺名)
+    2.  **Phone** (手机号)
+    3.  **City** (城市)
+    4.  **Price** (System/Expected)
+    5.  **Status** (Pending/Verified)
+    6.  **Action** (Audit Button)
 
 ### 4.2 Guide Audit Page (`client/src/pages/admin/GuideAudit.tsx`)
-*   **Entry**: From Guide List -> Click "Audit".
-*   **Layout**:
-    *   **Left Panel (Profile)**:
-        *   Avatar, Stage Name (`stageName`), Real Name (if any).
-        *   Photos Carousel.
-        *   Intro Text.
-        *   **Map Preview**: Show `latitude/longitude` on a static map.
-        *   **Residence**: Show `address`.
-    *   **Right Panel (Action)**:
-        *   **Status Toggle**: Switch `Is Guide` (Active/Inactive).
-        *   **Price Input**: `Real Price` (¥/Hour).
-        *   **Save Button**: Calls `PUT /api/v1/admin/guides/:userId`.
+*   **Layout**: Two Columns.
+*   **Left Panel (Profile)**:
+    *   Avatar, Stage Name, ID Number.
+    *   City, Address (Text only, no map).
+    *   Intro, Tags.
+    *   Photos Grid (5 slots).
+*   **Right Panel (Action)**:
+    *   **Pricing**: Display `Expected Price`, Input `Real Price`.
+    *   **Status**: Switch `Enable Guide Identity` (isGuide).
+    *   **Save**: Button to commit changes.
 
 ## 5. Implementation Checklist
 
-### Phase 1: Backend Implementation (Update)
-- [x] **Schema**: Rename `name` to `stage_name`.
-- [ ] **Model**: Update `findAllGuides` to support `onlyVerified` filter (default true).
-- [ ] **Controller**: Add `AdminGuideController.list` and `AdminGuideController.detail`.
-- [ ] **Controller**: Fix `AdminGuideController.updateStatus` to use `stageName`.
+### Phase 1: Backend Implementation
+- [ ] **Service**: Create `AdminGuideService` with `listGuides`, `getGuideDetail`, `updateGuideStatus`.
+- [ ] **Model**: Update `findAllGuides` to support `status` enum filter.
+- [ ] **Controller**: Refactor `AdminGuideController` to use Service.
+- [ ] **Verification**: Script `scripts/verify-admin-guides.ts`.
 
 ### Phase 2: Frontend Implementation
-- [x] **Component**: `ImageUploader` refactor.
-- [x] **Page**: `GuideEdit.tsx` update (StageName, ImageUploader).
-- [ ] **Page**: Create `src/pages/admin/GuideList.tsx`.
-- [ ] **Page**: Update `src/pages/admin/GuideAudit.tsx` to use Admin API.
-- [ ] **Verification**: Manual test (Guide Update -> Admin List -> Admin Audit).
+- [ ] **Page**: `GuideList.tsx` (Admin List).
+- [ ] **Page**: `GuideAudit.tsx` (Admin Detail).
+- [ ] **Integration**: Connect to Admin API.
