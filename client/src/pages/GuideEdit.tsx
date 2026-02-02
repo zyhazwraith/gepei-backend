@@ -275,19 +275,11 @@ export default function GuideEdit() {
           </label>
           
           <div className="grid grid-cols-3 gap-3">
+            {/* Render all non-null photos based on their slot index */}
             {photos.map((photo, index) => {
-              // 只在以下情况显示上传按钮：
-              // 1. 当前位置有图片 (显示图片 + 删除)
-              // 2. 当前位置无图片，且是"第一个"空位 (显示上传)
-              // 3. 其他空位 (隐藏，保持紧凑)
-              
-              const isFirstEmpty = !photo && (index === 0 || photos[index - 1] !== null);
-              
-              if (!photo && !isFirstEmpty) return null;
-
-              return (
-              <div key={index} className="aspect-square">
-                {photo ? (
+               if (!photo) return null;
+               return (
+                <div key={index} className="aspect-square">
                   <div className="relative w-full h-full group">
                     <img
                       src={photo.url}
@@ -296,11 +288,9 @@ export default function GuideEdit() {
                     />
                     <button
                       onClick={() => {
-                        // 删除时，执行"紧凑"操作：移除该元素，末尾补 null
-                        // 这样后面的图片会自动前移，Slot 也会跟着前移
+                        // Delete: Just set this slot to null
                         const newPhotos = [...photos];
-                        newPhotos.splice(index, 1);
-                        newPhotos.push(null);
+                        newPhotos[index] = null;
                         setPhotos(newPhotos);
                       }}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
@@ -309,22 +299,31 @@ export default function GuideEdit() {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                ) : (
-                  <ImageUploader
-                    usage="guide_photo"
-                    slot={String(index)} // 使用当前 index 作为 slot
-                    onChange={(url, id) => {
-                      if (url && id) {
+                </div>
+               );
+            })}
+
+            {/* Render one upload button if there is any empty slot */}
+            {photos.some(p => p === null) && (
+              <div className="aspect-square">
+                <ImageUploader
+                  usage="guide_photo"
+                  // Find the first empty slot index
+                  slot={String(photos.findIndex(p => p === null))}
+                  onChange={(url, id) => {
+                    if (url && id) {
+                      const firstEmptyIndex = photos.findIndex(p => p === null);
+                      if (firstEmptyIndex !== -1) {
                         const newPhotos = [...photos];
-                        newPhotos[index] = { id, url };
+                        newPhotos[firstEmptyIndex] = { id, url };
                         setPhotos(newPhotos);
                       }
-                    }}
-                    className="w-full h-full"
-                  />
-                )}
+                    }
+                  }}
+                  className="w-full h-full"
+                />
               </div>
-            )})}
+            )}
           </div>
         </div>
 
