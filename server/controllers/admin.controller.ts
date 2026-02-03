@@ -8,6 +8,7 @@ import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
 import { createCustomOrderSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
+import { OrderStatus } from '../constants/index.js';
 
 // 更新状态 Schema
 const updateStatusSchema = z.object({
@@ -396,32 +397,21 @@ export async function refundOrder(req: Request, res: Response) {
     }
 
     // 1. 状态校验
-    if (!['paid', 'waiting_service'].includes(order.status || '')) {
+    if (![OrderStatus.PAID, OrderStatus.WAITING_SERVICE].includes(order.status as OrderStatus)) {
       throw new ValidationError('当前订单状态不支持退款');
     }
 
-    // 2. 单次退款校验
-    if (order.status === 'refunded') {
-       throw new ValidationError('订单已退款，不可重复操作');
-    }
-    
-    // Check if any refund record exists
-    const existingRefunds = await db.select({ count: count() }).from(refundRecords).where(eq(refundRecords.orderId, orderId));
-    if (existingRefunds[0].count > 0) {
-        throw new ValidationError('订单已有退款记录');
-    }
-
-    // 3. 金额校验
+    // 2. 金额校验 (单次退款校验已由状态流转和事务保证)
     if (validated.amount > order.amount) {
       throw new ValidationError('退款金额不能超过订单实付金额');
     }
 
-    // 4. 执行事务
+    // 3. 执行事务
     await db.transaction(async (tx) => {
       // Update Order
       await tx.update(orders)
         .set({ 
-          status: 'refunded',
+          status: OrderStatus.REFUNDED,
           refundAmount: validated.amount,
           updatedAt: new Date()
         })
@@ -443,7 +433,7 @@ export async function refundOrder(req: Request, res: Response) {
       message: '退款成功',
       data: {
         orderId,
-        status: 'refunded',
+        status: OrderStatus.REFUNDED,
         refundAmount: validated.amount
       }
     });
