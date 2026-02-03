@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db/index.js';
-import { orders, users, guides } from '../db/schema.js';
+import { orders, users, guides, refundRecords } from '../db/schema.js';
 import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
@@ -8,11 +8,18 @@ import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
 import { createCustomOrderSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
+import { OrderStatus } from '../constants/index.js';
 
 // 更新状态 Schema
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'paid', 'waiting_service', 'in_service', 'service_ended', 'completed', 'cancelled', 'refunded']),
   force: z.boolean().optional(),
+});
+
+// 退款 Schema
+const refundOrderSchema = z.object({
+  amount: z.number().int().positive(),
+  reason: z.string().min(1, '退款原因不能为空'),
 });
 
 /**
@@ -161,6 +168,7 @@ export async function getOrderDetails(req: Request, res: Response) {
         userNickname: users.nickname,
         guidePhone: guideUsers.phone,
         guideNickname: guideUsers.nickname,
+        refundAmount: orders.refundAmount,
     })
     .from(orders)
     .leftJoin(users, eq(orders.userId, users.id))
@@ -171,11 +179,21 @@ export async function getOrderDetails(req: Request, res: Response) {
         throw new NotFoundError('订单不存在');
     }
 
+    // 查询退款记录
+    const records = await db.select({
+      amount: refundRecords.amount,
+      reason: refundRecords.reason,
+      createdAt: refundRecords.createdAt,
+    })
+    .from(refundRecords)
+    .where(eq(refundRecords.orderId, orderId));
+
     res.json({
         code: 0,
         message: '获取成功',
         data: {
             ...order,
+            refund_records: records,
             user: {
                 phone: order.userPhone,
                 nickName: order.userNickname
@@ -360,4 +378,70 @@ export const assignGuide = async (req: Request, res: Response) => {
     } else {
         throw new ValidationError('普通订单不可指派候选人');
     }
+}
+
+/**
+ * 执行退款 (Admin)
+ * POST /api/v1/admin/orders/:id/refund
+ */
+export async function refundOrder(req: Request, res: Response) {
+  const orderId = parseInt(req.params.id);
+  const operatorId = req.user!.id; 
+
+  try {
+    const validated = refundOrderSchema.parse(req.body);
+
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+
+    // 1. 状态校验
+    if (![OrderStatus.PAID, OrderStatus.WAITING_SERVICE].includes(order.status as OrderStatus)) {
+      throw new ValidationError('当前订单状态不支持退款');
+    }
+
+    // 2. 金额校验 (单次退款校验已由状态流转和事务保证)
+    if (validated.amount > order.amount) {
+      throw new ValidationError('退款金额不能超过订单实付金额');
+    }
+
+    // 3. 执行事务
+    await db.transaction(async (tx) => {
+      // Update Order
+      await tx.update(orders)
+        .set({ 
+          status: OrderStatus.REFUNDED,
+          refundAmount: validated.amount,
+          updatedAt: new Date()
+        })
+        .where(eq(orders.id, orderId));
+
+      // Insert Refund Record
+      await tx.insert(refundRecords).values({
+        orderId,
+        amount: validated.amount,
+        reason: validated.reason,
+        operatorId,
+      });
+
+      // TODO: Audit Log (O-7)
+    });
+
+    res.json({
+      code: 0,
+      message: '退款成功',
+      data: {
+        orderId,
+        status: OrderStatus.REFUNDED,
+        refundAmount: validated.amount
+      }
+    });
+
+  } catch (error) {
+     if (error instanceof z.ZodError) {
+      throw new ValidationError('参数错误: ' + (error as any).errors.map((e: any) => e.message).join(', '));
+    }
+    throw error;
+  }
 }
