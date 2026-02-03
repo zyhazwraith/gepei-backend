@@ -418,8 +418,6 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
   const overtimeId = parseInt(req.params.id);
   const { paymentMethod } = req.body;
 
-  console.log(`[payOvertime] Request: userId=${userId}, overtimeId=${overtimeId}, method=${paymentMethod}`);
-
   if (isNaN(overtimeId)) {
     return next(new ValidationError('无效的加时申请ID'));
   }
@@ -430,7 +428,6 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
 
     // 1. Fetch Overtime Record
     const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
-    console.log('[payOvertime] Found overtime:', overtime);
 
     if (!overtime) {
         throw new NotFoundError('加时申请不存在');
@@ -438,7 +435,6 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
 
     // 2. Fetch Associated Order
     const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
-    console.log('[payOvertime] Found order:', order);
 
     if (!order) {
         throw new NotFoundError('关联订单不存在');
@@ -446,14 +442,11 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
     
     // 3. Permission Check
     if (order.userId !== userId) {
-        console.warn(`[payOvertime] Forbidden: OrderUser=${order.userId} vs ReqUser=${userId}`);
         throw new ForbiddenError('无权支付此订单');
     }
 
     // 4. Call Service
-    console.log('[payOvertime] Calling Service...');
     const payResult = await OrderService.payOvertime(overtimeId, paymentMethod);
-    console.log('[payOvertime] Service Result:', payResult);
     
     res.json({
       code: 0,
@@ -461,7 +454,6 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
       data: payResult
     });
   } catch (error: any) {
-    console.error('[payOvertime] Error:', error);
     if (error instanceof z.ZodError) {
         const msg = (error as any).errors?.[0]?.message || '参数校验失败';
         return next(new ValidationError(msg));

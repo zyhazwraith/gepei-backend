@@ -202,29 +202,12 @@ export default function OrderDetail() {
   };
 
   const handleOvertimePaymentSuccess = () => {
-      // Mock payment success for overtime (reuse logic or specialized call)
-      // Since PaymentSheet is generic, we might need a specific handler if using separate logic
-      // But here we use a separate state/component flow
+      // Refresh order to see updated status/amounts
       if (order) fetchOrder(order.id);
       setShowOvertimePayment(false);
       setPendingOvertime(null);
   };
 
-  // Custom Payment Logic for Overtime (using the same Sheet but different callback)
-  // Actually, let's reuse PaymentSheet by passing different props?
-  // PaymentSheet takes `onSuccess`. 
-  // However, PaymentSheet calls `payOrder` internally. 
-  // We need it to call `payOvertime`.
-  // Solution: We will use a modified PaymentSheet or a wrapper.
-  // Or better: Let PaymentSheet accept an optional `paymentAction` prop.
-  // But PaymentSheet is likely simple. Let's check if we can just make a small wrapper or duplicate.
-  // Actually, looking at PaymentSheet import, I don't see the code but I can infer.
-  // For simplicity, let's handle overtime payment directly here or update PaymentSheet later.
-  // Wait, I can't easily see PaymentSheet code without reading it.
-  // Assuming PaymentSheet is tightly coupled with `payOrder`.
-  // I will use a simple confirm dialog for now for overtime payment since it's "Mock".
-  // OR: I will just use `payOvertime` directly in a new simple UI.
-  
   const handleOvertimePayConfirm = async () => {
       if (!pendingOvertime) return;
       const toastId = toast.loading("正在支付加时费...");
