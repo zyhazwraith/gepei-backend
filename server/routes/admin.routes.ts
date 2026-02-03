@@ -6,7 +6,8 @@ import {
   getOrders, 
   updateOrderStatus, 
   assignGuide,
-  getOrderDetails
+  getOrderDetails,
+  refundOrder
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
@@ -47,6 +48,9 @@ router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGui
 
 // 2. Admin Only Routes
 // ----------------------------------------------------------------
+
+// POST /api/v1/admin/orders/:id/refund - 订单退款
+router.post('/orders/:id/refund', requireAdmin, asyncHandler(refundOrder));
 
 // PUT /api/v1/admin/system-configs - 更新系统配置
 router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));

@@ -78,7 +78,7 @@
     - *User Story*: 订单结束 > 24h 自动完结，计算抽成入账。
     - *Tech*: Node-cron job (1 hour).
     - *Verification*: [x] scripts/test-auto-settle.ts (Order+Overtime -> Balance).
-- [ ] **[O-3] 退款接口 (Refund)** `[PRD 1.1, 3.4.3]`
+- [x] **[O-3] 退款接口 (Refund)** `[PRD 1.1, 3.4.3]` `Status: Completed`
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
 - [ ] **[O-4] 提现审核接口 (Withdraw)** `[PRD 3.2]`
