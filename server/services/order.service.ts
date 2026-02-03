@@ -1,7 +1,8 @@
 import { db } from '../db';
-import { orders, checkInRecords, attachments } from '../db/schema';
-import { eq, and, lt } from 'drizzle-orm';
+import { orders, checkInRecords, attachments, overtimeRecords, payments } from '../db/schema';
+import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
+import { nanoid } from 'nanoid';
 
 interface CheckInPayload {
   type: 'start' | 'end';
@@ -12,9 +13,37 @@ interface CheckInPayload {
 
 export class OrderService {
   /**
+   * Get Order Details with Overtime
+   */
+  static async getOrderDetails(orderId: number) {
+    // 1. Fetch Basic Order Info
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+
+    if (!order) {
+        throw new NotFoundError('订单不存在');
+    }
+
+    // 2. Fetch Paid Overtime Records
+    // Since relations might not be configured in schema for db.query, we use manual select
+    const paidOvertimeRecords = await db.select()
+        .from(overtimeRecords)
+        .where(and(
+            eq(overtimeRecords.orderId, orderId),
+            eq(overtimeRecords.status, 'paid')
+        ))
+        .orderBy(desc(overtimeRecords.createdAt));
+
+    // 3. Return Combined Result
+    return {
+        ...order,
+        overtimeRecords: paidOvertimeRecords
+    };
+  }
+
+  /**
    * Check-in (Start/End Service)
    */
-  static async checkIn(orderId: number, guideId: number, payload: CheckInPayload) {
+  static async checkIn(orderId: number, payload: CheckInPayload) {
     const { type, attachmentId, lat, lng } = payload;
 
     // 1. Fetch Order
@@ -24,12 +53,7 @@ export class OrderService {
       throw new NotFoundError('订单不存在');
     }
 
-    // 2. Auth Check (Must be the assigned guide)
-    if (order.guideId !== guideId) {
-      throw new ForbiddenError('无权操作此订单');
-    }
-
-    // 3. Status Transition Logic
+    // 2. Status Transition Logic
     if (type === 'start') {
       if (order.status !== 'waiting_service') {
         throw new ValidationError(`当前订单状态为 ${order.status}，无法开始服务`);
@@ -40,7 +64,7 @@ export class OrderService {
       }
     }
 
-    // 4. Verify Attachment (Optional but recommended)
+    // 3. Verify Attachment (Optional but recommended)
     // Check if attachment exists and belongs to usage 'check_in'
     const [attachment] = await db.select().from(attachments).where(eq(attachments.id, attachmentId));
     if (!attachment) {
@@ -52,9 +76,9 @@ export class OrderService {
         throw new ValidationError('照片用途不符');
     }
 
-    // 5. Execute Transaction
+    // 4. Execute Transaction
     const result = await db.transaction(async (tx) => {
-      // 5.1 Insert Check-in Record
+      // 4.1 Insert Check-in Record
       await tx.insert(checkInRecords).values({
         orderId,
         type,
@@ -64,14 +88,18 @@ export class OrderService {
         longitude: lng.toString(),
       });
 
-      // 5.2 Update Order Status
+      // 4.2 Update Order Status
       const nextStatus = type === 'start' ? 'in_service' : 'service_ended';
       
+      const updatePayload: any = { 
+        status: nextStatus,
+        updatedAt: new Date()
+      };
+
+      // Removed auto-update of serviceEndTime logic based on feedback
+
       await tx.update(orders)
-        .set({ 
-          status: nextStatus,
-          updatedAt: new Date()
-        })
+        .set(updatePayload)
         .where(eq(orders.id, orderId));
       
       return { 
@@ -82,6 +110,100 @@ export class OrderService {
     });
 
     return result;
+  }
+
+  /**
+   * Create Overtime Request
+   */
+  static async createOvertime(orderId: number, duration: number) {
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+
+    if (order.status !== 'in_service') {
+      throw new ValidationError('只有服务中的订单可以申请加时');
+    }
+
+    // Calculate fee based on snapshot price
+    if (!order.pricePerHour) {
+        // Fallback or error? Assuming pricePerHour is always set for standard/custom orders in V2
+        // But schema says it's nullable. Let's handle it.
+        throw new ValidationError('订单未设置小时单价，无法计算加时费');
+    }
+
+    const fee = duration * order.pricePerHour;
+
+    // Create pending overtime record
+    const [result] = await db.insert(overtimeRecords).values({
+        orderId,
+        duration,
+        fee,
+        status: 'pending',
+    });
+
+    return {
+        overtimeId: result.insertId,
+        duration,
+        fee,
+        pricePerHour: order.pricePerHour
+    };
+  }
+
+  /**
+   * Pay Overtime (Mock)
+   */
+  static async payOvertime(overtimeId: number, paymentMethod: 'wechat' = 'wechat') {
+    // 1. Fetch Overtime Record with Order
+    const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
+    
+    if (!overtime) {
+        throw new NotFoundError('加时申请不存在');
+    }
+
+    if (overtime.status !== 'pending') {
+        throw new ValidationError('该加时申请状态不正确');
+    }
+
+    const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
+
+    // 2. Execute Transaction
+    await db.transaction(async (tx) => {
+        // 2.1 Mark Overtime as Paid
+        await tx.update(overtimeRecords)
+            .set({ status: 'paid' })
+            .where(eq(overtimeRecords.id, overtimeId));
+
+        // 2.2 Update Order Stats
+        // New End Time = MAX(OldEndTime, NOW()) + Duration
+        const now = new Date();
+        const oldEndTime = order.serviceEndTime ? new Date(order.serviceEndTime) : now;
+        const baseTime = oldEndTime > now ? oldEndTime : now;
+        const newEndTime = new Date(baseTime.getTime() + overtime.duration * 60 * 60 * 1000);
+
+        await tx.update(orders)
+            .set({ 
+                amount: sql`${orders.amount} + ${overtime.fee}`,
+                totalDuration: sql`COALESCE(${orders.totalDuration}, ${orders.duration}) + ${overtime.duration}`,
+                serviceEndTime: newEndTime,
+                updatedAt: new Date()
+            })
+            .where(eq(orders.id, order.id));
+
+        // 2.3 Record Payment
+        await tx.insert(payments).values({
+            amount: overtime.fee,
+            paymentMethod,
+            status: 'success',
+            relatedType: 'overtime',
+            relatedId: overtimeId,
+            transactionId: `MOCK_OT_${nanoid()}`, // Mock ID
+            paidAt: new Date(),
+        });
+    });
+
+    return { success: true };
   }
 
   /**

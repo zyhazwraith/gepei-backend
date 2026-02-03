@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, payments, users, guides } from '../db/schema';
+import { orders, payments, users, guides, overtimeRecords } from '../db/schema';
 import { eq, and, ne, or } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import { AppError, NotFoundError, ValidationError } from '../utils/errors.js';
+import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { ErrorCodes } from '../../shared/errorCodes.js';
 
 // 验证 Schema
@@ -44,6 +44,11 @@ const selectGuideSchema = z.object({
   guideId: z.number().int().positive(),
 });
 
+// 加时申请 Schema
+const createOvertimeSchema = z.object({
+  duration: z.number().int().min(1).max(24),
+});
+
 /**
  * 创建订单 (支持 custom 和 normal)
  */
@@ -69,13 +74,17 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
 
       // 事务处理
       const result = await db.transaction(async (tx) => {
+        const startTime = new Date(validated.serviceStartTime);
+        const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
+
         // 创建订单主记录
         const [order] = await tx.insert(orders).values({
           orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
           userId,
           type: 'custom', // V2: orderType -> type
           status: 'pending', // 初始状态为待支付
-          serviceStartTime: new Date(validated.serviceStartTime), // Use new field
+          serviceStartTime: startTime, // Use new field
+          serviceEndTime: endTime, // Initialize serviceEndTime
           serviceAddress: validated.serviceAddress,
           serviceLat: validated.serviceLat.toString(),
           serviceLng: validated.serviceLng.toString(),
@@ -135,6 +144,9 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       const price = guide.realPrice; // Already int (fen)
       const amount = price * validated.duration; // int * int = int
 
+      const startTime = new Date(validated.serviceStartTime);
+      const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
+
       // 创建订单
       const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
@@ -142,7 +154,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         guideId: validated.guideId,
         type: 'standard', // V2: orderType -> type
         status: 'pending',
-        serviceStartTime: new Date(validated.serviceStartTime),
+        serviceStartTime: startTime,
+        serviceEndTime: endTime, // Initialize serviceEndTime
         duration: validated.duration,
         serviceAddress: validated.serviceAddress,
         serviceLat: validated.serviceLat.toString(),
@@ -312,34 +325,25 @@ export async function getOrders(req: Request, res: Response) {
 /**
  * 获取订单详情
  */
-export async function getOrderById(req: Request, res: Response) {
+export async function getOrderById(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
+  const role = req.user!.role;
   const orderId = parseInt(req.params.id);
 
   if (isNaN(orderId)) {
-    throw new ValidationError('无效的订单ID');
+    return next(new ValidationError('无效的订单ID'));
   }
 
   try {
-    const [order] = await db.select().from(orders).where(
-      and(
-        eq(orders.id, orderId),
-        or(
-          eq(orders.userId, userId),
-          eq(orders.guideId, userId)
-        )
-      )
-    );
+    const result = await OrderService.getOrderDetails(orderId);
+    
+    // Permission Check
+    const isOwner = result.userId === userId;
+    const isAssignedGuide = result.guideId === userId;
+    const isAdmin = role === 'admin' || role === 'cs';
 
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-
-    let result: any = { ...order };
-
-    if (order.type === 'custom') { // V2: orderType -> type
-        // V2: Candidates logic removed.
-        // Just return order info
+    if (!isOwner && !isAssignedGuide && !isAdmin) {
+        throw new ForbiddenError('无权查看此订单');
     }
 
     res.json({
@@ -348,7 +352,7 @@ export async function getOrderById(req: Request, res: Response) {
       data: result,
     });
   } catch (error) {
-    throw error;
+    next(error);
   }
 }
 
@@ -368,6 +372,115 @@ import { OrderService } from '../services/order.service.js';
 
 // ... (existing imports)
 
+/**
+ * Create Overtime Request
+ * POST /api/v1/orders/:id/overtime
+ */
+export async function createOvertime(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const orderId = parseInt(req.params.id);
+
+  if (isNaN(orderId)) {
+    return next(new ValidationError('无效的订单ID'));
+  }
+
+  try {
+    const validated = createOvertimeSchema.parse(req.body);
+
+    // 1. 验证订单所有权
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) throw new NotFoundError('订单不存在');
+    if (order.userId !== userId) throw new ForbiddenError('无权操作此订单');
+    
+    // 2. 调用服务
+    const createdOvertime = await OrderService.createOvertime(orderId, validated.duration);
+    
+    res.status(201).json({
+      code: 0,
+      message: '加时申请创建成功',
+      data: createdOvertime
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+        const msg = (error as any).errors?.[0]?.message || '参数校验失败';
+        return next(new ValidationError(msg));
+    }
+    next(error);
+  }
+}
+
+/**
+ * Pay Overtime
+ * POST /api/v1/overtime/:id/pay
+ */
+export async function payOvertime(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const overtimeId = parseInt(req.params.id);
+  const { paymentMethod } = req.body;
+
+  if (isNaN(overtimeId)) {
+    return next(new ValidationError('无效的加时申请ID'));
+  }
+
+  try {
+    // Validate Input
+    payOrderSchema.parse({ paymentMethod }); // Reuse payOrderSchema
+
+    // Check Ownership via Relation (Overtime -> Order -> User)
+    // We need to fetch to check.
+    // OPTIMIZATION: We could do a join query here or let Service handle it if we passed userId.
+    // But since we removed userId from Service, we MUST check here.
+    // This requires fetching Overtime AND Order.
+    // It's getting heavy for Controller. 
+    // Maybe we should have a `OvertimeService.getOvertimeWithOrder(id)`?
+    // Or just query directly.
+    
+    const overtimeWithOrder = await db.query.overtimeRecords.findFirst({
+        where: eq(orders.id, overtimeId), // Wait, overtimeId matches overtimeRecords.id
+        with: {
+            order: true
+        }
+    });
+    
+    // Wait, `db.query` is better for relations.
+    // But I need to import `overtimeRecords` for the query builder? 
+    // Actually `db.query.overtimeRecords` works if schema is set up.
+    // Let's use `db.select` with join for safety as schema relations might be tricky.
+    
+    const result = await db.select({
+        overtime: overtimeRecords,
+        order: orders
+    })
+    .from(overtimeRecords)
+    .innerJoin(orders, eq(overtimeRecords.orderId, orders.id))
+    .where(eq(overtimeRecords.id, overtimeId));
+    
+    if (result.length === 0) {
+        throw new NotFoundError('加时申请不存在');
+    }
+    
+    const { order } = result[0];
+    
+    if (order.userId !== userId) {
+        throw new ForbiddenError('无权支付此订单');
+    }
+
+    const payResult = await OrderService.payOvertime(overtimeId, paymentMethod);
+    
+    res.json({
+      code: 0,
+      message: '支付成功',
+      data: payResult
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+        const msg = (error as any).errors?.[0]?.message || '参数校验失败';
+        return next(new ValidationError(msg));
+    }
+    next(error);
+  }
+}
+
 // ... (existing functions)
 
 /**
@@ -385,7 +498,7 @@ export async function checkIn(req: Request, res: Response, next: NextFunction) {
   try {
     const { type, attachmentId, lat, lng } = req.body;
     
-    // Basic Validation
+    // Basic Validation (Could be moved to Zod)
     if (!['start', 'end'].includes(type)) {
        throw new ValidationError('无效的打卡类型');
     }
@@ -393,7 +506,13 @@ export async function checkIn(req: Request, res: Response, next: NextFunction) {
        throw new ValidationError('参数不完整 (attachmentId, lat, lng)');
     }
 
-    const result = await OrderService.checkIn(orderId, userId, {
+    // Check Ownership/Assignment
+    // Guide must be the assigned guide for this order
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) throw new NotFoundError('订单不存在');
+    if (order.guideId !== userId) throw new ForbiddenError('无权操作此订单');
+
+    const result = await OrderService.checkIn(orderId, {
       type,
       attachmentId,
       lat,

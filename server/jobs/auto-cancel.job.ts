@@ -17,4 +17,4 @@ export const autoCancelJob = cron.schedule('*/5 * * * *', async () => {
   }
 }, {
   scheduled: false // Do not start immediately, wait for manual start
-});
+} as any);
