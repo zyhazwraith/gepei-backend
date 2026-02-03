@@ -122,6 +122,7 @@ export const orders = mysqlTable('orders', {
   // 核心服务信息
   pricePerHour: int('price_per_hour'), // 单位: 分 (单价快照)
   duration: int('duration'), // 预约时长 (小时)
+  totalDuration: int('total_duration'), // V2: 实际总时长 (预约 + 加时)
   amount: int('amount').notNull(), // 总额 (单位: 分)
   refundAmount: int('refund_amount').default(0), // 已退款金额 (单位: 分)
   content: text('content'), // 核心服务内容 (纯文本描述，如“三日包车游”)
@@ -129,6 +130,7 @@ export const orders = mysqlTable('orders', {
   
   // 时间信息
   serviceStartTime: timestamp('service_start_time'),
+  serviceEndTime: timestamp('service_end_time'), // 预计服务结束时间
   paidAt: timestamp('paid_at'),
   completedAt: timestamp('completed_at'),
   

@@ -69,13 +69,17 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
 
       // 事务处理
       const result = await db.transaction(async (tx) => {
+        const startTime = new Date(validated.serviceStartTime);
+        const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
+
         // 创建订单主记录
         const [order] = await tx.insert(orders).values({
           orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
           userId,
           type: 'custom', // V2: orderType -> type
           status: 'pending', // 初始状态为待支付
-          serviceStartTime: new Date(validated.serviceStartTime), // Use new field
+          serviceStartTime: startTime, // Use new field
+          serviceEndTime: endTime, // Initialize serviceEndTime
           serviceAddress: validated.serviceAddress,
           serviceLat: validated.serviceLat.toString(),
           serviceLng: validated.serviceLng.toString(),
@@ -135,6 +139,9 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       const price = guide.realPrice; // Already int (fen)
       const amount = price * validated.duration; // int * int = int
 
+      const startTime = new Date(validated.serviceStartTime);
+      const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
+
       // 创建订单
       const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
@@ -142,7 +149,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         guideId: validated.guideId,
         type: 'standard', // V2: orderType -> type
         status: 'pending',
-        serviceStartTime: new Date(validated.serviceStartTime),
+        serviceStartTime: startTime,
+        serviceEndTime: endTime, // Initialize serviceEndTime
         duration: validated.duration,
         serviceAddress: validated.serviceAddress,
         serviceLat: validated.serviceLat.toString(),
@@ -312,43 +320,27 @@ export async function getOrders(req: Request, res: Response) {
 /**
  * 获取订单详情
  */
-export async function getOrderById(req: Request, res: Response) {
+export async function getOrderById(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
   const orderId = parseInt(req.params.id);
 
   if (isNaN(orderId)) {
-    throw new ValidationError('无效的订单ID');
+    return next(new ValidationError('无效的订单ID'));
   }
 
   try {
-    const [order] = await db.select().from(orders).where(
-      and(
-        eq(orders.id, orderId),
-        or(
-          eq(orders.userId, userId),
-          eq(orders.guideId, userId)
-        )
-      )
-    );
-
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-
-    let result: any = { ...order };
-
-    if (order.type === 'custom') { // V2: orderType -> type
-        // V2: Candidates logic removed.
-        // Just return order info
-    }
-
+    const result = await OrderService.getOrderDetails(orderId, userId, req.user!.role);
     res.json({
       code: 0,
       message: '获取成功',
       data: result,
     });
   } catch (error) {
-    throw error;
+    // If OrderService.getOrderDetails is not used or throws error not handled here, fallback to old logic?
+    // Actually, we should replace the logic inside getOrderById with OrderService call.
+    // But since I cannot easily replace the whole function body without risk of conflict with old imports/logic
+    // I will try to replace the body of getOrderById
+    next(error);
   }
 }
 
@@ -367,6 +359,56 @@ export async function getCandidates(req: Request, res: Response) {
 import { OrderService } from '../services/order.service.js';
 
 // ... (existing imports)
+
+/**
+ * Create Overtime Request
+ * POST /api/v1/orders/:id/overtime
+ */
+export async function createOvertime(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const orderId = parseInt(req.params.id);
+  const { duration } = req.body;
+
+  if (isNaN(orderId)) {
+    return next(new ValidationError('无效的订单ID'));
+  }
+
+  try {
+    const result = await OrderService.createOvertime(orderId, userId, duration);
+    res.status(201).json({
+      code: 0,
+      message: '加时申请创建成功',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Pay Overtime
+ * POST /api/v1/overtime/:id/pay
+ */
+export async function payOvertime(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const overtimeId = parseInt(req.params.id);
+  const { paymentMethod } = req.body;
+
+  if (isNaN(overtimeId)) {
+    return next(new ValidationError('无效的加时申请ID'));
+  }
+
+  try {
+    const result = await OrderService.payOvertime(overtimeId, userId, paymentMethod);
+    res.json({
+      code: 0,
+      message: '支付成功',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
 // ... (existing functions)
 

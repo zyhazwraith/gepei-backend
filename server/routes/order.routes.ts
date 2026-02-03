@@ -26,4 +26,7 @@ router.post('/:id/select-guide', asyncHandler(authenticate), asyncHandler(orderC
 // POST /api/v1/orders/:id/check-in - 地陪打卡 (开始/结束服务)
 router.post('/:id/check-in', asyncHandler(authenticate), asyncHandler(orderController.checkIn));
 
+// POST /api/v1/orders/:id/overtime - 申请加时
+router.post('/:id/overtime', asyncHandler(authenticate), asyncHandler(orderController.createOvertime));
+
 export default router;
