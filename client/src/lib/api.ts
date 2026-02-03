@@ -214,17 +214,28 @@ export interface CustomRequirements {
   specialRequirements: string;
 }
 
+export interface OvertimeRecord {
+  id: number;
+  duration: number;
+  fee: number;
+  status: 'pending' | 'paid';
+  createdAt: string;
+}
+
 export interface OrderDetailResponse {
   id: number;
   orderNumber: string;
   userId: number;
   guideId: number | null;
   orderType: 'normal' | 'custom';
-  status: 'pending' | 'paid' | 'waiting_for_user' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'paid' | 'waiting_for_user' | 'waiting_service' | 'in_service' | 'service_ended' | 'in_progress' | 'completed' | 'cancelled';
   serviceDate: string;
   serviceHours: number;
   serviceStartTime?: string;
+  serviceEndTime?: string; // S-3
+  pricePerHour?: number; // S-3
   duration?: number;
+  totalDuration?: number; // S-3
   serviceAddress?: string;
   serviceLat?: number;
   serviceLng?: number;
@@ -233,6 +244,30 @@ export interface OrderDetailResponse {
   requirements: string | null;
   createdAt: string;
   customRequirements?: CustomRequirements | null;
+  overtimeRecords?: OvertimeRecord[]; // S-3
+}
+
+export interface CreateOvertimeResponse {
+  overtimeId: number;
+  duration: number;
+  fee: number;
+  pricePerHour: number;
+}
+
+// ... existing code ...
+
+/**
+ * 创建加时申请 (S-3)
+ */
+export async function createOvertime(orderId: number, duration: number): Promise<ApiResponse<CreateOvertimeResponse>> {
+  return apiClient.post(`/orders/${orderId}/overtime`, { duration });
+}
+
+/**
+ * 支付加时单 (S-3)
+ */
+export async function payOvertime(overtimeId: number, paymentMethod: 'wechat' | 'alipay'): Promise<ApiResponse<any>> {
+  return apiClient.post(`/overtime/${overtimeId}/pay`, { paymentMethod });
 }
 
 // ==================== API方法 ====================

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { getOrderDetails, AdminOrder } from "@/lib/api";
 import { Loader2, User, MapPin, Clock, Calendar, Wallet } from "lucide-react";
+import Price from "@/components/Price";
 
 interface Props {
   orderId: number | null;
@@ -38,11 +39,6 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatPrice = (cents: number | string | undefined) => {
-    if (cents === undefined || cents === null) return "-";
-    return (Number(cents) / 100).toFixed(2);
   };
 
   return (
@@ -104,7 +100,7 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 flex items-center gap-1"><Wallet className="w-3 h-3" /> 总金额</div>
-                <div className="text-sm font-bold text-orange-600">¥{formatPrice(order.amount)}</div>
+                <Price amount={order.amount} className="text-sm font-bold text-orange-600" />
               </div>
             </div>
 

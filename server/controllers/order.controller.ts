@@ -424,47 +424,28 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
 
   try {
     // Validate Input
-    payOrderSchema.parse({ paymentMethod }); // Reuse payOrderSchema
+    payOrderSchema.parse({ paymentMethod });
 
-    // Check Ownership via Relation (Overtime -> Order -> User)
-    // We need to fetch to check.
-    // OPTIMIZATION: We could do a join query here or let Service handle it if we passed userId.
-    // But since we removed userId from Service, we MUST check here.
-    // This requires fetching Overtime AND Order.
-    // It's getting heavy for Controller. 
-    // Maybe we should have a `OvertimeService.getOvertimeWithOrder(id)`?
-    // Or just query directly.
-    
-    const overtimeWithOrder = await db.query.overtimeRecords.findFirst({
-        where: eq(orders.id, overtimeId), // Wait, overtimeId matches overtimeRecords.id
-        with: {
-            order: true
-        }
-    });
-    
-    // Wait, `db.query` is better for relations.
-    // But I need to import `overtimeRecords` for the query builder? 
-    // Actually `db.query.overtimeRecords` works if schema is set up.
-    // Let's use `db.select` with join for safety as schema relations might be tricky.
-    
-    const result = await db.select({
-        overtime: overtimeRecords,
-        order: orders
-    })
-    .from(overtimeRecords)
-    .innerJoin(orders, eq(overtimeRecords.orderId, orders.id))
-    .where(eq(overtimeRecords.id, overtimeId));
-    
-    if (result.length === 0) {
+    // 1. Fetch Overtime Record
+    const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
+
+    if (!overtime) {
         throw new NotFoundError('加时申请不存在');
     }
+
+    // 2. Fetch Associated Order
+    const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
+
+    if (!order) {
+        throw new NotFoundError('关联订单不存在');
+    }
     
-    const { order } = result[0];
-    
+    // 3. Permission Check
     if (order.userId !== userId) {
         throw new ForbiddenError('无权支付此订单');
     }
 
+    // 4. Call Service
     const payResult = await OrderService.payOvertime(overtimeId, paymentMethod);
     
     res.json({
