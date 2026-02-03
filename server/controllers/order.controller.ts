@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { orders, payments, users, guides } from '../db/schema';
+import { orders, payments, users, guides, overtimeRecords } from '../db/schema';
 import { eq, and, ne, or } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import { AppError, NotFoundError, ValidationError } from '../utils/errors.js';
+import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { ErrorCodes } from '../../shared/errorCodes.js';
 
 // 验证 Schema
@@ -42,6 +42,11 @@ const payOrderSchema = z.object({
 // 选择地陪 Schema
 const selectGuideSchema = z.object({
   guideId: z.number().int().positive(),
+});
+
+// 加时申请 Schema
+const createOvertimeSchema = z.object({
+  duration: z.number().int().min(1).max(24),
 });
 
 /**
@@ -322,6 +327,7 @@ export async function getOrders(req: Request, res: Response) {
  */
 export async function getOrderById(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
+  const role = req.user!.role;
   const orderId = parseInt(req.params.id);
 
   if (isNaN(orderId)) {
@@ -329,17 +335,23 @@ export async function getOrderById(req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const result = await OrderService.getOrderDetails(orderId, userId, req.user!.role);
+    const result = await OrderService.getOrderDetails(orderId);
+    
+    // Permission Check
+    const isOwner = result.userId === userId;
+    const isAssignedGuide = result.guideId === userId;
+    const isAdmin = role === 'admin' || role === 'cs';
+
+    if (!isOwner && !isAssignedGuide && !isAdmin) {
+        throw new ForbiddenError('无权查看此订单');
+    }
+
     res.json({
       code: 0,
       message: '获取成功',
       data: result,
     });
   } catch (error) {
-    // If OrderService.getOrderDetails is not used or throws error not handled here, fallback to old logic?
-    // Actually, we should replace the logic inside getOrderById with OrderService call.
-    // But since I cannot easily replace the whole function body without risk of conflict with old imports/logic
-    // I will try to replace the body of getOrderById
     next(error);
   }
 }
@@ -367,20 +379,32 @@ import { OrderService } from '../services/order.service.js';
 export async function createOvertime(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
   const orderId = parseInt(req.params.id);
-  const { duration } = req.body;
 
   if (isNaN(orderId)) {
     return next(new ValidationError('无效的订单ID'));
   }
 
   try {
-    const result = await OrderService.createOvertime(orderId, userId, duration);
+    const validated = createOvertimeSchema.parse(req.body);
+
+    // 1. 验证订单所有权
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) throw new NotFoundError('订单不存在');
+    if (order.userId !== userId) throw new ForbiddenError('无权操作此订单');
+    
+    // 2. 调用服务
+    const createdOvertime = await OrderService.createOvertime(orderId, validated.duration);
+    
     res.status(201).json({
       code: 0,
       message: '加时申请创建成功',
-      data: result
+      data: createdOvertime
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+        const msg = (error as any).errors?.[0]?.message || '参数校验失败';
+        return next(new ValidationError(msg));
+    }
     next(error);
   }
 }
@@ -399,13 +423,60 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const result = await OrderService.payOvertime(overtimeId, userId, paymentMethod);
+    // Validate Input
+    payOrderSchema.parse({ paymentMethod }); // Reuse payOrderSchema
+
+    // Check Ownership via Relation (Overtime -> Order -> User)
+    // We need to fetch to check.
+    // OPTIMIZATION: We could do a join query here or let Service handle it if we passed userId.
+    // But since we removed userId from Service, we MUST check here.
+    // This requires fetching Overtime AND Order.
+    // It's getting heavy for Controller. 
+    // Maybe we should have a `OvertimeService.getOvertimeWithOrder(id)`?
+    // Or just query directly.
+    
+    const overtimeWithOrder = await db.query.overtimeRecords.findFirst({
+        where: eq(orders.id, overtimeId), // Wait, overtimeId matches overtimeRecords.id
+        with: {
+            order: true
+        }
+    });
+    
+    // Wait, `db.query` is better for relations.
+    // But I need to import `overtimeRecords` for the query builder? 
+    // Actually `db.query.overtimeRecords` works if schema is set up.
+    // Let's use `db.select` with join for safety as schema relations might be tricky.
+    
+    const result = await db.select({
+        overtime: overtimeRecords,
+        order: orders
+    })
+    .from(overtimeRecords)
+    .innerJoin(orders, eq(overtimeRecords.orderId, orders.id))
+    .where(eq(overtimeRecords.id, overtimeId));
+    
+    if (result.length === 0) {
+        throw new NotFoundError('加时申请不存在');
+    }
+    
+    const { order } = result[0];
+    
+    if (order.userId !== userId) {
+        throw new ForbiddenError('无权支付此订单');
+    }
+
+    const payResult = await OrderService.payOvertime(overtimeId, paymentMethod);
+    
     res.json({
       code: 0,
       message: '支付成功',
-      data: result
+      data: payResult
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+        const msg = (error as any).errors?.[0]?.message || '参数校验失败';
+        return next(new ValidationError(msg));
+    }
     next(error);
   }
 }
@@ -427,7 +498,7 @@ export async function checkIn(req: Request, res: Response, next: NextFunction) {
   try {
     const { type, attachmentId, lat, lng } = req.body;
     
-    // Basic Validation
+    // Basic Validation (Could be moved to Zod)
     if (!['start', 'end'].includes(type)) {
        throw new ValidationError('无效的打卡类型');
     }
@@ -435,7 +506,13 @@ export async function checkIn(req: Request, res: Response, next: NextFunction) {
        throw new ValidationError('参数不完整 (attachmentId, lat, lng)');
     }
 
-    const result = await OrderService.checkIn(orderId, userId, {
+    // Check Ownership/Assignment
+    // Guide must be the assigned guide for this order
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) throw new NotFoundError('订单不存在');
+    if (order.guideId !== userId) throw new ForbiddenError('无权操作此订单');
+
+    const result = await OrderService.checkIn(orderId, {
       type,
       attachmentId,
       lat,

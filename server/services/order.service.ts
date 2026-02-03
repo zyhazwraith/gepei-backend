@@ -15,7 +15,7 @@ export class OrderService {
   /**
    * Get Order Details with Overtime
    */
-  static async getOrderDetails(orderId: number, userId: number, role: string) {
+  static async getOrderDetails(orderId: number) {
     // 1. Fetch Basic Order Info
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 
@@ -23,16 +23,7 @@ export class OrderService {
         throw new NotFoundError('订单不存在');
     }
 
-    // 2. Permission Check
-    const isOwner = order.userId === userId;
-    const isAssignedGuide = order.guideId === userId;
-    const isAdmin = role === 'admin' || role === 'cs';
-
-    if (!isOwner && !isAssignedGuide && !isAdmin) {
-        throw new ForbiddenError('无权查看此订单');
-    }
-
-    // 3. Fetch Paid Overtime Records
+    // 2. Fetch Paid Overtime Records
     // Since relations might not be configured in schema for db.query, we use manual select
     const paidOvertimeRecords = await db.select()
         .from(overtimeRecords)
@@ -42,7 +33,7 @@ export class OrderService {
         ))
         .orderBy(desc(overtimeRecords.createdAt));
 
-    // 4. Return Combined Result
+    // 3. Return Combined Result
     return {
         ...order,
         overtimeRecords: paidOvertimeRecords
@@ -52,7 +43,7 @@ export class OrderService {
   /**
    * Check-in (Start/End Service)
    */
-  static async checkIn(orderId: number, guideId: number, payload: CheckInPayload) {
+  static async checkIn(orderId: number, payload: CheckInPayload) {
     const { type, attachmentId, lat, lng } = payload;
 
     // 1. Fetch Order
@@ -62,12 +53,7 @@ export class OrderService {
       throw new NotFoundError('订单不存在');
     }
 
-    // 2. Auth Check (Must be the assigned guide)
-    if (order.guideId !== guideId) {
-      throw new ForbiddenError('无权操作此订单');
-    }
-
-    // 3. Status Transition Logic
+    // 2. Status Transition Logic
     if (type === 'start') {
       if (order.status !== 'waiting_service') {
         throw new ValidationError(`当前订单状态为 ${order.status}，无法开始服务`);
@@ -78,7 +64,7 @@ export class OrderService {
       }
     }
 
-    // 4. Verify Attachment (Optional but recommended)
+    // 3. Verify Attachment (Optional but recommended)
     // Check if attachment exists and belongs to usage 'check_in'
     const [attachment] = await db.select().from(attachments).where(eq(attachments.id, attachmentId));
     if (!attachment) {
@@ -90,9 +76,9 @@ export class OrderService {
         throw new ValidationError('照片用途不符');
     }
 
-    // 5. Execute Transaction
+    // 4. Execute Transaction
     const result = await db.transaction(async (tx) => {
-      // 5.1 Insert Check-in Record
+      // 4.1 Insert Check-in Record
       await tx.insert(checkInRecords).values({
         orderId,
         type,
@@ -102,7 +88,7 @@ export class OrderService {
         longitude: lng.toString(),
       });
 
-      // 5.2 Update Order Status
+      // 4.2 Update Order Status
       const nextStatus = type === 'start' ? 'in_service' : 'service_ended';
       
       const updatePayload: any = { 
@@ -110,13 +96,7 @@ export class OrderService {
         updatedAt: new Date()
       };
 
-      // Initialize serviceEndTime when starting service
-      if (type === 'start' && order.duration) {
-          const startTime = new Date();
-          const endTime = new Date(startTime.getTime() + order.duration * 60 * 60 * 1000);
-          updatePayload.serviceStartTime = startTime;
-          updatePayload.serviceEndTime = endTime;
-      }
+      // Removed auto-update of serviceEndTime logic based on feedback
 
       await tx.update(orders)
         .set(updatePayload)
@@ -135,19 +115,11 @@ export class OrderService {
   /**
    * Create Overtime Request
    */
-  static async createOvertime(orderId: number, userId: number, duration: number) {
-    if (duration < 1 || duration > 24) {
-      throw new ValidationError('加时时长必须在 1-24 小时之间');
-    }
-
+  static async createOvertime(orderId: number, duration: number) {
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
     
     if (!order) {
       throw new NotFoundError('订单不存在');
-    }
-
-    if (order.userId !== userId) {
-      throw new ForbiddenError('无权操作此订单');
     }
 
     if (order.status !== 'in_service') {
@@ -182,7 +154,7 @@ export class OrderService {
   /**
    * Pay Overtime (Mock)
    */
-  static async payOvertime(overtimeId: number, userId: number, paymentMethod: 'wechat' = 'wechat') {
+  static async payOvertime(overtimeId: number, paymentMethod: 'wechat' = 'wechat') {
     // 1. Fetch Overtime Record with Order
     const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
     
@@ -195,9 +167,6 @@ export class OrderService {
     }
 
     const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
-    if (order.userId !== userId) {
-        throw new ForbiddenError('无权支付此订单');
-    }
 
     // 2. Execute Transaction
     await db.transaction(async (tx) => {
