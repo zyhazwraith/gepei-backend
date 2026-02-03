@@ -96,6 +96,10 @@ export class OrderService {
         updatedAt: new Date()
       };
 
+      if (type === 'end') {
+        updatePayload.actualEndTime = new Date();
+      }
+
       // Removed auto-update of serviceEndTime logic based on feedback
 
       await tx.update(orders)
