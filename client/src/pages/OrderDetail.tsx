@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User } from "@/lib/api";
+import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User, payOvertime } from "@/lib/api";
+import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
+import OvertimeDialog from "@/components/OvertimeDialog";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
@@ -16,6 +18,11 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  
+  // Overtime States
+  const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
+  const [pendingOvertime, setPendingOvertime] = useState<{ id: number; amount: number } | null>(null);
+  const [showOvertimePayment, setShowOvertimePayment] = useState(false);
   
   // User & Guide Status
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -128,6 +135,7 @@ export default function OrderDetail() {
   const canStartService = isGuideView && order?.status === 'waiting_service';
   const canEndService = isGuideView && order?.status === 'in_service';
   const isServiceEnded = isGuideView && order?.status === 'service_ended'; // Or completed
+  const canRequestOvertime = order?.status === 'in_service' && currentUser?.userId === order.userId;
 
   const fetchOrder = async (id: number) => {
     try {
@@ -186,6 +194,47 @@ export default function OrderDetail() {
     if (order) {
       fetchOrder(order.id); // 刷新状态
     }
+  };
+
+  const handleOvertimeCreated = (overtimeId: number, amount: number) => {
+    setPendingOvertime({ id: overtimeId, amount });
+    setShowOvertimePayment(true);
+  };
+
+  const handleOvertimePaymentSuccess = () => {
+      // Mock payment success for overtime (reuse logic or specialized call)
+      // Since PaymentSheet is generic, we might need a specific handler if using separate logic
+      // But here we use a separate state/component flow
+      if (order) fetchOrder(order.id);
+      setShowOvertimePayment(false);
+      setPendingOvertime(null);
+  };
+
+  // Custom Payment Logic for Overtime (using the same Sheet but different callback)
+  // Actually, let's reuse PaymentSheet by passing different props?
+  // PaymentSheet takes `onSuccess`. 
+  // However, PaymentSheet calls `payOrder` internally. 
+  // We need it to call `payOvertime`.
+  // Solution: We will use a modified PaymentSheet or a wrapper.
+  // Or better: Let PaymentSheet accept an optional `paymentAction` prop.
+  // But PaymentSheet is likely simple. Let's check if we can just make a small wrapper or duplicate.
+  // Actually, looking at PaymentSheet import, I don't see the code but I can infer.
+  // For simplicity, let's handle overtime payment directly here or update PaymentSheet later.
+  // Wait, I can't easily see PaymentSheet code without reading it.
+  // Assuming PaymentSheet is tightly coupled with `payOrder`.
+  // I will use a simple confirm dialog for now for overtime payment since it's "Mock".
+  // OR: I will just use `payOvertime` directly in a new simple UI.
+  
+  const handleOvertimePayConfirm = async () => {
+      if (!pendingOvertime) return;
+      const toastId = toast.loading("正在支付加时费...");
+      try {
+          await payOvertime(pendingOvertime.id, 'wechat');
+          toast.success("支付成功", { id: toastId });
+          handleOvertimePaymentSuccess();
+      } catch (error: any) {
+          toast.error(error.message || "支付失败", { id: toastId });
+      }
   };
 
 
@@ -385,25 +434,53 @@ export default function OrderDetail() {
           <CardContent className="text-sm space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-500">订金</span>
-              <span>¥{order.amount}</span>
+              <Price amount={order.amount} />
             </div>
+            {/* Overtime Records List */}
+            {order.overtimeRecords && order.overtimeRecords.length > 0 && (
+                <div className="pt-2 border-t space-y-2">
+                    {order.overtimeRecords.map(record => (
+                        <div key={record.id} className="flex justify-between items-center text-xs">
+                            <div className="flex flex-col">
+                                <span className="font-medium text-gray-700">加时 {record.duration}小时</span>
+                                <span className="text-gray-400 scale-90 origin-left">
+                                    {new Date(record.createdAt).toLocaleString([], {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                                </span>
+                            </div>
+                            <Price amount={record.fee} />
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="font-medium">实付金额</span>
-              <span className="text-lg font-bold text-orange-600">¥{order.amount}</span>
+              <Price amount={order.amount} className="text-lg font-bold text-orange-600" />
             </div>
           </CardContent>
         </Card>
 
       {/* 底部操作栏 */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t safe-area-bottom z-50">
+        
         {order.status === 'pending' && (
           <Button 
             className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
             size="lg"
             onClick={() => setShowPayment(true)}
           >
-            微信支付 ¥{order.amount}
+            微信支付 <Price amount={order.amount} className="ml-1" />
           </Button>
+        )}
+        
+        {/* User Overtime Request Button */}
+        {canRequestOvertime && (
+            <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
+                onClick={() => setShowOvertimeDialog(true)}
+            >
+                <Clock className="w-4 h-4 mr-2" />
+                申请加时服务
+            </Button>
         )}
 
         {/* 地陪打卡操作栏 */}
@@ -482,7 +559,38 @@ export default function OrderDetail() {
         onSuccess={handlePaymentSuccess}
       />
 
-      {order.status !== 'pending' && !canStartService && !canEndService && <BottomNav />}
+      {order.pricePerHour && (
+          <OvertimeDialog 
+            isOpen={showOvertimeDialog}
+            onClose={() => setShowOvertimeDialog(false)}
+            orderId={order.id}
+            pricePerHour={order.pricePerHour}
+            onSuccess={handleOvertimeCreated}
+          />
+      )}
+      
+      {/* Overtime Payment Confirmation Dialog (Simple) */}
+      {showOvertimePayment && pendingOvertime && (
+          <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center bg-black/50 p-4">
+              <div className="bg-white w-full max-w-md rounded-xl p-6 space-y-4 animate-in slide-in-from-bottom-10 fade-in">
+                  <h3 className="text-lg font-bold text-center">支付加时费</h3>
+                  <div className="text-center">
+                      <div className="text-3xl font-bold text-orange-600 mb-1">¥{(pendingOvertime.amount / 100).toFixed(2)}</div>
+                      <p className="text-sm text-gray-500">微信支付</p>
+                  </div>
+                  <Button 
+                    className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
+                    size="lg"
+                    onClick={handleOvertimePayConfirm}
+                  >
+                    立即支付
+                  </Button>
+                  <Button variant="ghost" className="w-full" onClick={() => setShowOvertimePayment(false)}>取消</Button>
+              </div>
+          </div>
+      )}
+
+      {order.status !== 'pending' && !canStartService && !canEndService && !canRequestOvertime && <BottomNav />}
     </div>
   );
 }
