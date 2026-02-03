@@ -51,7 +51,9 @@ async function main() {
 
   // 3. Create Overtime Request (+2 hours)
   console.log('Creating overtime request (+2h)...');
-  const overtimeResult = await OrderService.createOvertime(orderId, userId, 2);
+  // NOTE: OrderService.createOvertime now only accepts (orderId, duration)
+  // Permission checks are moved to Controller, so we skip them here for testing service logic directly
+  const overtimeResult = await OrderService.createOvertime(orderId, 2);
   console.log('Overtime Created:', overtimeResult);
 
   if (overtimeResult.fee !== 2500) {
@@ -68,7 +70,9 @@ async function main() {
 
   // 5. Pay Overtime
   console.log('Paying overtime...');
-  await OrderService.payOvertime(overtimeResult.overtimeId, userId);
+  // NOTE: OrderService.payOvertime now only accepts (overtimeId, paymentMethod)
+  // Permission checks are moved to Controller
+  await OrderService.payOvertime(overtimeResult.overtimeId);
 
   // 6. Verify Final State
   // 6.1 Overtime status -> paid
