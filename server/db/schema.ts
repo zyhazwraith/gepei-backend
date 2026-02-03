@@ -132,7 +132,7 @@ export const orders = mysqlTable('orders', {
   serviceStartTime: timestamp('service_start_time'),
   serviceEndTime: timestamp('service_end_time'), // 预计服务结束时间
   paidAt: timestamp('paid_at'),
-  completedAt: timestamp('completed_at'),
+  actualEndTime: timestamp('actual_end_time'),
   
   // LBS 快照 (可选保留，视业务需要)
   serviceAddress: varchar('service_address', { length: 255 }),

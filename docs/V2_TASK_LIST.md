@@ -19,7 +19,7 @@
     - *User Story*: 系统根据 User `role` 字段 (admin/cs) 拦截越权请求。
     - *Tech*: Middleware update, Types update.
     - *Verification*: [x] scripts/verify-rbac.ts (Admin/CS/User Matrix).
-- [ ] **[F-2] 地陪资料升级 (Guide Profile)** `[PRD 3.3]`
+- [x] **[F-2] 地陪资料升级 (Guide Profile)** `[PRD 3.3]` `Status: Completed`
     - *User Story*: 地陪可录入 LBS (lat/lng) 和相册；Admin 可查看并审核。
     - *Tech*: API update (`updateProfile`).
 - [x] **[F-3] 系统配置接口 (System Config)** `[PRD 3.4.1]` `Status: Completed`
@@ -46,10 +46,6 @@
     - *Verification*: [x] API Test (scripts/verify-T2.ts), [x] E2E Test (tests/e2e/admin-custom-order.spec.ts).
 - [ ] **[T-3] 订单指派接口 (Assign Guide)** `[Cancelled]`
     - *Note*: Merged into T-2. Custom orders are assigned upon creation.
-- [ ] **[T-4] 普通单校验 (Standard Order Check)** `[PRD 2.2]`
-    - *User Story*: 用户下单时，系统强制校验地陪是否有 `realPrice`。
-    - *Backend*: Update `createOrder` logic.
-    - *Frontend*: **[FE-T4]** App端下单页错误提示适配.
 - [ ] **[T-5] 统一支付回调 (Payment Callback)** `[PRD 1.1]` `Status: Deferred (Use Mock)`
     - *User Story*: 系统能正确处理普通/定制/加时单的微信支付回调。
     - *Strategy*: Use Mock Payment for MVP. Real Wechat Pay integration deferred to Pre-Launch.
@@ -66,7 +62,7 @@
 - [x] **[S-2] 调度器: 超时关单 (Auto Cancel)** `[PRD 1.1]` `Status: Completed`
     - *User Story*: 系统自动关闭创建 > 60m 未支付的订单 (实际执行: >75m)。
     - *Tech*: Node-cron job (5 min).
-- [ ] **[S-3] 加时下单接口 (Overtime)** `[PRD 2.4, 3.1]`
+- [x] **[S-3] 加时下单接口 (Overtime)** `[PRD 2.4, 3.1]` `Status: Completed`
     - *User Story*: 用户在服务中发起加时，按实时费率支付。订单列表需展示聚合金额。
     - *Tech*: New API (`POST /orders/:id/overtime`). Update Order List API for aggregation.
 
@@ -78,9 +74,10 @@
 - [ ] **[O-1] 地陪审核接口 (Guide Audit)** `[PRD 3.3]`
     - *User Story*: Admin 审核地陪并设置 `realPrice`。
     - *Tech*: New API.
-- [ ] **[O-2] 调度器: 自动结算 (Auto Settle)** `[PRD 3.2, 5.2]`
+- [x] **[O-2] 调度器: 自动结算 (Auto Settle)** `[PRD 3.2, 5.2]` `Status: Completed`
     - *User Story*: 订单结束 > 24h 自动完结，计算抽成入账。
     - *Tech*: Node-cron job (1 hour).
+    - *Verification*: [x] scripts/test-auto-settle.ts (Order+Overtime -> Balance).
 - [ ] **[O-3] 退款接口 (Refund)** `[PRD 1.1, 3.4.3]`
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
