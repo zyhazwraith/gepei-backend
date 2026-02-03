@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { orders, checkInRecords, attachments, overtimeRecords, payments } from '../db/schema';
-import { eq, and, lt, sql } from 'drizzle-orm';
+import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
 
@@ -16,34 +16,14 @@ export class OrderService {
    * Get Order Details with Overtime
    */
   static async getOrderDetails(orderId: number, userId: number, role: string) {
-    const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-            guide: true,
-            user: true,
-            // Only fetch PAID overtime records
-            overtimeRecords: {
-                where: eq(overtimeRecords.status, 'paid'),
-                orderBy: (overtimeRecords, { desc   /**
-   * Get Order Details with Overtime
-   */
-  static async getOrderDetails(orderId: number, userId: number, role: string) {
-    const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-            // Only fetch PAID overtime records
-            overtimeRecords: {
-                where: eq(overtimeRecords.status, 'paid'),
-                orderBy: (overtimeRecords, { desc }) => [desc(overtimeRecords.createdAt)],
-            }
-        }
-    });
+    // 1. Fetch Basic Order Info
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 
     if (!order) {
         throw new NotFoundError('订单不存在');
     }
 
-    // Permission Check
+    // 2. Permission Check
     const isOwner = order.userId === userId;
     const isAssignedGuide = order.guideId === userId;
     const isAdmin = role === 'admin' || role === 'cs';
@@ -52,42 +32,23 @@ export class OrderService {
         throw new ForbiddenError('无权查看此订单');
     }
 
-    return order;
+    // 3. Fetch Paid Overtime Records
+    // Since relations might not be configured in schema for db.query, we use manual select
+    const paidOvertimeRecords = await db.select()
+        .from(overtimeRecords)
+        .where(and(
+            eq(overtimeRecords.orderId, orderId),
+            eq(overtimeRecords.status, 'paid')
+        ))
+        .orderBy(desc(overtimeRecords.createdAt));
+
+    // 4. Return Combined Result
+    return {
+        ...order,
+        overtimeRecords: paidOvertimeRecords
+    };
   }
-}) => [desc(overtimeRecords.createdAt)],
-            }
-        }
-    });
 
-    if (!order) {
-        throw new NotFoundError('订单不存在');
-    }
-
-    // Permission Check
-    const isOwner = order.userId === userId;
-    const isAssignedGuide = order.guideId === userId;
-    const isAdmin = role === 'admin' || role === 'cs';
-
-    if (!isOwner && !isAssignedGuide && !isAdmin) {
-        throw new ForbiddenError('无权查看此订单');
-    }
-
-    return order;
-  }
-} from '../db';
-import { orders, checkInRecords, attachments, overtimeRecords, payments } from '../db/schema';
-import { eq, and, lt, sql } from 'drizzle-orm';
-import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
-import { nanoid } from 'nanoid';
-
-interface CheckInPayload {
-  type: 'start' | 'end';
-  attachmentId: number;
-  lat: number;
-  lng: number;
-}
-
-export class OrderService {
   /**
    * Check-in (Start/End Service)
    */
