@@ -81,6 +81,7 @@
 - [x] **[O-3] 退款接口 (Refund)** `[PRD 1.1, 3.4.3]` `Status: Completed`
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
+    - *Frontend*: [x] Admin Order Detail Refund Dialog.
 - [ ] **[O-4] 提现审核接口 (Withdraw)** `[PRD 3.2]`
     - *User Story*: Admin 确认打款后核销提现单。
     - *Tech*: Update withdraw API.
