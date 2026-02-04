@@ -39,10 +39,6 @@ export class AuditService {
 
     if (!finalOperatorId) {
         console.warn('[AuditService] Missing operatorId for action:', action);
-        // In strict mode, we might want to throw, but for now we log with 0 or skip?
-        // Let's allow 0 for system actions if needed, or throw if critical.
-        // For migration/script safety, if no ID provided, we can't log validly.
-        // throw new Error('Audit log requires operatorId');
     }
 
     await db.insert(auditLogs).values({
