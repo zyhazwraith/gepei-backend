@@ -46,6 +46,10 @@
     - *Verification*: [x] API Test (scripts/verify-T2.ts), [x] E2E Test (tests/e2e/admin-custom-order.spec.ts).
 - [ ] **[T-3] 订单指派接口 (Assign Guide)** `[Cancelled]`
     - *Note*: Merged into T-2. Custom orders are assigned upon creation.
+- [x] **[T-4] 前端: 客服联系流程 (CS Contact Flow)** `[PRD 1.1]` `Status: Completed`
+    - *User Story*: 普通订单全流程可联系客服，待服务状态强引导；定制订单改为引导联系客服。
+    - *Tech*: New `ContactCSDialog`, Update `OrderDetail` & `Custom` page, Fix `OrderCreate` param.
+    - *Frontend*: [x] `Custom.tsx` as landing page, [x] `OrderDetail.tsx` with persistent button & QR code.
 - [ ] **[T-5] 统一支付回调 (Payment Callback)** `[PRD 1.1]` `Status: Deferred (Use Mock)`
     - *User Story*: 系统能正确处理普通/定制/加时单的微信支付回调。
     - *Strategy*: Use Mock Payment for MVP. Real Wechat Pay integration deferred to Pre-Launch.
