@@ -16,15 +16,15 @@ export const generateUser = (overrides = {}) => ({
 });
 
 // Auth Helpers
-export async function registerUser(user?: any) {
-  const userData = user || generateUser();
+export async function registerUser(userOverrides: any = {}) {
+  const userData = { ...generateUser(), ...userOverrides };
   try {
     const res = await axios.post(`${API_URL}/auth/register`, userData);
     if (res.data.code === 0) {
       return {
         token: res.data.data.token,
         userId: res.data.data.userId, // Fixed: backend returns camelCase userId
-        user
+        user: userData
       };
     }
     throw new Error('Register failed');

@@ -540,4 +540,99 @@ export async function updateSystemConfigs(data: UpdateSystemConfigRequest): Prom
   return apiClient.put('/admin/system-configs', data);
 }
 
+// ==================== F-4: Wallet API ====================
+
+export interface WalletLog {
+  id: number;
+  type: 'income' | 'withdraw_freeze' | 'withdraw_unfreeze' | 'withdraw_success' | 'refund';
+  amount: number;
+  relatedType: string;
+  relatedId: number;
+  createdAt: string;
+  title?: string; // Optional enriched title
+  status?: 'pending' | 'completed' | 'rejected'; // For withdrawals
+  
+  // Extended fields
+  orderNumber?: string;
+  adminNote?: string;
+}
+
+export interface WalletSummary {
+  balance: number;
+  frozen_amount: number;
+}
+
+export interface GetWalletLogsResponse {
+  list: WalletLog[];
+  pagination: Pagination;
+}
+
+export interface WithdrawResponse {
+  id: number;
+  amount: number;
+  status: string;
+}
+
+/**
+ * 获取钱包概览
+ */
+export async function getWalletSummary(): Promise<ApiResponse<WalletSummary>> {
+  return apiClient.get('/wallet/summary');
+}
+
+/**
+ * 获取钱包流水
+ */
+export async function getWalletLogs(page: number = 1, limit: number = 20): Promise<ApiResponse<GetWalletLogsResponse>> {
+  return apiClient.get('/wallet/logs', { params: { page, limit } });
+}
+
+/**
+ * 发起提现
+ */
+export async function applyWithdraw(amount: number, userNote: string): Promise<ApiResponse<WithdrawResponse>> {
+  return apiClient.post('/wallet/withdraw', { amount, userNote });
+}
+
+// ==================== O-7: Audit Logs API ====================
+
+export interface AuditLog {
+  id: number;
+  operatorId: number;
+  operatorName?: string;
+  action: string;
+  targetType: string;
+  targetId: number | null;
+  details: Record<string, any> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface GetAuditLogsResponse {
+  list: AuditLog[];
+  pagination: Pagination;
+}
+
+/**
+ * 获取审计日志列表 (Admin)
+ */
+export async function getAuditLogs(params: { 
+  page: number; 
+  limit: number; 
+  action?: string; 
+  target_type?: string;
+  operator_id?: string; // Input as string, parse to number if needed
+}): Promise<ApiResponse<GetAuditLogsResponse>> {
+  const queryParams: any = { 
+    page: params.page, 
+    limit: params.limit 
+  };
+  
+  if (params.action && params.action !== 'all') queryParams.action = params.action;
+  if (params.target_type && params.target_type !== 'all') queryParams.target_type = params.target_type;
+  if (params.operator_id) queryParams.operator_id = params.operator_id;
+
+  return apiClient.get('/admin/audit-logs', { params: queryParams });
+}
+
 export default apiClient;

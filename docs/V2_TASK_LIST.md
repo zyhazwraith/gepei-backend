@@ -38,7 +38,7 @@
 - [ ] **[T-1] 废弃旧接口 (Deprecation)** `[PRD 2.3]`
     - *User Story*: 旧版 App 无法再发起定制单或选择候选人。
     - *Tech*: Delete/Disable routes.
-- [ ] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Completed`
+- [x] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Completed`
     - *Spec*: [Link](docs/v2_specs/T-2_admin_create_custom_order.md)
     - *User Story*: 客服在后台录入信息，生成“待支付”定制单。
     - *Backend*: [x] New API (`POST /admin/custom-orders`), [x] Detail API (`GET /admin/orders/:id`).
@@ -75,9 +75,9 @@
 ## **Level 4: 运营与风控 (Ops)**
 *后台管理核心能力。*
 
-- [ ] **[O-1] 地陪审核接口 (Guide Audit)** `[PRD 3.3]`
+- [x] **[O-1] 地陪审核接口 (Guide Audit)** `[PRD 3.3]` `Status: Completed`
     - *User Story*: Admin 审核地陪并设置 `realPrice`。
-    - *Tech*: New API.
+    - *Tech*: API (`PUT /admin/guides/:id`), Frontend (`GuideAudit.tsx`).
 - [x] **[O-2] 调度器: 自动结算 (Auto Settle)** `[PRD 3.2, 5.2]` `Status: Completed`
     - *User Story*: 订单结束 > 24h 自动完结，计算抽成入账。
     - *Tech*: Node-cron job (1 hour).
@@ -86,15 +86,27 @@
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
     - *Frontend*: [x] Admin Order Detail Refund Dialog.
-- [ ] **[O-4] 提现审核接口 (Withdraw)** `[PRD 3.2]`
-    - *User Story*: Admin 确认打款后核销提现单。
-    - *Tech*: Update withdraw API.
 - [ ] **[O-5] 封禁管理接口 (Ban)** `[PRD 3.3]`
     - *User Story*: Admin 封禁/解禁账号。
     - *Tech*: New API.
 - [ ] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]`
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).
-- [ ] **[O-7] 审计日志系统 (Audit System)** `[PRD 3.4.3]`
+- [x] **[O-7] 审计日志系统 (Audit System)** `[PRD 3.4.3]` `Status: Completed`
     - *User Story*: 系统记录关键操作 (如地陪审核)，Admin 可查询审计日志。
     - *Tech*: Shared Logger Module, Frontend Viewer, API (`GET /admin/audit-logs`).
+
+---
+
+## **Level 5: 资金体系 (Finance)**
+*实现地陪资金管理与平台提现审核。*
+
+- [ ] **[F-4] 地陪钱包 (Guide Wallet)** `[PRD 5.2]`
+    - *User Story*: 地陪查看余额与收支明细 (收入/提现)，并发起提现申请 (填写收款备注)。
+    - *Note*: 仅涉及“收入”与“提现”，不包含退款逻辑（C端退款由平台处理，未结算资金不进入地陪钱包）。
+    - *Tech*: Schema Update (`user_note`), `WalletService` (Income/Withdraw logic).
+    - *Frontend*: `Wallet` Page, `WithdrawDialog`.
+- [ ] **[O-4] 提现审核 (Withdraw Audit)** `[PRD 5.2]`
+    - *User Story*: Admin 审核提现单，查看用户备注，线下打款后核销。
+    - *Tech*: Admin API (`PUT /audit`).
+    - *Frontend*: `AdminWithdrawList` Page.
