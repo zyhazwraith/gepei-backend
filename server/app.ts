@@ -16,6 +16,7 @@ import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import overtimeRoutes from './routes/overtime.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import walletRoutes from './routes/wallet.routes.js';
 
 // 创建 Express 应用
 export function createApp(): Application {
@@ -58,6 +59,7 @@ export function createApp(): Application {
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/overtime', overtimeRoutes);
   app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/wallet', walletRoutes);
 
   // F-3: System Config Routes
   // Public GET /api/v1/system-configs

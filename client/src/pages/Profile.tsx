@@ -55,8 +55,8 @@ export default function Profile() {
     [
       {
         icon: Wallet,
-        label: "余额和提现",
-        onClick: () => toast.info("功能开发中"),
+        label: "我的钱包",
+        onClick: () => setLocation("/wallet"),
       },
     ],
     [

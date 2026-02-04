@@ -24,3 +24,12 @@ export enum WalletLogType {
   WITHDRAW_SUCCESS = 'withdraw_success',
   REFUND = 'refund'
 }
+
+/**
+ * 提现状态枚举
+ */
+export enum WithdrawStatus {
+  PENDING = 'pending',     // 审核中/冻结中
+  COMPLETED = 'completed', // 已打款
+  REJECTED = 'rejected'    // 已驳回
+}

@@ -236,8 +236,10 @@ export const withdrawals = mysqlTable('withdrawals', {
   id: int('id').primaryKey().autoincrement(),
   userId: int('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   amount: int('amount').notNull(), // 单位: 分
-  status: mysqlEnum('status', ['pending', 'processing', 'completed', 'failed']).default('pending'),
-  bankInfo: json('bank_info'),
+  status: mysqlEnum('status', ['pending', 'completed', 'rejected']).default('pending'),
+  userNote: varchar('user_note', { length: 255 }), // 用户收款信息
+  adminNote: varchar('admin_note', { length: 255 }), // 管理员备注/驳回理由
+  bankInfo: json('bank_info'), // Deprecated but kept for compatibility if needed
   auditLogId: int('audit_log_id'), // FK -> audit_logs.id
   processedAt: timestamp('processed_at'),
   createdAt: timestamp('created_at').defaultNow(),
