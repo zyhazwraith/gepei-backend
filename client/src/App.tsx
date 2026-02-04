@@ -24,6 +24,7 @@ import AdminUserList from "./pages/admin/UserList";
 import AdminGuideList from "./pages/admin/GuideList";
 import AdminGuideAudit from "./pages/admin/GuideAudit";
 import AdminSettings from "./pages/admin/SettingsPage";
+import AdminAuditLogList from "./pages/admin/AuditLogList";
 
 function Router() {
   return (
@@ -49,6 +50,7 @@ function Router() {
       <Route path={"/admin/users"} component={AdminUserList} />
       <Route path={"/admin/guides"} component={AdminGuideList} />
       <Route path={"/admin/guides/:id"} component={AdminGuideAudit} />
+      <Route path={"/admin/audit-logs"} component={AdminAuditLogList} />
       <Route path={"/admin/settings"} component={AdminSettings} />
 
       <Route path={"/404"} component={NotFound} />

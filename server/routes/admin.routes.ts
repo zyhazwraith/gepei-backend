@@ -11,6 +11,7 @@ import {
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
+import { listAuditLogs } from '../controllers/admin/audit-logs.controller.js';
 
 const router = Router();
 
@@ -44,6 +45,9 @@ router.get('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(getGuideD
 
 // PUT /api/v1/admin/guides/:userId - 更新地陪状态与定价 (Audit)
 router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGuideStatus));
+
+// GET /api/v1/admin/audit-logs - 获取审计日志
+router.get('/audit-logs', authorize(['admin', 'cs']), asyncHandler(listAuditLogs));
 
 
 // 2. Admin Only Routes

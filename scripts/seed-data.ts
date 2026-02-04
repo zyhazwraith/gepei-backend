@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { fakerZH_CN as faker } from '@faker-js/faker';
 import { db } from '../server/db';
-import { users, guides, orders, reviews, payments, withdrawals, customRequirements, customOrderCandidates, adminLogs } from '../server/db/schema';
+import { users, guides, orders, reviews, payments, withdrawals, auditLogs } from '../server/db/schema';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
@@ -11,10 +11,10 @@ async function seed() {
 
   // 1. 清理数据 (倒序删除以避免外键约束)
   console.log('🧹 清理旧数据...');
-  await db.delete(adminLogs); // 如果有
+  await db.delete(auditLogs);
   await db.delete(reviews);
-  await db.delete(customOrderCandidates);
-  await db.delete(customRequirements);
+  // await db.delete(customOrderCandidates);
+  // await db.delete(customRequirements);
   await db.delete(payments);
   await db.delete(withdrawals);
   await db.delete(orders);
@@ -25,6 +25,17 @@ async function seed() {
   console.log('👤 创建测试用户...');
   const testPassword = await bcrypt.hash('password123', 10);
   
+  // 2.1 创建 Admin 用户
+  await db.insert(users).values({
+    phone: '13800000000',
+    password: testPassword,
+    nickname: 'Admin User',
+    avatarUrl: faker.image.avatar(),
+    role: 'admin',
+    balance: 0
+  });
+
+  // 2.2 创建普通测试用户
   const [testUser] = await db.insert(users).values({
     phone: '13800138000',
     password: testPassword,
@@ -69,13 +80,14 @@ async function seed() {
 
     guideData.push({
       userId,
-      name: faker.person.fullName(),
+      stageName: faker.person.fullName(),
       idNumber: faker.string.numeric(18),
       city: faker.helpers.arrayElement(cities),
       intro: faker.lorem.paragraph(),
-      hourlyPrice: faker.finance.amount({ min: 50, max: 500, dec: 2 }),
-      tags: JSON.stringify(faker.helpers.arrayElements(['历史', '美食', '摄影', '购物', '自驾', '夜店'], { min: 1, max: 4 })),
-      photos: JSON.stringify([faker.image.urlLoremFlickr({ category: 'city' }), faker.image.urlLoremFlickr({ category: 'nature' })]),
+      expectedPrice: Math.floor(Number(faker.finance.amount({ min: 50, max: 500, dec: 2 })) * 100),
+      realPrice: Math.floor(Number(faker.finance.amount({ min: 50, max: 500, dec: 2 })) * 100),
+      tags: faker.helpers.arrayElements(['历史', '美食', '摄影', '购物', '自驾', '夜店'], { min: 1, max: 4 }),
+      photoIds: [1, 2],
       idVerifiedAt: new Date(),
     });
   }
@@ -84,12 +96,12 @@ async function seed() {
   
   // 获取所有地陪ID
   const allGuides = await db.select().from(guides);
-  const guideIds = allGuides.map(g => g.id);
+  const guideIds = allGuides.map(g => g.userId);
 
   // 5. 生成订单 (50个)
   console.log('📦 创建订单数据...');
   const orderData = [];
-  const orderStatuses = ['pending', 'paid', 'in_progress', 'completed', 'cancelled'] as const;
+  const orderStatuses = ['pending', 'paid', 'in_service', 'completed', 'cancelled'] as const;
 
   for (let i = 0; i < 50; i++) {
     const status = faker.helpers.arrayElement(orderStatuses);
@@ -101,11 +113,11 @@ async function seed() {
       orderNumber: faker.string.numeric(18), // 模拟订单号
       userId,
       guideId,
-      orderType: 'normal' as const,
+      type: 'standard' as const,
       status,
-      serviceDate: faker.date.future().toISOString().split('T')[0],
-      serviceHours: faker.number.int({ min: 2, max: 8 }),
-      amount,
+      serviceStartTime: faker.date.future(),
+      duration: faker.number.int({ min: 2, max: 8 }),
+      amount: Math.floor(Number(amount) * 100),
       requirements: faker.lorem.sentence(),
       createdAt: faker.date.past(),
     });
@@ -120,13 +132,15 @@ async function seed() {
 
   // 6. 生成支付记录 (对已支付/完成的订单)
   console.log('💳 创建支付记录...');
-  const paidOrders = createdOrders.filter(o => ['paid', 'in_progress', 'completed'].includes(o.status));
+  const paidOrders = createdOrders.filter(o => ['paid', 'in_service', 'completed'].includes(o.status));
   const paymentData = paidOrders.map(o => ({
     orderId: o.id,
     paymentMethod: 'wechat' as const,
     transactionId: faker.string.uuid(),
     amount: o.amount,
     status: 'success' as const,
+    relatedType: 'order' as const,
+    relatedId: o.id,
     paidAt: faker.date.recent(),
   }));
   
