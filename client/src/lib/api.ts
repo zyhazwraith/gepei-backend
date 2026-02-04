@@ -594,6 +594,48 @@ export async function applyWithdraw(amount: number, userNote: string): Promise<A
   return apiClient.post('/wallet/withdraw', { amount, userNote });
 }
 
+export interface AdminWithdrawal {
+  id: number;
+  userId: number;
+  userPhone: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'rejected';
+  userNote: string;
+  adminNote?: string;
+  createdAt: string;
+  processedAt?: string;
+}
+
+export interface GetAdminWithdrawalsResponse {
+  list: AdminWithdrawal[];
+  pagination: Pagination;
+}
+
+/**
+ * 获取提现列表 (Admin)
+ */
+export async function getAdminWithdrawals(params: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  userId?: number;
+  keyword?: string;
+}): Promise<ApiResponse<GetAdminWithdrawalsResponse>> {
+  const query: any = { page: params.page || 1, limit: params.limit || 10 };
+  if (params.status && params.status !== 'all') query.status = params.status;
+  if (params.userId) query.userId = params.userId;
+  if (params.keyword) query.keyword = params.keyword;
+  
+  return apiClient.get('/admin/withdrawals', { params: query });
+}
+
+/**
+ * 审核提现 (Admin)
+ */
+export async function auditWithdrawal(id: number, status: 'completed' | 'rejected', adminNote?: string): Promise<ApiResponse<any>> {
+  return apiClient.put(`/admin/withdrawals/${id}`, { status, adminNote });
+}
+
 // ==================== O-7: Audit Logs API ====================
 
 export interface AuditLog {

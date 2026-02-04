@@ -10,6 +10,7 @@ import {
   Menu,
   Contact,
   FileText,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
     { label: "订单管理", icon: ShoppingBag, path: "/admin/orders" },
     { label: "用户管理", icon: Users, path: "/admin/users" },
     { label: "向导审核", icon: Contact, path: "/admin/guides" },
+    { label: "提现审核", icon: Wallet, path: "/admin/withdrawals" },
     { label: "审计日志", icon: FileText, path: "/admin/audit-logs" },
     { label: "系统设置", icon: Settings, path: "/admin/settings" },
   ];
