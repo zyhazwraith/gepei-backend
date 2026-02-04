@@ -12,6 +12,7 @@ import {
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
 import { listAuditLogs } from '../controllers/admin/audit-logs.controller.js';
+import { AdminWithdrawController } from '../controllers/admin-withdraw.controller.js';
 
 const router = Router();
 
@@ -58,5 +59,11 @@ router.post('/orders/:id/refund', requireAdmin, asyncHandler(refundOrder));
 
 // PUT /api/v1/admin/system-configs - 更新系统配置
 router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));
+
+// GET /api/v1/admin/withdrawals - 获取提现列表
+router.get('/withdrawals', requireAdmin, asyncHandler(AdminWithdrawController.list));
+
+// PUT /api/v1/admin/withdrawals/:id - 审核提现
+router.put('/withdrawals/:id', requireAdmin, asyncHandler(AdminWithdrawController.audit));
 
 export default router;

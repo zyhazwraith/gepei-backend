@@ -2,6 +2,7 @@ import { db } from '../db/index.js';
 import { users, withdrawals, walletLogs, orders } from '../db/schema.js';
 import { eq, desc, and, count, inArray, sql } from 'drizzle-orm';
 import { ValidationError } from '../utils/errors.js';
+import { WithdrawalStatus, WalletLogType } from '../constants/wallet.js';
 
 export class WalletService {
 
@@ -26,7 +27,7 @@ export class WalletService {
     .from(withdrawals)
     .where(and(
       eq(withdrawals.userId, userId),
-      eq(withdrawals.status, 'pending')
+      eq(withdrawals.status, WithdrawalStatus.PENDING)
     ));
 
     const frozenAmount = Number(frozenResult?.total || 0);
@@ -115,7 +116,7 @@ export class WalletService {
         userId,
         amount,
         userNote,
-        status: 'pending',
+        status: WithdrawalStatus.PENDING,
         createdAt: new Date()
       });
       const withdrawalId = withdrawResult.insertId;
@@ -123,7 +124,7 @@ export class WalletService {
       // 3. Log Wallet Transaction (Freeze)
       await tx.insert(walletLogs).values({
         userId,
-        type: 'withdraw_freeze',
+        type: WalletLogType.WITHDRAW_FREEZE,
         amount: -amount, // Negative for outflow
         relatedType: 'withdrawal',
         relatedId: withdrawalId,
@@ -133,7 +134,7 @@ export class WalletService {
       return {
         id: withdrawalId,
         amount,
-        status: 'pending'
+        status: WithdrawalStatus.PENDING
       };
     });
   }
