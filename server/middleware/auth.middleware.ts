@@ -3,6 +3,7 @@ import { AuthenticationError, ForbiddenError, ERROR_CODES } from '../utils/error
 import { verifyToken, extractTokenFromHeader, TokenPayload } from '../utils/jwt.js';
 import { findUserById } from '../models/user.model.js';
 import { User } from '../types/index.js';
+import { Context } from '../utils/context.js';
 
 // 扩展Express Request类型，添加user属性
 declare global {
@@ -39,6 +40,13 @@ export async function authenticate(
     // 将用户信息和Token payload附加到请求对象
     req.user = user;
     req.tokenPayload = payload;
+
+    // Update Context Store with User ID
+    // Since Store object is mutable (reference), we can update it directly.
+    const store = Context.get();
+    if (store) {
+      store.operatorId = user.id;
+    }
 
     next();
   } catch (error) {

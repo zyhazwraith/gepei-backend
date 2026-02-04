@@ -3,6 +3,8 @@ import { users, guides } from '../db/schema';
 import { eq, sql, desc, count, getTableColumns, isNull } from 'drizzle-orm';
 import { findAllGuides, findGuideByUserId } from '../models/guide.model';
 import { GuideService } from './guide.service';
+import { AuditService } from './audit.service';
+import { AuditActions, AuditTargets } from '../constants/audit';
 
 export class AdminGuideService {
   /**
@@ -87,7 +89,12 @@ export class AdminGuideService {
   /**
    * Update guide status (isGuide) and price (realPrice)
    */
-  static async updateGuideStatus(userId: number, data: { isGuide?: boolean; realPrice?: number }) {
+  static async updateGuideStatus(
+    userId: number, 
+    data: { isGuide?: boolean; realPrice?: number }
+  ) {
+    let actionType: 'enable' | 'disable' | null = null;
+
     await db.transaction(async (tx) => {
       // 1. Update User Status (is_guide)
       if (data.isGuide !== undefined) {
@@ -95,6 +102,9 @@ export class AdminGuideService {
           .set({ isGuide: data.isGuide })
           .where(eq(users.id, userId));
         
+        // Determine action type for audit
+        actionType = data.isGuide ? 'enable' : 'disable';
+
         // If enabling guide, ensure idVerifiedAt is set
         if (data.isGuide === true) {
            await tx.update(guides)
@@ -119,12 +129,30 @@ export class AdminGuideService {
       isGuide: users.isGuide,
       realPrice: guides.realPrice,
       idVerifiedAt: guides.idVerifiedAt,
-      stageName: guides.stageName
+      stageName: guides.stageName,
+      userPhone: users.phone
     })
     .from(users)
     .leftJoin(guides, eq(users.id, guides.userId))
     .where(eq(users.id, userId))
     .limit(1);
+
+    // 3. Audit Log (O-7) - Only if status changed (enable/disable)
+    if (actionType) {
+        // AuditService will now pull operatorId/IP from Context
+        await AuditService.log(
+            undefined, // Use context
+            AuditActions.AUDIT_GUIDE,
+            AuditTargets.GUIDE,
+            userId,
+            {
+                sub_action: actionType,
+                real_price: updated.realPrice,
+                target_phone: updated.userPhone
+            },
+            undefined // Use context
+        );
+    }
 
     return updated;
   }

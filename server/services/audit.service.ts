@@ -2,6 +2,7 @@ import { db } from '../db';
 import { auditLogs } from '../db/schema';
 import { AuditActionType, AuditTargetType } from '../constants/audit';
 import { desc, eq, and, sql } from 'drizzle-orm';
+import { Context } from '../utils/context';
 
 interface CreateLogParams {
   operatorId: number;
@@ -20,25 +21,44 @@ interface GetLogsParams {
   targetType?: string;
 }
 
-export const auditService = {
+export class AuditService {
   /**
    * Create a new audit log entry
    */
-  async log({ operatorId, action, targetType, targetId, details, ipAddress }: CreateLogParams) {
+  static async log(
+    operatorId: number | undefined, // Make optional
+    action: AuditActionType, 
+    targetType: AuditTargetType, 
+    targetId: number, 
+    details?: Record<string, any>, 
+    ipAddress?: string
+  ) {
+    // 1. Try to get from Context
+    const finalOperatorId = operatorId ?? Context.getOperatorId();
+    const finalIpAddress = ipAddress ?? Context.getIpAddress();
+
+    if (!finalOperatorId) {
+        console.warn('[AuditService] Missing operatorId for action:', action);
+        // In strict mode, we might want to throw, but for now we log with 0 or skip?
+        // Let's allow 0 for system actions if needed, or throw if critical.
+        // For migration/script safety, if no ID provided, we can't log validly.
+        // throw new Error('Audit log requires operatorId');
+    }
+
     await db.insert(auditLogs).values({
-      operatorId,
+      operatorId: finalOperatorId || 0, // Fallback to 0 (system) if absolutely missing
       action,
       targetType: targetType || null,
       targetId: targetId || null,
       details: details ? details : null,
-      ipAddress: ipAddress ? ipAddress.slice(0, 45) : null,
+      ipAddress: finalIpAddress ? finalIpAddress.slice(0, 45) : null,
     });
-  },
+  }
 
   /**
    * Get audit logs with pagination and filters
    */
-  async getLogs({ page = 1, limit = 20, operatorId, action, targetType }: GetLogsParams) {
+  static async getLogs({ page = 1, limit = 20, operatorId, action, targetType }: GetLogsParams) {
     const offset = (page - 1) * limit;
 
     const filters = [];
@@ -76,4 +96,17 @@ export const auditService = {
       }
     };
   }
+}
+
+// Deprecated: use AuditService class instead
+export const auditService = {
+    log: (params: CreateLogParams) => AuditService.log(
+        params.operatorId, 
+        params.action, 
+        params.targetType!, 
+        params.targetId!, 
+        params.details, 
+        params.ipAddress
+    ),
+    getLogs: AuditService.getLogs
 };
