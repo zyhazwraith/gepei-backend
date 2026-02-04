@@ -430,11 +430,6 @@ export async function refundOrder(req: Request, res: Response) {
       });
 
       // Audit Log (O-7)
-      // 获取用户手机号用于日志记录
-      const [user] = await tx.select({ phone: users.phone })
-        .from(users)
-        .where(eq(users.id, order.userId));
-        
       await AuditService.log(
         operatorId,
         AuditActions.REFUND_ORDER,
@@ -444,7 +439,6 @@ export async function refundOrder(req: Request, res: Response) {
           order_number: order.orderNumber,
           refund_amount: validated.amount,
           total_amount: order.amount,
-          target_phone: user?.phone || 'unknown',
           reason: validated.reason
         },
         getClientIp(req)

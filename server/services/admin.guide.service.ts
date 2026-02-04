@@ -147,8 +147,7 @@ export class AdminGuideService {
             userId,
             {
                 sub_action: actionType,
-                real_price: updated.realPrice,
-                target_phone: updated.userPhone
+                real_price: updated.realPrice
             },
             undefined // Use context
         );
