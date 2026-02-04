@@ -64,6 +64,10 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   refunded: [], 
 };
 
+import { AuditService } from '../services/audit.service.js';
+import { AuditActions, AuditTargets } from '../constants/audit.js';
+import { getClientIp } from '../utils/request.js';
+
 /**
  * 获取所有订单列表 (管理员)
  * 
@@ -425,7 +429,20 @@ export async function refundOrder(req: Request, res: Response) {
         operatorId,
       });
 
-      // TODO: Audit Log (O-7)
+      // Audit Log (O-7)
+      await AuditService.log(
+        operatorId,
+        AuditActions.REFUND_ORDER,
+        AuditTargets.ORDER,
+        orderId,
+        {
+          order_number: order.orderNumber,
+          refund_amount: validated.amount,
+          total_amount: order.amount,
+          reason: validated.reason
+        },
+        getClientIp(req)
+      );
     });
 
     res.json({

@@ -148,6 +148,8 @@ export const uploadAttachment = async (file: File, usage: 'avatar' | 'guide_phot
   return response;
 };
 
+// ... existing code ...
+
 /**
  * 订单打卡 (S-1)
  */
@@ -251,6 +253,8 @@ export interface CreateOvertimeResponse {
   fee: number;
   pricePerHour: number;
 }
+
+// ... existing code ...
 
 /**
  * 创建加时申请 (S-3)
@@ -534,47 +538,6 @@ export async function getPublicConfigs(): Promise<ApiResponse<SystemConfigs>> {
  */
 export async function updateSystemConfigs(data: UpdateSystemConfigRequest): Promise<ApiResponse<any>> {
   return apiClient.put('/admin/system-configs', data);
-}
-
-// ==================== O-7: Audit Logs API ====================
-
-export interface AuditLog {
-  id: number;
-  operatorId: number;
-  operatorName?: string;
-  action: string;
-  targetType: string;
-  targetId: number | null;
-  details: Record<string, any> | null;
-  ipAddress: string | null;
-  createdAt: string;
-}
-
-export interface GetAuditLogsResponse {
-  list: AuditLog[];
-  pagination: Pagination;
-}
-
-/**
- * 获取审计日志列表 (Admin)
- */
-export async function getAuditLogs(params: { 
-  page: number; 
-  limit: number; 
-  action?: string; 
-  target_type?: string;
-  operator_id?: string; // Input as string, parse to number if needed
-}): Promise<ApiResponse<GetAuditLogsResponse>> {
-  const queryParams: any = { 
-    page: params.page, 
-    limit: params.limit 
-  };
-  
-  if (params.action && params.action !== 'all') queryParams.action = params.action;
-  if (params.target_type && params.target_type !== 'all') queryParams.target_type = params.target_type;
-  if (params.operator_id) queryParams.operator_id = params.operator_id;
-
-  return apiClient.get('/admin/audit-logs', { params: queryParams });
 }
 
 export default apiClient;

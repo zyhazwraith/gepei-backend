@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { contextMiddleware } from './middleware/context.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
@@ -24,6 +25,11 @@ export function createApp(): Application {
   app.use(cors({ origin: '*', credentials: true }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  
+  // 上下文中间件
+  // 负责初始化 AsyncLocalStorage Store (包含 IP 和 RequestID)
+  // 注意: User ID 会在 authMiddleware 中鉴权成功后回填到 Store 中
+  app.use(contextMiddleware);
 
   // 健康检查端点
   app.get('/health', (req, res) => {
