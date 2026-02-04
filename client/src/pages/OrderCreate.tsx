@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ArrowLeft, Calendar, Clock, Info } from "lucide-react";
@@ -17,7 +16,8 @@ export default function OrderCreate() {
   const [location, setLocation] = useLocation();
   const search = useSearch();
   const query = new URLSearchParams(search);
-  const guideId = query.get("guide_id");
+  // Fix: support both guideId (camelCase) and guide_id (snake_case)
+  const guideId = query.get("guideId") || query.get("guide_id");
   const { user } = useAuth();
 
   const [guide, setGuide] = useState<Guide | null>(null);
@@ -32,17 +32,18 @@ export default function OrderCreate() {
     serviceAddress: "",
     serviceLat: 0,
     serviceLng: 0,
-    city: "", // 定制单
-    content: "", // 定制单
-    budget: "", // 定制单
     requirements: "", // 通用 (原 remark)
   });
-
-  const isCustom = !guideId;
 
   useEffect(() => {
     if (guideId) {
       fetchGuide(parseInt(guideId));
+    } else {
+      // If no guideId is present, this page should not be accessed directly for custom orders anymore.
+      // Redirect to home or guides list.
+      // toast.error("无效的订单请求");
+      // setLocation("/guides");
+      setLoadingGuide(false);
     }
   }, [guideId]);
 
@@ -81,64 +82,32 @@ export default function OrderCreate() {
         toast.error("请选择服务地点");
         return;
     }
-
-    if (isCustom) {
-      // 验证定制单必填项
-      if (!formData.city) {
-        toast.error("请输入目的地城市");
+    
+    if (!guideId) {
+        toast.error("请选择地陪");
         return;
-      }
-      if (!formData.budget) {
-        toast.error("请输入预算");
-        return;
-      }
-      if (!formData.content) {
-        toast.error("请输入服务内容");
-        return;
-      }
-      if (formData.content.length < 10) {
-        toast.error("服务内容描述至少需要10个字");
-        return;
-      }
     }
 
     setSubmitting(true);
     try {
-      let payload: CreateOrderRequest;
       const serviceStartTime = new Date(`${formData.serviceDate}T${formData.serviceTime}:00`).toISOString();
 
-      if (isCustom) {
-        payload = {
-          type: 'custom',
-          serviceDate: formData.serviceDate, // Custom still uses Date for now or upgrade later
-          serviceStartTime, // Common field
-          duration: Number(formData.serviceHours), // Include duration
-          serviceAddress: formData.serviceAddress,
-          serviceLat: Number(formData.serviceLat),
-          serviceLng: Number(formData.serviceLng),
-          city: formData.city,
-          content: formData.content,
-          budget: Number(formData.budget),
-          requirements: formData.requirements, 
-        };
-      } else {
-        payload = {
-          type: 'normal',
-          serviceStartTime,
-          duration: Number(formData.serviceHours),
-          serviceAddress: formData.serviceAddress,
-          serviceLat: Number(formData.serviceLat),
-          serviceLng: Number(formData.serviceLng),
-          guideId: parseInt(guideId!),
-          requirements: formData.requirements,
-        };
-      }
+      const payload: CreateOrderRequest = {
+        type: 'normal',
+        serviceStartTime,
+        duration: Number(formData.serviceHours),
+        serviceAddress: formData.serviceAddress,
+        serviceLat: Number(formData.serviceLat),
+        serviceLng: Number(formData.serviceLng),
+        guideId: parseInt(guideId),
+        requirements: formData.requirements,
+      };
 
       const res = await createOrder(payload);
 
       if (res.code === 0) {
         toast.success("预订成功！");
-        // 跳转到订单详情页 (或列表页如果详情页未开发)
+        // 跳转到订单详情页
         setLocation(`/orders/${res.data.orderId}`);
       } else {
         toast.error(res.message || "预订失败");
@@ -154,8 +123,15 @@ export default function OrderCreate() {
     return <div className="p-4"><Skeleton className="h-64 w-full" /></div>;
   }
 
-  // 如果是普通单但没加载到地陪信息，返回空
-  if (!isCustom && !guide) return null;
+  // Fallback if no guide found (though we redirect in effect)
+  if (!guide) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+            <p className="text-gray-500">无效的下单请求</p>
+            <Button onClick={() => setLocation("/guides")}>去选择地陪</Button>
+        </div>
+      );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -164,12 +140,12 @@ export default function OrderCreate() {
         <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => window.history.back()}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-bold">{isCustom ? "定制行程" : "预订下单"}</h1>
+        <h1 className="text-lg font-bold">预订下单</h1>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Guide Card (Only for Normal Order) */}
-        {!isCustom && guide && (
+        {/* Guide Card */}
+        {guide && (
           <Card className="border-none shadow-sm overflow-hidden">
             <CardContent className="p-0 flex h-24">
               <img 
@@ -223,12 +199,12 @@ export default function OrderCreate() {
                 serviceAddress: loc.address,
                 serviceLat: loc.lat,
                 serviceLng: loc.lng,
-                city: loc.city || formData.city // Use picked city or fallback
+                // city: loc.city // Not needed for normal order unless stored
               })}
             />
           </div>
 
-          {/* 普通单特有字段：时长 */}
+          {/* 服务时长 */}
           <div className="space-y-2">
             <Label>服务时长 (小时)</Label>
             <div className="relative">
@@ -243,31 +219,6 @@ export default function OrderCreate() {
               />
             </div>
           </div>
-
-          {/* 定制单特有字段：预算和服务内容 */}
-          {isCustom && (
-            <>
-              <div className="space-y-2">
-                <Label>预估预算 (元)</Label>
-                <Input
-                  type="number"
-                  placeholder="请输入您的预算"
-                  min={0}
-                  value={formData.budget}
-                  onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>服务内容需求</Label>
-                <Textarea
-                  placeholder="例如：想去故宫、长城，需要导游讲解，包车服务..."
-                  className="min-h-[100px]"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                />
-              </div>
-            </>
-          )}
 
           <div className="space-y-2">
             <Label>备注 (可选)</Label>
@@ -286,11 +237,10 @@ export default function OrderCreate() {
         {/* Price & Submit */}
         <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex items-center gap-4 z-20">
           <div className="flex-1">
-            <p className="text-xs text-gray-500">{isCustom ? "定金 (固定)" : "总计"}</p>
+            <p className="text-xs text-gray-500">总计</p>
             <p className="text-2xl font-bold text-orange-600">
-              {isCustom ? "¥150.00" : `¥${totalPrice}`}
+              ¥{totalPrice}
             </p>
-            {isCustom && <p className="text-xs text-gray-400">后续费用请与向导协商</p>}
           </div>
           <Button 
             size="lg" 
@@ -298,7 +248,7 @@ export default function OrderCreate() {
             onClick={handleSubmit}
             disabled={submitting}
           >
-            {submitting ? "提交中..." : (isCustom ? "发布需求" : "提交订单")}
+            {submitting ? "提交中..." : "提交订单"}
           </Button>
         </div>
       </div>

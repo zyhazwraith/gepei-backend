@@ -1,16 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check, Camera } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check, Camera, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User, payOvertime } from "@/lib/api";
+import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User, payOvertime, getPublicConfigs } from "@/lib/api";
 import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
 import OvertimeDialog from "@/components/OvertimeDialog";
+import ContactCSDialog from "@/components/ContactCSDialog";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
@@ -18,6 +19,8 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  const [showCSDialog, setShowCSDialog] = useState(false);
+  const [csQrCode, setCsQrCode] = useState<string | null>(null);
   
   // Overtime States
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
@@ -43,6 +46,13 @@ export default function OrderDetail() {
     // Load current user
     getCurrentUser().then(res => {
       if(res.code === 0) setCurrentUser(res.data || null);
+    });
+
+    // Fetch CS config
+    getPublicConfigs().then(res => {
+        if (res.code === 0 && res.data && res.data.cs_qrcode_url) {
+            setCsQrCode(res.data.cs_qrcode_url);
+        }
     });
 
     if (params?.id) {
@@ -269,7 +279,10 @@ export default function OrderDetail() {
         <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => setLocation("/")}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-bold">订单详情</h1>
+        <h1 className="text-lg font-bold flex-1">订单详情</h1>
+        <Button variant="ghost" size="icon" onClick={() => setShowCSDialog(true)}>
+          <Headphones className="w-5 h-5" />
+        </Button>
       </div>
 
       <div className="p-4 space-y-4">
@@ -297,12 +310,23 @@ export default function OrderDetail() {
             <p className="text-sm text-orange-800/80">
               {order.status === 'pending' ? '请在 30 分钟内完成支付' : 
                order.status === 'paid' ? '系统正在为您匹配合适的地陪' : 
-               order.status === 'waiting_for_user' ? '已有地陪报名，请选择一位为您服务' :
-               order.status === 'waiting_service' ? (isGuideView ? '请在到达约定地点后开始服务' : '地陪将按时为您服务') :
-               order.status === 'in_service' ? '请享受您的旅程' :
-               order.status === 'service_ended' ? '服务已完成，系统正在进行资金结算（预计24小时内到账）' :
+               order.status === 'waiting_for_user' ? '已有地陪报名，请选择一位为您服务' : 
+               order.status === 'waiting_service' ? (isGuideView ? '请在到达约定地点后开始服务' : '地陪将按时为您服务') : 
+               order.status === 'in_service' ? '请享受您的旅程' : 
+               order.status === 'service_ended' ? '服务已完成，系统正在进行资金结算（预计24小时内到账）' : 
                '祝您旅途愉快'}
             </p>
+            
+            {/* 待服务状态下直接显示客服二维码 */}
+            {order.status === 'waiting_service' && !isGuideView && csQrCode && (
+                <div className="mt-4 p-4 bg-white/60 rounded-lg flex flex-col items-center">
+                    <div className="text-xs font-bold text-orange-900 mb-2">请务必扫描下方二维码联系客服确认行程</div>
+                    <div className="w-32 h-32 bg-white p-1 rounded border border-orange-200">
+                        <img src={csQrCode} alt="客服二维码" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="text-[10px] text-orange-800/70 mt-1">长按识别或截图保存</div>
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -574,6 +598,8 @@ export default function OrderDetail() {
       )}
 
       {order.status !== 'pending' && !canStartService && !canEndService && !canRequestOvertime && <BottomNav />}
+      
+      <ContactCSDialog isOpen={showCSDialog} onClose={() => setShowCSDialog(false)} />
     </div>
   );
 }
