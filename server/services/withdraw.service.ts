@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { users, withdrawals, walletLogs } from '../db/schema.js';
-import { eq, desc, and, count, sql } from 'drizzle-orm';
+import { eq, desc, and, count, sql, or, like } from 'drizzle-orm';
 import { ValidationError } from '../utils/errors.js';
 import { AuditService } from './audit.service.js';
 import { AuditActions, AuditTargets } from '../constants/audit.js';
@@ -16,6 +16,7 @@ export class WithdrawService {
     limit?: number;
     status?: WithdrawalStatusType;
     userId?: number;
+    keyword?: string;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -24,6 +25,14 @@ export class WithdrawService {
     const conditions = [];
     if (params.status) conditions.push(eq(withdrawals.status, params.status));
     if (params.userId) conditions.push(eq(withdrawals.userId, params.userId));
+    if (params.keyword) {
+      const orConditions = [like(users.phone, `%${params.keyword}%`)];
+      const idVal = Number(params.keyword);
+      if (!isNaN(idVal)) {
+        orConditions.push(eq(withdrawals.userId, idVal));
+      }
+      conditions.push(or(...orConditions));
+    }
 
     const whereClause = conditions.length ? and(...conditions) : undefined;
 
@@ -31,6 +40,7 @@ export class WithdrawService {
     const [{ value: total }] = await db
       .select({ value: count() })
       .from(withdrawals)
+      .leftJoin(users, eq(withdrawals.userId, users.id))
       .where(whereClause);
 
     // 2. List

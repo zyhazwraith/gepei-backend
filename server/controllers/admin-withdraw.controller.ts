@@ -20,12 +20,14 @@ export class AdminWithdrawController {
     const limit = parseInt(req.query.limit as string) || 10;
     const status = req.query.status as any;
     const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+    const keyword = req.query.keyword as string;
 
     const data = await WithdrawService.getAdminWithdrawals({
       page,
       limit,
       status,
-      userId
+      userId,
+      keyword
     });
 
     res.json({
