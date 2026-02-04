@@ -69,8 +69,7 @@ export const withdrawals = mysqlTable('withdrawals', {
             "createdAt": "...",
             // 扩展字段 (Optional)
             "orderNumber": "20231001001", // 当 relatedType='order' 时返回
-            "adminNote": "收款账号错误",    // 当 relatedType='withdrawal' 且有备注时返回
-            "withdrawalStatus": "rejected" // 当 relatedType='withdrawal' 时返回
+            "adminNote": "收款账号错误"     // 当 relatedType='withdrawal' 且有备注时返回
           }
         ],
         "pagination": {
@@ -85,16 +84,20 @@ export const withdrawals = mysqlTable('withdrawals', {
     *   **后端逻辑**: 
         *   查询 `wallet_logs` 表。
         *   LEFT JOIN `orders` 获取 `orderNumber`。
-        *   LEFT JOIN `withdrawals` 获取 `adminNote` 和 `status`。
+        *   LEFT JOIN `withdrawals` 获取 `adminNote`。
     *   **UI/UX 规范**:
         *   **分页**: 默认每页 10 条。
         *   **颜色**: 
             *   收入/退回 (`income`, `withdraw_unfreeze`): **红色/橙色** (Text Red)。
             *   支出/冻结 (`withdraw_freeze`): **黑色** (Text Black/Gray)。
         *   **交互**: 
+            *   **下拉加载 (Infinite Scroll)**: 到底部自动加载下一页。
             *   点击列表项 -> 弹出详情 Dialog。
-            *   **收入详情**: 展示关联订单号，并提供 "查看订单详情" 按钮 (跳转 `/orders/:id`)。
-            *   **提现详情**: 展示提现状态 (Badge)。若状态为 `rejected`，展示 "驳回理由" (`adminNote`)。
+            *   **收入详情**: 展示关联订单号，并提供 "查看订单详情" 按钮。
+            *   **提现详情**: 
+                *   `withdraw_freeze`: 显示 "提现申请"。
+                *   `withdraw_unfreeze`: 显示 "提现驳回"，并展示 "驳回理由" (`adminNote`)。
+                *   `withdraw_success`: 显示 "提现成功"。
 
 ### 3.3 发起提现申请
 *   **Endpoint**: `POST /withdraw`

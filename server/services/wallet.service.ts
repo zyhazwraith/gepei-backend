@@ -60,7 +60,6 @@ export class WalletService {
       // Joined fields
       orderNumber: orders.orderNumber,
       adminNote: withdrawals.adminNote,
-      withdrawalStatus: withdrawals.status,
     })
     .from(walletLogs)
     .leftJoin(orders, and(

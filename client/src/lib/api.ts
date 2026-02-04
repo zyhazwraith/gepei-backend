@@ -555,7 +555,6 @@ export interface WalletLog {
   // Extended fields
   orderNumber?: string;
   adminNote?: string;
-  withdrawalStatus?: string;
 }
 
 export interface WalletSummary {

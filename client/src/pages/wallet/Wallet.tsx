@@ -1,18 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, Link } from 'wouter';
 import {
   Wallet,
   ArrowUp,
   ArrowDown,
-  Lock,
   History,
   Loader2,
   ChevronLeft,
   ExternalLink
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +46,9 @@ const WalletPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 5;
 
+  // Infinite Scroll Observer
+  const observerTarget = useRef<HTMLDivElement>(null);
+
   const fetchSummary = async () => {
     try {
       const res = await getWalletSummary();
@@ -66,7 +67,6 @@ const WalletPage: React.FC = () => {
       }
 
       const res = await getWalletLogs(pageNum, PAGE_SIZE);
-      console.log('fetchLogs response:', { pageNum, pageSize: PAGE_SIZE, pagination: res.data?.pagination, listLength: res.data?.list?.length });
       
       if (res.data) {
         const newLogs = res.data.list;
@@ -79,7 +79,6 @@ const WalletPage: React.FC = () => {
         // Check if there are more pages
         // Logic: If current page < total pages, there are more.
         const hasMoreData = pageNum < res.data.pagination.totalPages;
-        console.log('Setting hasMore:', hasMoreData, { pageNum, totalPages: res.data.pagination.totalPages });
         setHasMore(hasMoreData);
       }
     } catch (error) {
@@ -95,11 +94,34 @@ const WalletPage: React.FC = () => {
     fetchLogs(1);
   }, []);
 
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchLogs(nextPage, true);
-  };
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchLogs(nextPage, true);
+    }
+  }, [loadingMore, hasMore, page]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [handleLoadMore]);
 
   const handleWithdrawSuccess = () => {
     fetchSummary();
@@ -124,29 +146,11 @@ const WalletPage: React.FC = () => {
   const getLogTitle = (log: WalletLog) => {
     switch (log.type) {
       case 'income': return '订单收入';
-      case 'withdraw_freeze': return '提现冻结';
-      case 'withdraw_unfreeze': return '提现驳回解冻';
+      case 'withdraw_freeze': return '提现申请';
+      case 'withdraw_unfreeze': return '提现驳回';
       case 'withdraw_success': return '提现成功';
       default: return '未知交易';
     }
-  };
-
-  const getStatusBadge = (log: WalletLog) => {
-    // 优先显示 withdrawalStatus
-    const status = log.withdrawalStatus || log.status;
-    
-    if (log.type === 'withdraw_freeze' && status) {
-      if (status === 'pending') {
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50 text-[10px] px-1 py-0 h-5">审核中</Badge>;
-      }
-      if (status === 'completed') {
-        return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px] px-1 py-0 h-5">已完成</Badge>;
-      }
-      if (status === 'rejected') {
-        return <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px] px-1 py-0 h-5">已驳回</Badge>;
-      }
-    }
-    return null;
   };
 
   if (loading && !summary) {
@@ -228,7 +232,6 @@ const WalletPage: React.FC = () => {
                     <div className="space-y-1">
                       <div className="font-medium flex items-center gap-2">
                         {getLogTitle(log)}
-                        {getStatusBadge(log)}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(log.createdAt).toLocaleString()}
@@ -247,32 +250,20 @@ const WalletPage: React.FC = () => {
           </div>
         )}
 
-        {/* Load More Button */}
-        {logs.length > 0 && hasMore && (
-          <div className="flex justify-center pt-4">
-            <Button 
-              variant="outline" 
-              onClick={handleLoadMore} 
-              disabled={loadingMore}
-              className="w-full sm:w-auto"
-            >
-              {loadingMore ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  加载中...
-                </>
-              ) : (
-                '查看更多'
-              )}
-            </Button>
-          </div>
-        )}
-        
-        {!hasMore && logs.length > 0 && (
-          <p className="text-center text-xs text-muted-foreground pt-4">
-            没有更多记录了
-          </p>
-        )}
+        {/* Infinite Scroll Loader / End Message */}
+        <div ref={observerTarget} className="flex justify-center pt-4 min-h-[40px]">
+          {loadingMore && (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span className="text-xs text-muted-foreground">加载中...</span>
+            </>
+          )}
+          {!hasMore && !loadingMore && logs.length > 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              没有更多记录了
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Withdraw Dialog */}
@@ -299,9 +290,6 @@ const WalletPage: React.FC = () => {
                 }`}>
                   {selectedLog.amount > 0 ? '+' : ''}{formatMoney(selectedLog.amount)}
                 </h3>
-                <div className="flex justify-center pt-1">
-                   {getStatusBadge(selectedLog)}
-                </div>
               </div>
 
               <div className="space-y-4 border-t pt-4">
@@ -323,7 +311,7 @@ const WalletPage: React.FC = () => {
                 )}
 
                 {/* 驳回理由 */}
-                {selectedLog.adminNote && (
+                {selectedLog.adminNote && selectedLog.type === 'withdraw_unfreeze' && (
                   <div className="bg-red-50 p-3 rounded-md text-sm text-red-700 space-y-1">
                     <p className="font-semibold">驳回理由</p>
                     <p>{selectedLog.adminNote}</p>
