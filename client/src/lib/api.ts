@@ -693,4 +693,47 @@ export async function getAuditLogs(params: {
   return apiClient.get('/admin/audit-logs', { params: queryParams });
 }
 
+export interface StatsChartItem {
+  date: string;
+  count?: number;
+  amount?: number;
+  income?: number;
+  withdraw?: number;
+}
+
+export type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
+
+export interface CSPerformanceItem {
+  csId: number;
+  csName: string;
+  orderCount: number;
+  totalAmount: number;
+}
+
+export interface CSPerformanceData {
+  list: CSPerformanceItem[];
+}
+
+export interface PlatformFinanceData {
+  summary: {
+    totalIncome: number;
+    totalWithdraw: number;
+  };
+  chartData: StatsChartItem[];
+}
+
+/**
+ * 获取客服业绩 (Admin)
+ */
+export async function getCSPerformance(params: { timeRange: TimeRange; startDate?: string; endDate?: string }): Promise<ApiResponse<CSPerformanceData>> {
+  return apiClient.get('/admin/stats/cs-performance', { params });
+}
+
+/**
+ * 获取平台收支 (Admin)
+ */
+export async function getPlatformFinance(params: { timeRange: TimeRange; startDate?: string; endDate?: string }): Promise<ApiResponse<PlatformFinanceData>> {
+  return apiClient.get('/admin/stats/platform-finance', { params });
+}
+
 export default apiClient;

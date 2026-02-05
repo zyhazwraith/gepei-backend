@@ -91,9 +91,11 @@
     - *User Story*: Admin 封禁/解禁账号 (Double Guard: Login + Middleware)。
     - *Tech*: New API (`PUT /ban`, `/unban`), Middleware Check.
     - *Verification*: [x] scripts/test-ban-flow.ts.
-- [ ] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]`
+- [x] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/O-6_statistics.md)
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).
+    - *Frontend*: [x] AdminStats.tsx (Charts & Tables).
 - [x] **[O-7] 审计日志系统 (Audit System)** `[PRD 3.4.3]` `Status: Completed`
     - *User Story*: 系统记录关键操作 (如地陪审核)，Admin 可查询审计日志。
     - *Tech*: Shared Logger Module, Frontend Viewer, API (`GET /admin/audit-logs`).
@@ -103,12 +105,16 @@
 ## **Level 5: 资金体系 (Finance)**
 *实现地陪资金管理与平台提现审核。*
 
-- [ ] **[F-4] 地陪钱包 (Guide Wallet)** `[PRD 5.2]`
+- [x] **[F-4] 地陪钱包 (Guide Wallet)** `[PRD 5.2]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/F-4_wallet_system.md)
     - *User Story*: 地陪查看余额与收支明细 (收入/提现)，并发起提现申请 (填写收款备注)。
     - *Note*: 仅涉及“收入”与“提现”，不包含退款逻辑（C端退款由平台处理，未结算资金不进入地陪钱包）。
     - *Tech*: Schema Update (`user_note`), `WalletService` (Income/Withdraw logic).
     - *Frontend*: `Wallet` Page, `WithdrawDialog`.
-- [ ] **[O-4] 提现审核 (Withdraw Audit)** `[PRD 5.2]`
+    - *Verification*: [x] scripts/verify-wallet-flow.ts.
+- [x] **[O-4] 提现审核 (Withdraw Audit)** `[PRD 5.2]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/O-4_withdraw_audit.md)
     - *User Story*: Admin 审核提现单，查看用户备注，线下打款后核销。
     - *Tech*: Admin API (`PUT /audit`).
     - *Frontend*: `AdminWithdrawList` Page.
+    - *Verification*: [x] scripts/verify-admin-withdraw.ts.
