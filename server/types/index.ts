@@ -6,6 +6,8 @@ export interface User {
   nickname: string | null;
   is_guide: boolean;
   role: 'user' | 'admin' | 'cs';
+  status?: 'active' | 'banned';
+  banReason?: string | null;
   balance: number;
   created_at: Date;
   updated_at: Date;

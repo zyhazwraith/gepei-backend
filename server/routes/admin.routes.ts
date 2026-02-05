@@ -7,7 +7,9 @@ import {
   updateOrderStatus, 
   assignGuide,
   getOrderDetails,
-  refundOrder
+  refundOrder,
+  banUser,
+  unbanUser
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
@@ -53,6 +55,12 @@ router.get('/audit-logs', authorize(['admin', 'cs']), asyncHandler(listAuditLogs
 
 // 2. Admin Only Routes
 // ----------------------------------------------------------------
+
+// PUT /api/v1/admin/users/:id/ban
+router.put('/users/:id/ban', requireAdmin, asyncHandler(banUser));
+
+// PUT /api/v1/admin/users/:id/unban
+router.put('/users/:id/unban', requireAdmin, asyncHandler(unbanUser));
 
 // POST /api/v1/admin/orders/:id/refund - 订单退款
 router.post('/orders/:id/refund', requireAdmin, asyncHandler(refundOrder));

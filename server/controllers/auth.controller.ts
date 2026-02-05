@@ -108,6 +108,12 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // [New] Check Ban Status (Double Guard: Login Layer)
+    if (user.status === 'banned') {
+      errorResponse(res, ErrorCodes.USER_BANNED, '账号已被封禁: ' + (user.banReason || '无'));
+      return;
+    }
+
     // 验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {

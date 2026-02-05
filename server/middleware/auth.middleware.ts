@@ -37,6 +37,11 @@ export async function authenticate(
       throw new AuthenticationError('用户不存在', ERROR_CODES.USER_NOT_FOUND);
     }
 
+    // [New] Check Ban Status (Double Guard: Middleware Layer)
+    if (user.status === 'banned') {
+      throw new ForbiddenError('账号已被封禁: ' + (user.banReason || '无'), ERROR_CODES.USER_BANNED);
+    }
+
     // 将用户信息和Token payload附加到请求对象
     req.user = user;
     req.tokenPayload = payload;

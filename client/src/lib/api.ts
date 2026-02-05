@@ -412,6 +412,8 @@ export interface AdminUser {
   isGuide: boolean;
   balance: string;
   createdAt: string;
+  status: 'active' | 'banned';
+  banReason?: string;
 }
 
 export interface GetAdminUsersResponse {
@@ -469,6 +471,20 @@ export async function getAdminUsers(page: number = 1, pageSize: number = 20, key
   const params: any = { page, limit: pageSize };
   if (keyword) params.keyword = keyword;
   return apiClient.get('/admin/users', { params });
+}
+
+/**
+ * 封禁用户 (管理员)
+ */
+export async function banUser(userId: number, reason: string): Promise<ApiResponse<any>> {
+  return apiClient.put(`/admin/users/${userId}/ban`, { reason });
+}
+
+/**
+ * 解封用户 (管理员)
+ */
+export async function unbanUser(userId: number): Promise<ApiResponse<any>> {
+  return apiClient.put(`/admin/users/${userId}/unban`, {});
 }
 
 /**
