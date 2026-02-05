@@ -113,7 +113,7 @@ export class StatsService {
       .select({ total: sql<string>`sum(${orders.amount})` })
       .from(orders)
       .where(and(
-        inArray(orders.status, incomeStatuses),
+        inArray(orders.status, incomeStatuses as any),
         gte(completionTimeCol, startDate),
         lte(completionTimeCol, endDate)
       ));
@@ -156,7 +156,7 @@ export class StatsService {
       })
       .from(orders)
       .where(and(
-        inArray(orders.status, incomeStatuses),
+        inArray(orders.status, incomeStatuses as any),
         gte(completionTimeCol, startDate),
         lte(completionTimeCol, endDate)
       ))

@@ -70,7 +70,7 @@ export async function createCustomOrder(req: Request, res: Response) {
     // 6. Audit Log
     await AuditService.log(
         operatorId,
-        'CREATE_CUSTOM_ORDER', 
+        AuditActions.CREATE_CUSTOM_ORDER, 
         AuditTargets.ORDER,
         orderId,
         { orderNumber, amount },
@@ -92,7 +92,7 @@ export async function createCustomOrder(req: Request, res: Response) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError('参数错误: ' + error.errors.map(e => e.message).join(', '));
+      throw new ValidationError('参数错误: ' + (error as any).errors.map((e: any) => e.message).join(', '));
     }
     throw error;
   }

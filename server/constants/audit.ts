@@ -4,6 +4,7 @@ export const AuditActions = {
   BAN_USER: 'ban_user',
   UNBAN_USER: 'unban_user',
   REFUND_ORDER: 'refund_order',
+  CREATE_CUSTOM_ORDER: 'create_custom_order',
   UPDATE_CONFIG: 'update_config',
 } as const;
 

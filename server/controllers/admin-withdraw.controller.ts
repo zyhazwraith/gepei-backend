@@ -57,7 +57,7 @@ export class AdminWithdrawController {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new ValidationError('参数错误: ' + error.errors.map(e => e.message).join(', '));
+        throw new ValidationError('参数错误: ' + (error as any).errors.map((e: any) => e.message).join(', '));
       }
       throw error;
     }
