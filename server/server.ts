@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
 import { testConnection } from './config/database.js';
-import { startScheduler } from './jobs/scheduler';
+import { startScheduler } from './scheduler/index.js';
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';

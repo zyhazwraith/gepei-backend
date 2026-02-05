@@ -25,8 +25,8 @@ sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_passwo
 sudo mysql -e "FLUSH PRIVILEGES;"
 
 # 6. 安装全局工具
-sudo npm install -g pnpm pm2
+sudo npm install -g pm2
 
 echo ">>> ✅ 环境安装完成！"
-echo "请运行: pnpm install 来安装项目依赖"
-echo "然后运行: pnpm dev 启动项目"
+echo "请运行: npm install 来安装项目依赖"
+echo "然后运行: npm run dev 启动项目"

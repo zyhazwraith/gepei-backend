@@ -35,7 +35,7 @@
 ## **Level 2: 交易闭环 (Transaction)**
 *跑通“下单-支付”主链路。*
 
-- [ ] **[T-1] 废弃旧接口 (Deprecation)** `[PRD 2.3]`
+- [x] **[T-1] 废弃旧接口 (Deprecation)** `[PRD 2.3]` `Status: Completed`
     - *User Story*: 旧版 App 无法再发起定制单或选择候选人。
     - *Tech*: Delete/Disable routes.
 - [x] **[T-2] 后台建单接口 (Admin Create Custom Order)** `[PRD 2.3, 5.3]` `Status: Completed`
@@ -44,13 +44,13 @@
     - *Backend*: [x] New API (`POST /admin/custom-orders`), [x] Detail API (`GET /admin/orders/:id`).
     - *Frontend*: [x] **[FE-T2]** 适配“定制单创建”弹窗 (Input: Phone, Price in Yuan -> Cents).
     - *Verification*: [x] API Test (scripts/verify-T2.ts), [x] E2E Test (tests/e2e/admin-custom-order.spec.ts).
-- [ ] **[T-3] 订单指派接口 (Assign Guide)** `[Cancelled]`
+- [x] **[T-3] 订单指派接口 (Assign Guide)** `[Cancelled]`
     - *Note*: Merged into T-2. Custom orders are assigned upon creation.
 - [x] **[T-4] 前端: 客服联系流程 (CS Contact Flow)** `[PRD 1.1]` `Status: Completed`
     - *User Story*: 普通订单全流程可联系客服，待服务状态强引导；定制订单改为引导联系客服。
     - *Tech*: New `ContactCSDialog`, Update `OrderDetail` & `Custom` page, Fix `OrderCreate` param.
     - *Frontend*: [x] `Custom.tsx` as landing page, [x] `OrderDetail.tsx` with persistent button & QR code.
-- [ ] **[T-5] 统一支付回调 (Payment Callback)** `[PRD 1.1]` `Status: Deferred (Use Mock)`
+- [x] **[T-5] 统一支付回调 (Payment Callback)** `[PRD 1.1]` `Status: Deferred (Use Mock)`
     - *User Story*: 系统能正确处理普通/定制/加时单的微信支付回调。
     - *Strategy*: Use Mock Payment for MVP. Real Wechat Pay integration deferred to Pre-Launch.
     - *Backend*: Refactor callback handler.
@@ -92,10 +92,8 @@
     - *Tech*: New API (`PUT /ban`, `/unban`), Middleware Check.
     - *Verification*: [x] scripts/test-ban-flow.ts.
 - [x] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]` `Status: Completed`
-    - *Spec*: [Link](docs/v2_specs/O-6_statistics.md)
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).
-    - *Frontend*: [x] AdminStats.tsx (Charts & Tables).
 - [x] **[O-7] 审计日志系统 (Audit System)** `[PRD 3.4.3]` `Status: Completed`
     - *User Story*: 系统记录关键操作 (如地陪审核)，Admin 可查询审计日志。
     - *Tech*: Shared Logger Module, Frontend Viewer, API (`GET /admin/audit-logs`).
