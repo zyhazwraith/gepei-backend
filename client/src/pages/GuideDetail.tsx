@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { getGuideDetail, Guide } from "@/lib/api";
 import { toast } from "sonner";
+import Price from "@/components/Price";
 import { Loader2, MapPin, ChevronLeft, Share2, Star, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -231,7 +232,7 @@ export default function GuideDetail() {
         <div className="flex-1">
           <p className="text-xs text-gray-500">参考总价 (8小时)</p>
           <p className="text-xl font-bold text-orange-500">
-            {guide.hourlyPrice ? `¥${guide.hourlyPrice * 8}` : "¥0"}
+            {guide.price ? <Price amount={guide.price * 8} /> : "¥0"}
             <span className="text-xs text-gray-400 font-normal">/天</span>
           </p>
         </div>

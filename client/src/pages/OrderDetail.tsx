@@ -353,7 +353,7 @@ export default function OrderDetail() {
                                     </Avatar>
                                     <div>
                                         <div className="font-medium text-gray-900">{candidate.nickName}</div>
-                                        <div className="text-xs text-gray-500">{candidate.city} · ¥{candidate.hourlyPrice}/小时</div>
+                                        <div className="text-xs text-gray-500">{candidate.city} · <Price amount={candidate.hourlyPrice} />/小时</div>
                                     </div>
                                 </div>
                                 <Button 
@@ -582,7 +582,7 @@ export default function OrderDetail() {
               <div className="bg-white w-full max-w-md rounded-xl p-6 space-y-4 animate-in slide-in-from-bottom-10 fade-in">
                   <h3 className="text-lg font-bold text-center">支付加时费</h3>
                   <div className="text-center">
-                      <div className="text-3xl font-bold text-orange-600 mb-1">¥{(pendingOvertime.amount / 100).toFixed(2)}</div>
+                      <div className="text-3xl font-bold text-orange-600 mb-1"><Price amount={pendingOvertime.amount} /></div>
                       <p className="text-sm text-gray-500">微信支付</p>
                   </div>
                   <Button 

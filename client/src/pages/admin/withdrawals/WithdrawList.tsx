@@ -33,6 +33,7 @@ import {
   auditWithdrawal, 
   AdminWithdrawal 
 } from '@/lib/api';
+import Price from "@/components/Price";
 
 const WithdrawList: React.FC = () => {
   // URL Sync Logic
@@ -162,8 +163,6 @@ const WithdrawList: React.FC = () => {
     setAuditAction('completed'); // Default to approve
     setAdminNote('');
   };
-
-  const formatMoney = (cents: number) => (cents / 100).toFixed(2);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -310,7 +309,7 @@ const WithdrawList: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">申请金额</Label>
-                  <div className="text-2xl font-bold mt-1">¥{formatMoney(selectedWithdrawal.amount)}</div>
+                  <div className="text-2xl font-bold mt-1"><Price amount={selectedWithdrawal.amount} /></div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">申请人</Label>

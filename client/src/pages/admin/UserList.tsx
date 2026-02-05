@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { getAdminUsers, AdminUser, Pagination, unbanUser } from "@/lib/api";
+import Price from "@/components/Price";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,7 +156,7 @@ export default function AdminUserList() {
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium text-gray-900">¥{(parseInt(user.balance || '0') / 100).toFixed(2)}</TableCell>
+                    <TableCell className="font-medium text-gray-900"><Price amount={user.balance || 0} /></TableCell>
                     <TableCell className="text-gray-500 text-sm">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>

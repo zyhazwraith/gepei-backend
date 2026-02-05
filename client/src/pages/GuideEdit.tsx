@@ -167,7 +167,7 @@ export default function GuideEdit() {
         address,
         photoIds: photoIds.length > 0 ? photoIds : undefined,
         avatarId, 
-        expectedPrice: hourlyPrice ? Number(hourlyPrice) : undefined,
+        expectedPrice: hourlyPrice ? Math.round(Number(hourlyPrice) * 100) : undefined, // Yuan to Cents
         intro: intro.trim() || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         latitude,
@@ -343,7 +343,7 @@ export default function GuideEdit() {
           <p className="text-xs text-gray-500 mt-1">最终展示价格由平台审核决定</p>
           {realPrice !== undefined && (
             <div className="mt-2 p-2 bg-orange-50 rounded text-sm text-orange-800 flex items-center gap-2">
-              <span className="font-semibold">当前展示价格: ¥{realPrice}</span>
+              <span className="font-semibold">当前展示价格: <Price amount={realPrice} /></span>
             </div>
           )}
         </div>

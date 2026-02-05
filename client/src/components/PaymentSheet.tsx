@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { payOrder } from "@/lib/api";
 import { Loader2, CheckCircle } from "lucide-react";
+import Price from "@/components/Price";
 
 interface PaymentSheetProps {
   orderId: number | null;
@@ -51,7 +52,7 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
           
           <div className="p-4 pb-0">
             <div className="flex flex-col items-center justify-center py-6 border-b">
-              <span className="text-3xl font-bold">¥{Number(amount).toFixed(2)}</span>
+              <Price amount={amount} className="text-3xl font-bold" />
             </div>
             
             <div className="py-6">

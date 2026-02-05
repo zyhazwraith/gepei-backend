@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getCSPerformance, getPlatformFinance, CSPerformanceData, PlatformFinanceData } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import Price from "@/components/Price";
 import { Loader2, DollarSign, CreditCard, HelpCircle } from 'lucide-react';
 
 export default function AdminStats() {
@@ -102,7 +103,7 @@ export default function AdminStats() {
                         <TableCell>{item.csName}</TableCell>
                         <TableCell className="text-right font-bold text-indigo-400">{item.orderCount}</TableCell>
                         <TableCell className="text-right text-slate-300">
-                          ¥{(item.totalAmount / 100).toFixed(2)}
+                          <Price amount={item.totalAmount} />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -144,7 +145,7 @@ export default function AdminStats() {
                     <DollarSign className="h-4 w-4 text-yellow-500" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">¥{(financeData.summary.totalIncome / 100).toFixed(2)}</div>
+                    <div className="text-2xl font-bold"><Price amount={financeData.summary.totalIncome} /></div>
                   </CardContent>
                 </Card>
                 <Card className="bg-slate-900 border-slate-800 text-slate-100">
@@ -165,7 +166,7 @@ export default function AdminStats() {
                     <CreditCard className="h-4 w-4 text-red-500" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">¥{(financeData.summary.totalWithdraw / 100).toFixed(2)}</div>
+                    <div className="text-2xl font-bold"><Price amount={financeData.summary.totalWithdraw} /></div>
                   </CardContent>
                 </Card>
               </div>

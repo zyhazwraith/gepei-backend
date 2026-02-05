@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getGuides, Guide } from "@/lib/api";
+import Price from "@/components/Price";
 import {
   MapPin,
   Star,
@@ -200,7 +201,7 @@ export default function Home() {
                 </div>
 
                 <p className="text-sm font-semibold text-primary">
-                  ¥{guide.price || guide.realPrice}/小时
+                  <Price amount={guide.price || guide.realPrice || 0} />/小时
                 </p>
               </div>
             </Card>

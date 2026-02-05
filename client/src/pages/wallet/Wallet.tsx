@@ -24,11 +24,7 @@ import {
   WalletLog 
 } from '../../lib/api';
 import { WithdrawDialog } from '../../components/wallet/WithdrawDialog';
-
-// Format Helper
-const formatMoney = (cents: number) => {
-  return (cents / 100).toFixed(2);
-};
+import Price from '@/components/Price';
 
 const WalletPage: React.FC = () => {
   const [, setLocation] = useLocation();
@@ -181,7 +177,7 @@ const WalletPage: React.FC = () => {
             <div className="space-y-1">
               <p className="text-primary-foreground/80 text-sm font-medium">可用余额 (元)</p>
               <h2 className="text-4xl font-bold">
-                {summary ? formatMoney(summary.balance) : '0.00'}
+                <Price amount={summary?.balance} showSymbol={false} />
               </h2>
             </div>
             <Button 
@@ -199,7 +195,7 @@ const WalletPage: React.FC = () => {
             <div className="space-y-1">
               <p className="text-primary-foreground/80 text-xs">冻结中 (元)</p>
               <p className="text-xl font-semibold">
-                {summary ? formatMoney(summary.frozen_amount) : '0.00'}
+                <Price amount={summary?.frozen_amount} showSymbol={false} />
               </p>
             </div>
           </div>
@@ -242,7 +238,7 @@ const WalletPage: React.FC = () => {
                   <div className={`text-lg font-bold ${
                     (log.type === 'income' || log.type === 'withdraw_unfreeze') ? 'text-red-600' : 'text-gray-900'
                   }`}>
-                    {log.amount > 0 ? '+' : ''}{formatMoney(log.amount)}
+                    {log.amount > 0 ? '+' : ''}<Price amount={log.amount} showSymbol={false} />
                   </div>
                 </CardContent>
               </Card>
@@ -288,7 +284,7 @@ const WalletPage: React.FC = () => {
                 <h3 className={`text-4xl font-bold ${
                   (selectedLog.type === 'income' || selectedLog.type === 'withdraw_unfreeze') ? 'text-red-600' : 'text-gray-900'
                 }`}>
-                  {selectedLog.amount > 0 ? '+' : ''}{formatMoney(selectedLog.amount)}
+                  {selectedLog.amount > 0 ? '+' : ''}<Price amount={selectedLog.amount} showSymbol={false} />
                 </h3>
               </div>
 

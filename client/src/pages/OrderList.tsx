@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { getOrders, OrderDetailResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import Price from "@/components/Price";
 
 import EmptyState from "@/components/EmptyState";
 
@@ -76,7 +77,7 @@ export default function OrderList() {
               </Badge>
               <span className="text-xs text-gray-400">{order.orderNumber}</span>
             </div>
-            <span className="font-bold text-gray-900">¥{order.amount}</span>
+            <Price amount={order.amount} className="font-bold text-gray-900" />
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-2">

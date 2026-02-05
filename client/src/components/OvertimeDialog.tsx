@@ -5,6 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { createOvertime } from "@/lib/api";
 import { Clock, Calculator } from "lucide-react";
+import Price from "@/components/Price";
 
 interface OvertimeDialogProps {
   isOpen: boolean;
@@ -72,16 +73,14 @@ export default function OvertimeDialog({
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between text-sm">
                 <span className="text-gray-500">小时单价</span>
-                <span>¥{(pricePerHour / 100).toFixed(2)}/小时</span>
+                <span><Price amount={pricePerHour} />/小时</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
                 <span className="font-medium flex items-center gap-2">
                     <Calculator className="w-4 h-4" />
                     预估费用
                 </span>
-                <span className="text-xl font-bold text-orange-600">
-                    ¥{(totalAmount / 100).toFixed(2)}
-                </span>
+                <Price amount={totalAmount} className="text-xl font-bold text-orange-600" />
             </div>
           </div>
         </div>

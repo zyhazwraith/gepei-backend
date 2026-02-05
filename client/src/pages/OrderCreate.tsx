@@ -11,6 +11,7 @@ import { createOrder, getGuideDetail, Guide, CreateOrderRequest } from "@/lib/ap
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LocationPicker } from "@/components/common/LocationPicker";
+import Price from "@/components/Price";
 
 export default function OrderCreate() {
   const [location, setLocation] = useLocation();
@@ -64,8 +65,8 @@ export default function OrderCreate() {
   };
 
   const totalPrice = guide && guide.hourlyPrice 
-    ? (guide.hourlyPrice * formData.serviceHours).toFixed(2) 
-    : "0.00";
+    ? guide.hourlyPrice * formData.serviceHours
+    : 0;
 
   const handleSubmit = async () => {
     if (!user) {
@@ -155,7 +156,7 @@ export default function OrderCreate() {
               <div className="p-3 flex flex-col justify-center">
                 <h3 className="font-bold text-gray-900">{guide.stageName || guide.nickName}</h3>
                 <p className="text-sm text-gray-500">{guide.city}</p>
-                <p className="text-orange-500 font-bold mt-1">¥{guide.hourlyPrice}/小时</p>
+                <div className="text-orange-500 font-bold mt-1"><Price amount={guide.hourlyPrice} />/小时</div>
               </div>
             </CardContent>
           </Card>
@@ -238,9 +239,7 @@ export default function OrderCreate() {
         <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex items-center gap-4 z-20">
           <div className="flex-1">
             <p className="text-xs text-gray-500">总计</p>
-            <p className="text-2xl font-bold text-orange-600">
-              ¥{totalPrice}
-            </p>
+            <Price amount={totalPrice} className="text-2xl font-bold text-orange-600" />
           </div>
           <Button 
             size="lg" 

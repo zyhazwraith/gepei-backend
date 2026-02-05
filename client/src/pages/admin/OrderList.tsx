@@ -3,6 +3,7 @@ import AdminLayout from "@/components/layouts/AdminLayout";
 import { getAdminOrders, updateOrderStatus, assignGuide, getGuides, AdminOrder, Pagination, Guide } from "@/lib/api";
 import CreateCustomOrderDialog from "@/components/admin/CreateCustomOrderDialog";
 import OrderDetailDialog from "@/components/admin/OrderDetailDialog";
+import Price from "@/components/Price";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -214,7 +215,7 @@ export default function AdminOrderList() {
                       <TableCell className="text-gray-900">
                         {order.customRequirements?.destination || '-'}
                       </TableCell>
-                      <TableCell className="text-gray-900">¥{order.amount}</TableCell>
+                      <TableCell className="text-gray-900"><Price amount={order.amount} /></TableCell>
                       <TableCell className="text-gray-900">{order.serviceDate}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={`${statusInfo.color} ${statusInfo.textColor} border`}>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { getAdminGuideDetail, updateAdminGuideStatus, AdminGuide } from "@/lib/api";
+import Price from "@/components/Price";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,8 @@ export default function GuideAudit() {
       if (res.code === 0 && res.data) {
         const data = res.data;
         setGuide(data);
-        setRealPrice(data.realPrice ? String(data.realPrice) : "");
+        // Convert cents to yuan for display/input
+        setRealPrice(data.realPrice ? (data.realPrice / 100).toString() : "");
         setIsGuide(data.isGuide);
       }
     } catch (error) {
@@ -50,16 +52,18 @@ export default function GuideAudit() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const price = parseInt(realPrice);
-      if (isNaN(price) || price < 0) {
+      const priceYuan = parseFloat(realPrice);
+      if (isNaN(priceYuan) || priceYuan < 0) {
         toast.error("请输入有效的系统价格");
         setSaving(false);
         return;
       }
+      
+      const priceCents = Math.round(priceYuan * 100);
 
       const res = await updateAdminGuideStatus(userId, {
         isGuide,
-        realPrice: price
+        realPrice: priceCents
       });
 
       if (res.code === 0) {
@@ -219,7 +223,7 @@ export default function GuideAudit() {
                 <div className="space-y-2">
                   <Label className="text-gray-500">用户期望时薪</Label>
                   <div className="text-2xl font-bold text-gray-400">
-                    ¥{guide.expectedPrice || 0}
+                    <Price amount={guide.expectedPrice || 0} />
                   </div>
                 </div>
 

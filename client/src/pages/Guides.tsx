@@ -144,7 +144,7 @@ export default function Guides() {
                         {guide.stageName || guide.nickName}
                       </h3>
                       <span className="text-orange-500 font-bold text-sm">
-                        {guide.price ? `¥${guide.price}/h` : "面议"}
+                        {guide.price ? <><Price amount={guide.price} />/h</> : "面议"}
                       </span>
                     </div>
                     

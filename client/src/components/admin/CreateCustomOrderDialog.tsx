@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { createCustomOrder } from "@/lib/api";
+import Price from "@/components/Price";
 import { Loader2 } from "lucide-react";
 
 // Form Schema
@@ -153,7 +154,7 @@ export default function CreateCustomOrderDialog({ open, onOpenChange, onSuccess 
                 )}
               />
               <div className="pb-2 text-sm">
-                总价: <span className="text-lg font-bold text-orange-600">¥{totalAmountYuan.toFixed(2)}</span>
+                总价: <span className="text-lg font-bold text-orange-600"><Price amount={Math.round(totalAmountYuan * 100)} /></span>
               </div>
             </div>
 

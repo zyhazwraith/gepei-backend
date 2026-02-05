@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { applyWithdraw } from '../../lib/api';
+import Price from "@/components/Price";
 
 interface WithdrawDialogProps {
   open: boolean;
@@ -79,7 +80,7 @@ export const WithdrawDialog: React.FC<WithdrawDialogProps> = ({
         <DialogHeader>
           <DialogTitle>申请提现</DialogTitle>
           <DialogDescription>
-            可提现金额: ¥{(balance / 100).toFixed(2)}
+            可提现金额: <Price amount={balance} />
           </DialogDescription>
         </DialogHeader>
 

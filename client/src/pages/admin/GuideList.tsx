@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import { getAdminGuides, AdminGuide, Pagination } from "@/lib/api";
+import Price from "@/components/Price";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,8 +122,8 @@ export default function GuideList() {
                     <TableCell className="font-medium">{guide.stageName}</TableCell>
                     <TableCell>{guide.phone || '-'}</TableCell>
                     <TableCell>{guide.city}</TableCell>
-                    <TableCell>¥{guide.expectedPrice || 0}</TableCell>
-                    <TableCell className="font-bold text-green-600">¥{guide.realPrice || 0}</TableCell>
+                    <TableCell><Price amount={guide.expectedPrice || 0} /></TableCell>
+                    <TableCell className="font-bold text-green-600"><Price amount={guide.realPrice || 0} /></TableCell>
                     <TableCell>
                       {guide.isGuide ? (
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">已认证</Badge>
