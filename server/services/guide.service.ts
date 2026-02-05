@@ -3,6 +3,8 @@ import { attachments } from '../db/schema';
 import { inArray } from 'drizzle-orm';
 import { Guide } from '../types';
 
+const SLOT_REGEX = /_p_(\d+)\./;
+
 /**
  * Service for Guide Logic (Enrichment, Common Operations)
  */
@@ -34,26 +36,36 @@ export class GuideService {
 
     // 2. Fetch all attachments
     const attachmentList = await db
-      .select({ id: attachments.id, url: attachments.url })
+      .select({ id: attachments.id, url: attachments.url, key: attachments.key })
       .from(attachments)
       .where(inArray(attachments.id, Array.from(attachmentIds)));
 
-    const attachmentMap = new Map(attachmentList.map(a => [a.id, a.url]));
+    const attachmentMap = new Map(attachmentList.map(a => [a.id, a]));
 
     // 3. Map back to guides
     return guides.map(g => {
       // Resolve Avatar
       let avatarUrl = '';
       if (g.avatarId && attachmentMap.has(g.avatarId)) {
-        avatarUrl = attachmentMap.get(g.avatarId)!;
+        avatarUrl = attachmentMap.get(g.avatarId)!.url;
       }
 
       // Resolve Photos
-      let photos: { id: number; url: string }[] = [];
+      let photos: { id: number; url: string; slot?: number }[] = [];
       if (g.photoIds && Array.isArray(g.photoIds)) {
         photos = g.photoIds
-          .map((id: number) => ({ id, url: attachmentMap.get(id) || '' }))
-          .filter(p => p.url !== '');
+          .map((id: number) => {
+            const att = attachmentMap.get(id);
+            if (!att) return null;
+            
+            // Extract slot from key (e.g., ..._p_1.webp)
+            // Regex: matches _p_ followed by digits followed by a dot
+            const match = att.key ? att.key.match(SLOT_REGEX) : null;
+            const slot = match ? parseInt(match[1], 10) : undefined;
+
+            return { id, url: att.url, slot };
+          })
+          .filter((p): p is { id: number; url: string; slot: number | undefined } => p !== null);
       }
 
       // Remove photoIds from enriched object to avoid redundancy in API response

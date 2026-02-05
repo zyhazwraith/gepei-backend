@@ -60,21 +60,24 @@ export default function Home() {
       icon: Users,
       title: "找地陪",
       subtitle: "海量优质地陪",
-      color: "bg-purple-500",
+      color: "bg-orange-50",
+      iconColor: "text-primary",
       path: "/guides",
     },
     {
       icon: Sparkles,
       title: "高端定制",
       subtitle: "专属VIP服务",
-      color: "bg-yellow-500",
+      color: "bg-orange-50",
+      iconColor: "text-primary",
       path: "/custom",
     },
     {
       icon: MapPin,
       title: "我的订单",
       subtitle: "订单管理",
-      color: "bg-primary",
+      color: "bg-orange-50",
+      iconColor: "text-primary",
       path: "/profile",
     },
   ];
@@ -88,46 +91,46 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* 顶部导航栏 */}
-      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">陪你</h1>
-        <div className="flex items-center gap-3">
-          <button className="p-1.5 hover:bg-primary-foreground/10 rounded-lg transition-colors">
+      {/* Hero 区域 (Merged Header) */}
+      <div className="bg-primary text-primary-foreground px-4 pt-4 pb-16 relative">
+        {/* Top Buttons */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors">
             <Bell className="w-5 h-5" />
           </button>
           <button
             onClick={() => setLocation("/profile")}
-            className="p-1.5 hover:bg-primary-foreground/10 rounded-lg transition-colors"
+            className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors"
           >
             <Settings className="w-5 h-5" />
           </button>
         </div>
-      </header>
 
-      {/* Hero 区域 */}
-      <div className="bg-primary text-primary-foreground px-8 pt-6 pb-10 text-center">
-        <h2 className="text-4xl font-bold mb-2">陪你</h2>
-        <p className="text-sm mb-1">高品质地陪伴游服务</p>
-        <p className="text-xs opacity-80">连接高净值客户与高颜值地陪</p>
+        {/* Hero Content */}
+        <div className="text-center mt-8">
+          <h1 className="text-4xl font-bold mb-3 tracking-tight">陪你</h1>
+          <p className="text-base font-medium mb-1 opacity-95">高品质地陪伴游服务</p>
+          <p className="text-xs opacity-80">连接高净值客户与高颜值地陪</p>
+        </div>
       </div>
 
       {/* 快捷入口卡片 */}
-      <div className="px-4 -mt-8 mb-6">
+      <div className="px-4 -mt-12 mb-8 relative z-10">
         <div className="grid grid-cols-3 gap-3">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <Card
                 key={index}
-                className="p-4 flex flex-col items-center gap-2 hover:shadow-lg transition-shadow cursor-pointer"
+                className="p-4 flex flex-col items-center gap-2 hover:shadow-lg transition-shadow cursor-pointer border-none shadow-md"
                 onClick={() => setLocation(action.path)}
               >
                 <div className={`${action.color} w-12 h-12 rounded-full flex items-center justify-center`}>
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className={`w-6 h-6 ${action.iconColor}`} />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-foreground">{action.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{action.subtitle}</p>
+                  <p className="text-sm font-bold text-foreground">{action.title}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{action.subtitle}</p>
                 </div>
               </Card>
             );
@@ -136,18 +139,19 @@ export default function Home() {
       </div>
 
       {/* 平台保障 */}
-      <div className="px-4 mb-5">
-        <h3 className="text-lg font-semibold text-foreground mb-3">平台保障</h3>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="px-4 mb-8">
+        <div className="grid grid-cols-4 gap-2">
           {guarantees.map((item, index) => {
             const Icon = item.icon;
             return (
               <div
                 key={index}
-                className="bg-muted/50 rounded-lg px-3 py-2.5 flex items-center gap-2"
+                className="flex flex-col items-center justify-center gap-1.5 text-center"
               >
-                <Icon className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-foreground">{item.text}</span>
+                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="text-[10px] text-muted-foreground font-medium">{item.text}</span>
               </div>
             );
           })}
@@ -157,13 +161,13 @@ export default function Home() {
       {/* 推荐地陪 */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">推荐地陪</h3>
+          <h3 className="text-lg font-bold text-foreground">推荐地陪</h3>
           <button
             onClick={() => setLocation("/guides")}
-            className="text-sm text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary transition-colors"
           >
             查看更多
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3 h-3" />
           </button>
         </div>
 
@@ -171,23 +175,23 @@ export default function Home() {
           {recommendedGuides.map((guide) => (
             <Card
               key={guide.userId}
-              className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer"
+              className="p-3 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer border-slate-100"
               onClick={() => setLocation(`/guides/${guide.userId}`)}
             >
-              <Avatar className="w-15 h-15">
+              <Avatar className="w-14 h-14 border border-slate-100">
                 <AvatarImage src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} alt={guide.stageName || guide.nickName} />
                 <AvatarFallback>{(guide.stageName || guide.nickName)?.[0] || 'G'}</AvatarFallback>
               </Avatar>
 
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-foreground">{guide.stageName || guide.nickName}</span>
-                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                  <span className="text-sm font-bold text-slate-900 truncate">{guide.stageName || guide.nickName}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-orange-50 text-orange-600 border-orange-100">
                     认证
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
+                <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
                   <span className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                     4.9
@@ -195,19 +199,25 @@ export default function Home() {
                   <span>{guide.city}</span>
                   {guide.distance !== undefined && (
                     <span className="text-orange-500 font-medium">
-                      • 距离 {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
+                      {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
                     </span>
                   )}
                 </div>
 
-                <p className="text-sm font-semibold text-primary">
-                  <Price amount={guide.price || guide.realPrice || 0} />/小时
-                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold text-red-500">
+                    <Price amount={guide.price || guide.realPrice || 0} />
+                  </span>
+                  <span className="text-xs text-slate-400">/小时</span>
+                </div>
               </div>
             </Card>
           ))}
           {recommendedGuides.length === 0 && (
-            <div className="text-center py-8 text-gray-500 text-sm">暂无推荐数据</div>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <Users className="w-8 h-8 mb-2 opacity-50" />
+              <p className="text-xs">暂无推荐地陪</p>
+            </div>
           )}
         </div>
       </div>

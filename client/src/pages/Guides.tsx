@@ -63,9 +63,9 @@ export default function Guides() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* 顶部搜索栏 */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-3 shadow-sm flex gap-2">
+      <div className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-4 py-3 border-b border-border/40 flex gap-3">
         {/* 城市选择器 */}
         <CitySelector
           value={selectedCity}
@@ -74,18 +74,18 @@ export default function Guides() {
           }}
           placeholder="城市"
           data-testid="city-selector-trigger"
-          className="w-auto px-2 border-none shadow-none bg-transparent hover:bg-gray-100 min-w-[80px]"
+          className="w-[88px] h-10 px-2 border-0 bg-secondary/50 hover:bg-secondary/70 rounded-full text-sm font-medium shadow-none"
         />
 
         {/* 搜索框 */}
         <form onSubmit={handleSearch} className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={keyword}
             data-testid="search-input"
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="搜索地陪名字/简介"
-            className="pl-9 bg-gray-100 border-none h-10"
+            className="pl-9 bg-secondary/50 border-0 focus-visible:ring-0 rounded-full h-10 text-sm placeholder:text-muted-foreground/70"
           />
         </form>
       </div>
@@ -95,7 +95,7 @@ export default function Guides() {
         {loading ? (
           // 加载骨架屏
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden border-none shadow-sm">
+            <Card key={i} className="overflow-hidden border-0 shadow-sm">
               <CardContent className="p-0 flex h-32">
                 <Skeleton className="w-32 h-32" />
                 <div className="flex-1 p-3 space-y-2">
@@ -108,59 +108,61 @@ export default function Guides() {
           ))
         ) : guides.length > 0 ? (
           guides.map((guide) => {
-            console.log('Rendering guide:', guide); // Debug log
             return (
             <Card 
               key={guide.userId} 
-              className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-card"
               onClick={() => setLocation(`/guides/${guide.userId}`)}
             >
               <CardContent className="p-0 flex">
                 {/* 左侧头像/封面 */}
-                <div className="w-32 h-32 relative bg-gray-200 shrink-0">
+                <div className="w-32 h-32 relative bg-secondary/20 shrink-0">
                   <img
                     src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0].url : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
                     alt={guide.stageName || guide.nickName}
                     className="w-full h-full object-cover"
                     data-testid={`guide-avatar-${guide.userId}`}
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1">
-                    <div className="flex items-center text-white text-xs">
-                      <MapPin className="w-3 h-3 mr-0.5" />
-                      {guide.city}
-                      {guide.distance !== undefined && (
-                        <span className="ml-1">
-                          • {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {guide.distance !== undefined && (
+                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 pt-4">
+                       <p className="text-[10px] text-white flex items-center gap-1">
+                         <MapPin className="w-3 h-3" />
+                         {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
+                       </p>
+                     </div>
+                  )}
                 </div>
 
                 {/* 右侧信息 */}
-                <div className="flex-1 p-3 flex flex-col justify-between">
+                <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
                   <div>
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 line-clamp-1" data-testid={`guide-name-${guide.userId}`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-bold text-base truncate pr-2 text-foreground" data-testid={`guide-name-${guide.userId}`}>
                         {guide.stageName || guide.nickName}
                       </h3>
-                      <span className="text-orange-500 font-bold text-sm">
-                        {guide.price ? <><Price amount={guide.price} />/h</> : "面议"}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-lg font-bold text-red-500 leading-none">
+                           <Price amount={guide.price || 0} />
+                        </span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5">/小时</span>
+                      </div>
                     </div>
                     
+                    <div className="flex items-center gap-2 mb-2">
+                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                         <MapPin className="w-3 h-3" />
+                         {guide.city}
+                       </span>
+                    </div>
+
                     {/* 标签 */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
+                    <div className="flex flex-wrap gap-1">
                       {guide.tags?.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded">
+                        <span key={tag} className="text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
                           {tag}
                         </span>
                       ))}
                     </div>
-
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                      {guide.intro || "暂无简介"}
-                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -169,7 +171,6 @@ export default function Guides() {
           })
         ) : (
           <EmptyState 
-            icon={Search} 
             title="暂无符合条件的地陪" 
             description="换个关键词或城市试试看？"
             action={

@@ -189,14 +189,21 @@ export default function GuideAudit() {
               <CardContent>
                 {guide.photos && guide.photos.length > 0 ? (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {guide.photos.map(photo => (
+                    {guide.photos
+                      .sort((a: any, b: any) => (a.slot ?? 99) - (b.slot ?? 99))
+                      .map((photo: any) => (
                       <div key={photo.id} className="aspect-square relative group">
                         <img 
                           src={photo.url} 
-                          alt="Guide Photo" 
+                          alt={`Guide Photo Slot ${photo.slot}`} 
                           className="w-full h-full object-cover rounded-lg border hover:scale-105 transition-transform cursor-pointer"
                           onClick={() => window.open(photo.url, '_blank')}
                         />
+                        {photo.slot !== undefined && (
+                          <div className="absolute top-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded backdrop-blur-sm">
+                            #{photo.slot + 1}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -33,7 +33,6 @@ import {
   auditWithdrawal, 
   AdminWithdrawal 
 } from '@/lib/api';
-import Price from "@/components/Price";
 
 const WithdrawList: React.FC = () => {
   // URL Sync Logic
@@ -164,6 +163,8 @@ const WithdrawList: React.FC = () => {
     setAdminNote('');
   };
 
+  const formatMoney = (cents: number) => (cents / 100).toFixed(2);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <Badge variant="outline" className="text-yellow-600 bg-yellow-50 border-yellow-200">待审核</Badge>;
@@ -242,7 +243,7 @@ const WithdrawList: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="font-bold text-base">
-                        <Price amount={w.amount} />
+                        ¥{formatMoney(w.amount)}
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate" title={w.userNote}>
                         {w.userNote}
@@ -309,7 +310,7 @@ const WithdrawList: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">申请金额</Label>
-                  <div className="text-2xl font-bold mt-1"><Price amount={selectedWithdrawal.amount} /></div>
+                  <div className="text-2xl font-bold mt-1">¥{formatMoney(selectedWithdrawal.amount)}</div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">申请人</Label>

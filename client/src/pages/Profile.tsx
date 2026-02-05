@@ -1,32 +1,43 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import {
   FileText,
   Wallet,
-  User as UserIcon,
-  Edit,
+  UserCog,
+  ShieldCheck,
+  ListOrdered,
+  ChevronRight,
+  LogOut,
   Settings,
   HelpCircle,
   Info,
-  ChevronRight,
-  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-
-interface MenuItem {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  path?: string;
-  onClick?: () => void;
-}
+import { Badge } from "@/components/ui/badge";
 
 export default function Profile() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("已退出登录");
+    setLocation("/login");
+  };
+
+  const isGuide = user?.isGuide;
+  const isAdmin = user?.role === 'admin';
+
+  // 格式化手机号（隐藏中间4位）
+  const formatPhone = (phone: string) => {
+    if (!phone) return "";
+    return phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2");
+  };
 
   const handleBecomeGuide = () => {
     if (!isAuthenticated) {
@@ -37,64 +48,6 @@ export default function Profile() {
     // 跳转到地陪资料编辑页面
     setLocation("/guides/profile");
   };
-
-  // 格式化手机号（隐藏中间4位）
-  const formatPhone = (phone: string) => {
-    if (!phone) return "";
-    return phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2");
-  };
-
-  const menuSections: MenuItem[][] = [
-    [
-      {
-        icon: FileText,
-        label: "我的订单",
-        onClick: () => setLocation("/orders"),
-      },
-    ],
-    [
-      {
-        icon: Wallet,
-        label: "我的钱包",
-        onClick: () => setLocation("/wallet"),
-      },
-    ],
-    [
-      {
-        icon: UserIcon,
-        label: "个人资料",
-        onClick: () => toast.info("功能开发中"),
-      },
-      {
-        icon: Settings,
-        label: "设置",
-        onClick: () => toast.info("功能开发中"),
-      },
-    ],
-    [
-      {
-        icon: HelpCircle,
-        label: "帮助中心",
-        onClick: () => toast.info("功能开发中"),
-      },
-      {
-        icon: Info,
-        label: "关于我们",
-        onClick: () => toast.info("功能开发中"),
-      },
-    ],
-    [
-      {
-        icon: LogOut,
-        label: "退出登录",
-        onClick: () => {
-          logout();
-          toast.success("已退出登录");
-          setLocation("/login");
-        },
-      },
-    ],
-  ];
 
   if (loading) {
     return (
@@ -155,37 +108,172 @@ export default function Profile() {
       </div>
 
       {/* 菜单列表 */}
-      <div className="container max-w-2xl mx-auto px-4 -mt-16">
-        {menuSections.map((section, sectionIndex) => (
-          <Card key={sectionIndex} className="mb-2 overflow-hidden">
-            {section.map((item, itemIndex) => {
-              const Icon = item.icon;
-              const handleClick = () => {
-                if (item.onClick) {
-                  item.onClick();
-                } else if (item.path) {
-                  setLocation(item.path);
-                }
-              };
-
-              return (
+      <div className="px-4 -mt-4 relative z-20 space-y-4">
+        {/* 主要功能卡片 */}
+        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+          <CardContent className="p-0">
+             <div className="divide-y divide-border/50">
                 <button
-                  key={itemIndex}
-                  onClick={handleClick}
-                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0"
+                  onClick={() => setLocation("/orders")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-primary" />
+                    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                      <ListOrdered className="w-5 h-5" />
                     </div>
-                    <span className="text-foreground font-medium">{item.label}</span>
+                    <span className="font-medium text-sm">我的订单</span>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                 </button>
-              );
-            })}
-          </Card>
-        ))}
+
+                <button
+                  onClick={() => setLocation("/wallet")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">我的钱包</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                </button>
+
+                <button
+                  onClick={() => setLocation("/guides/profile")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
+                      <UserCog className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium text-sm">
+                        {isGuide ? "地陪资料管理" : "成为地陪"}
+                      </div>
+                      {!isGuide && (
+                        <div className="text-[10px] text-muted-foreground">
+                          认证后可接单赚钱
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isGuide ? (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-[10px]">已认证</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal border-border/50">未认证</Badge>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                  </div>
+                </button>
+             </div>
+          </CardContent>
+        </Card>
+
+        {/* 常用功能 */}
+        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+           <CardContent className="p-0">
+             <div className="divide-y divide-border/50">
+               <button
+                  onClick={() => toast.info("功能开发中")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+               >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-pink-50 flex items-center justify-center text-pink-600">
+                      <UserIcon className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">个人资料</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+               </button>
+
+               <button
+                  onClick={() => toast.info("功能开发中")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+               >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-600">
+                      <Settings className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">设置</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+               </button>
+             </div>
+           </CardContent>
+        </Card>
+
+        {/* 其他服务 */}
+        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+           <CardContent className="p-0">
+             <div className="divide-y divide-border/50">
+               <button
+                  onClick={() => toast.info("功能开发中")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+               >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-cyan-50 flex items-center justify-center text-cyan-600">
+                      <HelpCircle className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">帮助中心</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+               </button>
+
+               <button
+                  onClick={() => toast.info("功能开发中")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+               >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                      <Info className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">关于我们</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+               </button>
+             </div>
+           </CardContent>
+        </Card>
+
+        {/* 系统功能 */}
+        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+           <CardContent className="p-0">
+             <div className="divide-y divide-border/50">
+               {isAdmin && (
+                  <button
+                    onClick={() => window.location.href = "/admin/dashboard"}
+                    className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <span className="font-medium text-sm">后台管理</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                  </button>
+               )}
+               
+               <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-between p-4 hover:bg-red-50/50 transition-colors group"
+               >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-600 group-hover:bg-red-100 transition-colors">
+                      <LogOut className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm text-red-600">退出登录</span>
+                  </div>
+               </button>
+             </div>
+           </CardContent>
+        </Card>
+        
+        <div className="text-center pt-4">
+          <p className="text-[10px] text-muted-foreground/40">Gepei v2.0.0</p>
+        </div>
       </div>
 
       <BottomNav />

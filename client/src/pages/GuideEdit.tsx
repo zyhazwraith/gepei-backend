@@ -33,7 +33,7 @@ export default function GuideEdit() {
   const [city, setCity] = useState('');
   
   // V2: Photos state (Array of 5 slots, nullable)
-  const [photos, setPhotos] = useState<({ id: number; url: string } | null)[]>([null, null, null, null, null]);
+  const [photos, setPhotos] = useState<({ id: number; url: string; slot?: number } | null)[]>([null, null, null, null, null]);
   // Avatar state (Single object or null)
   const [avatar, setAvatar] = useState<{ id: number; url: string } | null>(null);
   
@@ -66,12 +66,16 @@ export default function GuideEdit() {
         
         // Handle Photos
         if (data.photos && Array.isArray(data.photos)) {
-            // Map backend photos to slots. Assuming backend returns list in order or we just fill sequentially.
-            // If backend doesn't return slot info, we just fill 0..N
-            const newPhotos: ({ id: number; url: string } | null)[] = [null, null, null, null, null];
-            data.photos.forEach((p: any, index: number) => {
-                if (index < 5) {
-                    newPhotos[index] = typeof p === 'string' ? { id: 0, url: p } : p;
+            const newPhotos: ({ id: number; url: string; slot?: number } | null)[] = [null, null, null, null, null];
+            data.photos.forEach((p: any) => {
+                const photo = typeof p === 'string' ? { id: 0, url: p } : p;
+                // Backend returns slot (0-4 based on new logic)
+                if (photo.slot !== undefined && photo.slot >= 0 && photo.slot < 5) {
+                    newPhotos[photo.slot] = photo;
+                } else {
+                    // Fallback for legacy data without slot info: fill first empty
+                    const firstEmpty = newPhotos.findIndex(x => x === null);
+                    if (firstEmpty !== -1) newPhotos[firstEmpty] = photo;
                 }
             });
             setPhotos(newPhotos);
@@ -83,8 +87,8 @@ export default function GuideEdit() {
             setAvatar({ url: data.avatarUrl, id: data.avatarId || 0 });
         }
 
-        // Map expectedPrice to input
-        if (data.expectedPrice) setHourlyPrice(String(data.expectedPrice));
+        // Map expectedPrice to input (Cents -> Yuan)
+        if (data.expectedPrice) setHourlyPrice(String(data.expectedPrice / 100));
         // Map realPrice for display
         if (data.realPrice) setRealPrice(data.realPrice);
         
@@ -222,7 +226,8 @@ export default function GuideEdit() {
              usage="avatar"
              value={avatar?.url}
              onChange={(url, id) => setAvatar(url ? { url, id: id || 0 } : null)}
-             className="w-24 h-24"
+             className="w-28 h-28 rounded-full"
+             minimal
           />
           <p className="text-xs text-gray-500 mt-2">点击上传个人头像</p>
         </div>
@@ -276,55 +281,51 @@ export default function GuideEdit() {
           </label>
           
           <div className="grid grid-cols-3 gap-3">
-            {/* Render all non-null photos based on their slot index */}
-            {photos.map((photo, index) => {
-               if (!photo) return null;
-               return (
-                <div key={index} className="aspect-square">
-                  <div className="relative w-full h-full group">
-                    <img
-                      src={photo.url}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover rounded-lg border border-gray-200"
-                    />
-                    <button
-                      onClick={() => {
-                        // Delete: Just set this slot to null
-                        const newPhotos = [...photos];
-                        newPhotos[index] = null;
-                        setPhotos(newPhotos);
-                      }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
-                      type="button"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+            {[0, 1, 2, 3, 4].map((index) => {
+              const photo = photos[index];
+              if (photo) {
+                return (
+                  <div key={index} className="aspect-square">
+                    <div className="relative w-full h-full group">
+                      <img
+                        src={photo.url}
+                        alt={`Photo ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        onClick={() => {
+                          const newPhotos = [...photos];
+                          newPhotos[index] = null;
+                          setPhotos(newPhotos);
+                        }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity"
+                        type="button"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-               );
+                );
+              } else {
+                return (
+                  <div key={index} className="aspect-square">
+                    <ImageUploader
+                      usage="guide_photo"
+                      slot={String(index)}
+                      onChange={(url, id) => {
+                        if (url && id) {
+                          const newPhotos = [...photos];
+                          newPhotos[index] = { id, url, slot: index };
+                          setPhotos(newPhotos);
+                        }
+                      }}
+                      className="w-full h-full rounded-lg"
+                      minimal
+                    />
+                  </div>
+                );
+              }
             })}
-
-            {/* Render one upload button if there is any empty slot */}
-            {photos.some(p => p === null) && (
-              <div className="aspect-square">
-                <ImageUploader
-                  usage="guide_photo"
-                  // Find the first empty slot index
-                  slot={String(photos.findIndex(p => p === null))}
-                  onChange={(url, id) => {
-                    if (url && id) {
-                      const firstEmptyIndex = photos.findIndex(p => p === null);
-                      if (firstEmptyIndex !== -1) {
-                        const newPhotos = [...photos];
-                        newPhotos[firstEmptyIndex] = { id, url };
-                        setPhotos(newPhotos);
-                      }
-                    }
-                  }}
-                  className="w-full h-full"
-                />
-              </div>
-            )}
           </div>
         </div>
 

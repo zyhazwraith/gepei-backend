@@ -118,20 +118,20 @@ export default function OrderList() {
   const isGuide = user.isGuide; // Check if user is guide
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* 顶部标题 & 角色切换 */}
-      <div className="bg-white sticky top-0 z-10 border-b flex flex-col items-center justify-center">
+      <div className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/40 flex flex-col items-center justify-center">
         <div className="w-full px-4 py-3 flex items-center justify-center relative">
             <h1 className="text-lg font-bold">我的订单</h1>
         </div>
         
         {/* Role Switcher (Only for Guides) */}
         {isGuide && (
-            <div className="w-full px-4 pb-2">
-                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-lg">
+            <div className="w-full px-4 pb-3">
+                <div className="grid grid-cols-2 p-1 bg-secondary rounded-lg">
                     <button
                         className={`py-1.5 text-sm font-medium rounded-md transition-all ${
-                            roleTab === 'user' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            roleTab === 'user' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                         }`}
                         onClick={() => setRoleTab('user')}
                     >
@@ -139,7 +139,7 @@ export default function OrderList() {
                     </button>
                     <button
                         className={`py-1.5 text-sm font-medium rounded-md transition-all ${
-                            roleTab === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            roleTab === 'guide' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                         }`}
                         onClick={() => setRoleTab('guide')}
                     >
@@ -150,24 +150,37 @@ export default function OrderList() {
         )}
       </div>
 
-      {/* 状态筛选 Tabs */}
-      <div className={`sticky ${isGuide ? 'top-[97px]' : 'top-[53px]'} z-10 bg-gray-50 px-4 pt-2 pb-2 transition-all`}>
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 bg-white border">
-            <TabsTrigger value="all">全部</TabsTrigger>
-            <TabsTrigger value="pending">待支付</TabsTrigger>
-            <TabsTrigger value="paid">待服务</TabsTrigger>
-            {/* 不同角色显示不同状态名可能更好，但 MVP 先复用 */}
-            <TabsTrigger value="waiting_for_user">待确认</TabsTrigger>
-            <TabsTrigger value="completed">已完成</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {/* 状态筛选 Tabs - 可横向滚动 */}
+      <div className={`sticky ${isGuide ? 'top-[105px]' : 'top-[53px]'} z-10 bg-background px-4 pt-3 pb-2 transition-all`}>
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {[
+            { id: 'all', label: '全部' },
+            { id: 'pending', label: '待支付' },
+            { id: 'paid', label: '待服务' },
+            { id: 'waiting_for_user', label: '待确认' },
+            { id: 'completed', label: '已完成' },
+          ].map((tab) => (
+             <button
+               key={tab.id}
+               onClick={() => setActiveTab(tab.id)}
+               className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors border ${
+                 activeTab === tab.id
+                   ? 'bg-primary text-primary-foreground border-primary'
+                   : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+               }`}
+             >
+               {tab.label}
+             </button>
+          ))}
+        </div>
       </div>
 
       {/* 订单列表 */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         {loading ? (
-          <div className="flex justify-center py-10 text-gray-400 text-sm">加载中...</div>
+          <div className="flex justify-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
         ) : orders.length > 0 ? (
           orders.map(renderOrderCard)
         ) : (

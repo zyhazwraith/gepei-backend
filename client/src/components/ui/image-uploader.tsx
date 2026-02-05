@@ -10,6 +10,7 @@ interface ImageUploaderProps {
   usage: "system" | "avatar" | "chat" | "guide_photo";
   slot?: string;
   className?: string;
+  minimal?: boolean; // If true, hide text
 }
 
 export function ImageUploader({
@@ -18,6 +19,7 @@ export function ImageUploader({
   usage,
   slot,
   className,
+  minimal = false,
 }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,10 +76,10 @@ export function ImageUploader({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`relative ${className || ""}`}>
       {/* Preview Area */}
       {value ? (
-        <div className="relative w-40 h-40 border rounded-lg overflow-hidden group">
+        <div className="relative w-full h-full border overflow-hidden group rounded-inherit">
           <img
             src={value}
             alt="Preview"
@@ -96,15 +98,15 @@ export function ImageUploader({
         </div>
       ) : (
         <div
-          className="w-40 h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 cursor-pointer transition-colors"
+          className="w-full h-full border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 cursor-pointer transition-colors rounded-inherit"
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? (
             <Loader2 className="w-8 h-8 animate-spin" />
           ) : (
             <>
-              <Upload className="w-8 h-8 mb-2" />
-              <span className="text-sm">点击上传</span>
+              <Upload className="w-6 h-6" />
+              {!minimal && <span className="text-sm mt-2">点击上传</span>}
             </>
           )}
         </div>

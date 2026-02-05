@@ -78,7 +78,7 @@ function App() {
       >
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
+            <Toaster position="top-center" />
             <Router />
           </TooltipProvider>
         </AuthProvider>
