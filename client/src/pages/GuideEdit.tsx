@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CitySelector from '@/components/common/CitySelector';
 import { LocationPicker } from '@/components/common/LocationPicker';
 import { ImageUploader } from '@/components/ui/image-uploader';
+import Price from "@/components/Price";
 
 // 预定义的服务技能标签
 const SKILL_TAGS = [

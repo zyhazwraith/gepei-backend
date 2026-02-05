@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; // Re-added Button import
 import { getGuides, Guide } from "@/lib/api";
+import Price from "@/components/Price";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
