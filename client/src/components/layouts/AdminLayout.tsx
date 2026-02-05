@@ -11,6 +11,7 @@ import {
   Contact,
   FileText,
   Wallet,
+  PieChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
     { label: "用户管理", icon: Users, path: "/admin/users" },
     { label: "向导审核", icon: Contact, path: "/admin/guides" },
     { label: "提现审核", icon: Wallet, path: "/admin/withdrawals" },
+    { label: "统计报表", icon: PieChart, path: "/admin/stats" },
     { label: "审计日志", icon: FileText, path: "/admin/audit-logs" },
     { label: "系统设置", icon: Settings, path: "/admin/settings" },
   ];

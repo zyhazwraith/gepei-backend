@@ -15,6 +15,7 @@ import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
 import { listAuditLogs } from '../controllers/admin/audit-logs.controller.js';
 import { AdminWithdrawController } from '../controllers/admin-withdraw.controller.js';
+import { AdminStatsController } from '../controllers/admin-stats.controller.js';
 
 const router = Router();
 
@@ -52,6 +53,9 @@ router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGui
 // GET /api/v1/admin/audit-logs - 获取审计日志
 router.get('/audit-logs', authorize(['admin', 'cs']), asyncHandler(listAuditLogs));
 
+// GET /api/v1/admin/stats/cs-performance - 获取客服业绩
+router.get('/stats/cs-performance', authorize(['admin', 'cs']), asyncHandler(AdminStatsController.getCSPerformance));
+
 
 // 2. Admin Only Routes
 // ----------------------------------------------------------------
@@ -73,5 +77,8 @@ router.get('/withdrawals', requireAdmin, asyncHandler(AdminWithdrawController.li
 
 // PUT /api/v1/admin/withdrawals/:id - 审核提现
 router.put('/withdrawals/:id', requireAdmin, asyncHandler(AdminWithdrawController.audit));
+
+// GET /api/v1/admin/stats/platform-finance - 获取平台收支
+router.get('/stats/platform-finance', requireAdmin, asyncHandler(AdminStatsController.getPlatformFinance));
 
 export default router;

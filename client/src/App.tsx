@@ -27,6 +27,7 @@ import AdminGuideAudit from "./pages/admin/GuideAudit";
 import AdminSettings from "./pages/admin/SettingsPage";
 import AdminAuditLogList from "./pages/admin/AuditLogList";
 import AdminWithdrawList from "./pages/admin/withdrawals/WithdrawList";
+import AdminStats from "./pages/admin/stats/AdminStats";
 
 function Router() {
   return (
@@ -54,6 +55,7 @@ function Router() {
       <Route path={"/admin/guides"} component={AdminGuideList} />
       <Route path={"/admin/guides/:id"} component={AdminGuideAudit} />
       <Route path={"/admin/withdrawals"} component={AdminWithdrawList} />
+      <Route path={"/admin/stats"} component={AdminStats} />
       <Route path={"/admin/audit-logs"} component={AdminAuditLogList} />
       <Route path={"/admin/settings"} component={AdminSettings} />
 
