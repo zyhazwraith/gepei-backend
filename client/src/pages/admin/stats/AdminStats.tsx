@@ -12,7 +12,7 @@ import { Loader2, DollarSign, CreditCard, HelpCircle } from 'lucide-react';
 
 export default function AdminStats() {
   const { user } = useAuth();
-  const [timeRange, setTimeRange] = useState('month');
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [loading, setLoading] = useState(false);
   const [csData, setCsData] = useState<CSPerformanceData | null>(null);
   const [financeData, setFinanceData] = useState<PlatformFinanceData | null>(null);

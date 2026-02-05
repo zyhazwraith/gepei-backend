@@ -701,6 +701,8 @@ export interface StatsChartItem {
   withdraw?: number;
 }
 
+export type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
+
 export interface CSPerformanceItem {
   csId: number;
   csName: string;
@@ -723,14 +725,14 @@ export interface PlatformFinanceData {
 /**
  * 获取客服业绩 (Admin)
  */
-export async function getCSPerformance(params: { timeRange: string; startDate?: string; endDate?: string }): Promise<ApiResponse<CSPerformanceData>> {
+export async function getCSPerformance(params: { timeRange: TimeRange; startDate?: string; endDate?: string }): Promise<ApiResponse<CSPerformanceData>> {
   return apiClient.get('/admin/stats/cs-performance', { params });
 }
 
 /**
  * 获取平台收支 (Admin)
  */
-export async function getPlatformFinance(params: { timeRange: string; startDate?: string; endDate?: string }): Promise<ApiResponse<PlatformFinanceData>> {
+export async function getPlatformFinance(params: { timeRange: TimeRange; startDate?: string; endDate?: string }): Promise<ApiResponse<PlatformFinanceData>> {
   return apiClient.get('/admin/stats/platform-finance', { params });
 }
 

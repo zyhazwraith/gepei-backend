@@ -14,9 +14,14 @@
 
 *   **Endpoint**: `GET /api/v1/admin/stats/cs-performance`
 *   **Query Params**:
-    *   `timeRange`: 'today' | 'week' | 'month' | 'year' | 'all' (默认 'month')
-    *   `startDate`: ISO Date String (可选)
-    *   `endDate`: ISO Date String (可选)
+    *   `timeRange`: 时间范围枚举值 (必填)
+        *   `today`: 今天 (00:00 - 23:59)
+        *   `week`: 本周 (周一 00:00 - 周日 23:59)
+        *   `month`: 本月 (1日 00:00 - 月末 23:59) [默认]
+        *   `year`: 本年 (1月1日 00:00 - 12月31日 23:59)
+        *   `all`: 全部时间 (自项目启动以来)
+    *   `startDate`: ISO Date String (可选, 自定义范围开始)
+    *   `endDate`: ISO Date String (可选, 自定义范围结束)
 *   **Response**:
     ```json
     {
