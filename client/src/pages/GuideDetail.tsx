@@ -180,7 +180,7 @@ export default function GuideDetail() {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-orange-500" data-testid="guide-detail-price">
-              {guide.price ? `¥${guide.price}` : "面议"}
+              {guide.price ? <Price amount={guide.price} /> : "面议"}
               <span className="text-sm text-gray-400 font-normal">/小时</span>
             </div>
           </div>
