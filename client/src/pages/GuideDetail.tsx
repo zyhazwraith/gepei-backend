@@ -139,7 +139,7 @@ export default function GuideDetail() {
             <CarouselContent>
               {guide.photos.map((photo, index) => (
                 <CarouselItem key={index} className="h-96">
-                  <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                 </CarouselItem>
               ))}
             </CarouselContent>
