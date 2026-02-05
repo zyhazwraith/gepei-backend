@@ -242,7 +242,7 @@ const WithdrawList: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="font-bold text-base">
-                        ¥{formatMoney(w.amount)}
+                        <Price amount={w.amount} />
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate" title={w.userNote}>
                         {w.userNote}
