@@ -10,7 +10,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Guides from "./pages/Guides";
-import Messages from "./pages/Messages";
 import Custom from "./pages/Custom";
 import GuideEdit from "./pages/GuideEdit";
 import GuideDetail from "./pages/GuideDetail";
@@ -40,7 +39,6 @@ function Router() {
       <Route path={"/guides"} component={Guides} />
       <Route path={"/guides/profile"} component={GuideEdit} />
       <Route path={"/guides/:id"} component={GuideDetail} />
-      <Route path={"/messages"} component={Messages} />
       <Route path={"/custom"} component={Custom} />
       <Route path={"/orders"} component={OrderList} />
       <Route path={"/orders/create"} component={OrderCreate} />
