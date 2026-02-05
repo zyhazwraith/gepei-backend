@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { db } from '../server/db/index';
+import { users, guides } from '../server/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Configuration
 const API_URL = 'http://localhost:3000/api/v1';
@@ -12,24 +15,48 @@ async function main() {
     console.log('🚀 Starting Verification: [T-2] Admin Create Custom Order');
 
     // 0. Ensure Users Exist (Helper)
-    async function ensureUser(phone: string, nickName: string) {
+    async function ensureUser(phone: string, nickName: string, isGuide: boolean = false) {
         try {
-            await axios.post(`${API_URL}/auth/register`, {
-                phone,
-                password: 'password123',
-                nickName
-            });
-        } catch (e: any) {
-            // If exists (400), ignore
-            if (e.response?.status !== 400 && e.response?.data?.code !== 1002) {
-                 // 1002 is UserExists
+            // Check if exists
+            const [existing] = await db.select().from(users).where(eq(users.phone, phone));
+            let userId = existing?.id;
+
+            if (!existing) {
+                // Register via API or DB
+                // API register is safer but simplified here
+                const res = await axios.post(`${API_URL}/auth/register`, {
+                    phone,
+                    password: 'password123',
+                    nickName
+                });
+                // Need to get ID? Login or DB query.
+                const [created] = await db.select().from(users).where(eq(users.phone, phone));
+                userId = created.id;
             }
+
+            if (isGuide && userId) {
+                 // Ensure guide record exists
+                 const [guide] = await db.select().from(guides).where(eq(guides.userId, userId));
+                 if (!guide) {
+                     await db.insert(guides).values({
+                         userId,
+                         stageName: nickName,
+                         idNumber: `ID_${phone}`,
+                         city: 'TestCity',
+                         realPrice: 10000,
+                     });
+                     console.log(`Created guide record for ${phone}`);
+                 }
+            }
+
+        } catch (e: any) {
+             console.error(`Ensure User Failed for ${phone}:`, e.message);
         }
     }
 
     console.log('\n0. Preparing Data...');
-    await ensureUser(USER_PHONE, 'TestUserT2');
-    await ensureUser(GUIDE_PHONE, 'TestGuideT2');
+    await ensureUser(USER_PHONE, 'TestUserT2', false);
+    await ensureUser(GUIDE_PHONE, 'TestGuideT2', true);
     console.log('✅ Users prepared');
 
     // 1. Login as Admin

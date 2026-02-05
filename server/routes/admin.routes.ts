@@ -9,7 +9,8 @@ import {
   getOrderDetails,
   refundOrder,
   banUser,
-  unbanUser
+  unbanUser,
+  createCustomOrder
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
 import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
@@ -33,6 +34,9 @@ router.get('/orders', authorize(['admin', 'cs']), asyncHandler(getOrders));
 
 // GET /api/v1/admin/orders/:id
 router.get('/orders/:id', authorize(['admin', 'cs']), asyncHandler(getOrderDetails));
+
+// POST /api/v1/admin/custom-orders (T-2)
+router.post('/custom-orders', authorize(['admin', 'cs']), asyncHandler(createCustomOrder));
 
 // PUT /api/v1/admin/orders/:id/status
 router.put('/orders/:id/status', authorize(['admin', 'cs']), asyncHandler(updateOrderStatus));

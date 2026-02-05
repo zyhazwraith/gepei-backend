@@ -10,6 +10,94 @@ import { createCustomOrderSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
 import { OrderStatus } from '../constants/index.js';
 
+// ... existing imports ...
+
+/**
+ * 后台创建定制订单 (T-2)
+ * POST /api/v1/admin/custom-orders
+ */
+export async function createCustomOrder(req: Request, res: Response) {
+  const operatorId = req.user!.id;
+
+  try {
+    const validated = createCustomOrderSchema.parse(req.body);
+
+    // 1. Find User
+    const [user] = await db.select().from(users).where(eq(users.phone, validated.userPhone));
+    if (!user) {
+      throw new NotFoundError(`用户 ${validated.userPhone} 不存在`);
+    }
+
+    // 2. Find Guide (User)
+    const [guideUser] = await db.select().from(users).where(eq(users.phone, validated.guidePhone));
+    if (!guideUser) {
+      throw new NotFoundError(`地陪手机号 ${validated.guidePhone} 不存在`);
+    }
+
+    // 3. Verify Guide (Table)
+    const [guideRecord] = await db.select().from(guides).where(eq(guides.userId, guideUser.id));
+    if (!guideRecord) {
+        throw new ValidationError(`该用户 ${validated.guidePhone} 不是认证地陪`);
+    }
+
+    // 4. Calculate Amount
+    const amount = validated.pricePerHour * validated.duration;
+
+    // 5. Create Order
+    const orderNumber = `ORD${Date.now()}${nanoid(6).toUpperCase()}`;
+    
+    // Insert
+    const [result] = await db.insert(orders).values({
+      orderNumber,
+      userId: user.id,
+      guideId: guideUser.id,
+      creatorId: operatorId, // Record who created it
+      type: 'custom',
+      status: 'pending', // Initial status
+      amount, // Total in cents
+      pricePerHour: validated.pricePerHour,
+      duration: validated.duration,
+      serviceAddress: validated.serviceAddress,
+      serviceStartTime: new Date(validated.serviceStartTime),
+      content: validated.content, 
+      requirements: validated.requirements,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const orderId = result.insertId;
+
+    // 6. Audit Log
+    await AuditService.log(
+        operatorId,
+        'CREATE_CUSTOM_ORDER', 
+        AuditTargets.ORDER,
+        orderId,
+        { orderNumber, amount },
+        getClientIp(req)
+    );
+
+    res.status(201).json({
+      code: 0,
+      message: '定制订单创建成功',
+      data: {
+        orderId,
+        orderNumber,
+        amount,
+        status: 'pending',
+        pricePerHour: validated.pricePerHour,
+        duration: validated.duration
+      }
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError('参数错误: ' + error.errors.map(e => e.message).join(', '));
+    }
+    throw error;
+  }
+}
+
 // 更新状态 Schema
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'paid', 'waiting_service', 'in_service', 'service_ended', 'completed', 'cancelled', 'refunded']),
