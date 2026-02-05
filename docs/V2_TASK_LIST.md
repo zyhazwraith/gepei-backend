@@ -86,9 +86,11 @@
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
     - *Frontend*: [x] Admin Order Detail Refund Dialog.
-- [ ] **[O-5] 封禁管理接口 (Ban)** `[PRD 3.3]`
-    - *User Story*: Admin 封禁/解禁账号。
-    - *Tech*: New API.
+- [x] **[O-5] 封禁管理接口 (Ban)** `[PRD 3.3]` `Status: Completed`
+    - *Spec*: [Link](docs/v2_specs/O-5_user_ban.md)
+    - *User Story*: Admin 封禁/解禁账号 (Double Guard: Login + Middleware)。
+    - *Tech*: New API (`PUT /ban`, `/unban`), Middleware Check.
+    - *Verification*: [x] scripts/test-ban-flow.ts.
 - [ ] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]`
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).

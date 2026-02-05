@@ -83,6 +83,7 @@ export function errorHandler(
       'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR,
       'FORBIDDEN': ErrorCodes.PERMISSION_DENIED,
       'NOT_FOUND': ErrorCodes.USER_NOT_FOUND, // Map generic Not Found to 404
+      'USER_BANNED': ErrorCodes.USER_BANNED,
     };
 
     if (errorCodeMap[code]) {

@@ -4,7 +4,7 @@ import { orders, users, guides, refundRecords } from '../db/schema.js';
 import { eq, desc, count, like, or, inArray, and } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
-import { NotFoundError, ValidationError } from '../utils/errors.js';
+import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
 import { createCustomOrderSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
@@ -139,6 +139,96 @@ export async function getOrders(req: Request, res: Response) {
   } catch (error) {
     throw error;
   }
+}
+
+/**
+ * 封禁用户 (Admin)
+ * PUT /api/v1/admin/users/:id/ban
+ */
+export async function banUser(req: Request, res: Response) {
+  const userId = parseInt(req.params.id);
+  const { reason } = req.body;
+  const operatorId = req.user!.id;
+
+  if (!reason) {
+    throw new ValidationError('封禁原因不能为空');
+  }
+
+  // 1. Check User
+  const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+  if (!targetUser) {
+    throw new NotFoundError('用户不存在');
+  }
+
+  // 2. RBAC: Cannot ban admin
+  if (targetUser.role === 'admin') {
+    throw new ForbiddenError('无法封禁管理员账号');
+  }
+
+  // 3. Execute Ban
+  await db.update(users)
+    .set({ 
+      status: 'banned', 
+      banReason: reason,
+      updatedAt: new Date()
+    })
+    .where(eq(users.id, userId));
+
+  // 4. Audit Log
+  await AuditService.log(
+    operatorId,
+    AuditActions.BAN_USER,
+    AuditTargets.USER,
+    userId,
+    { reason },
+    getClientIp(req)
+  );
+
+  res.json({
+    code: 0,
+    message: '用户已封禁',
+    data: { userId, status: 'banned' }
+  });
+}
+
+/**
+ * 解封用户 (Admin)
+ * PUT /api/v1/admin/users/:id/unban
+ */
+export async function unbanUser(req: Request, res: Response) {
+  const userId = parseInt(req.params.id);
+  const operatorId = req.user!.id;
+
+  // 1. Check User
+  const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+  if (!targetUser) {
+    throw new NotFoundError('用户不存在');
+  }
+
+  // 2. Execute Unban
+  await db.update(users)
+    .set({ 
+      status: 'active', 
+      banReason: null,
+      updatedAt: new Date()
+    })
+    .where(eq(users.id, userId));
+
+  // 3. Audit Log
+  await AuditService.log(
+    operatorId,
+    AuditActions.UNBAN_USER,
+    AuditTargets.USER,
+    userId,
+    {},
+    getClientIp(req)
+  );
+
+  res.json({
+    code: 0,
+    message: '用户已解封',
+    data: { userId, status: 'active' }
+  });
 }
 
 /**
@@ -287,6 +377,8 @@ export async function listUsers(req: Request, res: Response) {
       isGuide: users.isGuide,
       balance: users.balance,
       createdAt: users.createdAt,
+      status: users.status,
+      banReason: users.banReason,
     })
     .from(users)
     .where(whereCondition)

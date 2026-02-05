@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { getAdminUsers, AdminUser, Pagination } from "@/lib/api";
+import { getAdminUsers, AdminUser, Pagination, unbanUser } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, User as UserIcon, Shield, Search } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, User as UserIcon, Shield, Search, Ban, CheckCircle, AlertTriangle } from "lucide-react";
+import BanUserDialog from "@/components/admin/BanUserDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function AdminUserList() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -15,6 +24,11 @@ export default function AdminUserList() {
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState("");
   const [searchTrigger, setSearchTrigger] = useState(0); // 用于触发搜索
+  
+  // Ban/Unban Dialog State
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [unbanDialogOpen, setUnbanDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     fetchUsers(page);
@@ -43,6 +57,34 @@ export default function AdminUserList() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
+    }
+  };
+  
+  const handleOpenBan = (user: AdminUser) => {
+    setSelectedUser(user);
+    setBanDialogOpen(true);
+  };
+  
+  const handleUnban = async (user: AdminUser) => {
+    // if (!confirm(`确认要解封用户 ${user.nickName} 吗？`)) return;
+    setSelectedUser(user);
+    setUnbanDialogOpen(true);
+  };
+
+  const confirmUnban = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      const res = await unbanUser(selectedUser.id);
+      if (res.code === 0) {
+        toast.success("用户已解封");
+        setUnbanDialogOpen(false);
+        fetchUsers(page); // Refresh list
+      } else {
+        toast.error(res.message);
+      }
+    } catch (error) {
+      toast.error("操作失败");
     }
   };
 
@@ -80,6 +122,7 @@ export default function AdminUserList() {
                   <TableHead>余额</TableHead>
                   <TableHead>注册时间</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -88,7 +131,7 @@ export default function AdminUserList() {
                     <TableCell className="font-mono text-gray-500">#{user.id}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">{user.nickname}</span>
+                        <span className="font-medium text-gray-900">{user.nickName}</span>
                         <span className="text-xs text-gray-500">{user.phone}</span>
                       </div>
                     </TableCell>
@@ -104,7 +147,7 @@ export default function AdminUserList() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.isGuide === 1 ? (
+                      {user.isGuide ? (
                         <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
                           认证地陪
                         </Badge>
@@ -112,20 +155,60 @@ export default function AdminUserList() {
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium text-gray-900">¥{user.balance}</TableCell>
+                    <TableCell className="font-medium text-gray-900">¥{(parseInt(user.balance || '0') / 100).toFixed(2)}</TableCell>
                     <TableCell className="text-gray-500 text-sm">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-green-600 border-green-200">
-                        正常
-                      </Badge>
+                      {user.status === 'banned' ? (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="destructive" className="flex w-fit items-center gap-1">
+                            <Ban className="w-3 h-3" /> 封禁中
+                          </Badge>
+                          {user.banReason && (
+                            <span className="text-xs text-red-500 max-w-[150px] truncate" title={user.banReason}>
+                              {user.banReason}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-green-600 border-green-200">
+                          正常
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {user.role !== 'admin' && (
+                          <>
+                            {user.status === 'banned' ? (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8"
+                                onClick={() => handleUnban(user)}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 mr-1" /> 解封
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8"
+                                onClick={() => handleOpenBan(user)}
+                              >
+                                <Ban className="w-3.5 h-3.5 mr-1" /> 封禁
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-24 text-gray-500">
+                    <TableCell colSpan={8} className="text-center h-24 text-gray-500">
                       暂无用户数据
                     </TableCell>
                   </TableRow>
@@ -161,6 +244,42 @@ export default function AdminUserList() {
             </div>
           </div>
         )}
+        
+        {/* 封禁弹窗 */}
+        <BanUserDialog 
+          userId={selectedUser?.id || null}
+          userNickname={selectedUser?.nickName || selectedUser?.phone || `ID:${selectedUser?.id}`}
+          isOpen={banDialogOpen}
+          onClose={() => setBanDialogOpen(false)}
+          onSuccess={() => fetchUsers(page)}
+        />
+
+        {/* 解封确认弹窗 */}
+        <Dialog open={unbanDialogOpen} onOpenChange={setUnbanDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                解封用户
+              </DialogTitle>
+              <DialogDescription>
+                您确定要解封用户 <span className="font-bold text-slate-900">{selectedUser?.nickName || selectedUser?.phone || `ID:${selectedUser?.id}`}</span> 吗？
+                该用户将恢复正常登录权限。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUnbanDialogOpen(false)}>
+                取消
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white" 
+                onClick={confirmUnban}
+              >
+                确认解封
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
