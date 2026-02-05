@@ -736,4 +736,16 @@ export async function getPlatformFinance(params: { timeRange: TimeRange; startDa
   return apiClient.get('/admin/stats/platform-finance', { params });
 }
 
+export interface RefundOrderRequest {
+  amount: number; // 单位: 分
+  reason: string;
+}
+
+/**
+ * 订单退款 (管理员)
+ */
+export async function refundOrder(orderId: number, data: RefundOrderRequest): Promise<ApiResponse<any>> {
+  return apiClient.post(`/admin/orders/${orderId}/refund`, data);
+}
+
 export default apiClient;
