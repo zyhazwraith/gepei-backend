@@ -230,6 +230,15 @@ export default function OrderDetail() {
       }
   };
 
+  const handleRequestOvertime = () => {
+    if (!order) return;
+    if (!order.pricePerHour) {
+        toast.error("当前订单未设置加时单价，无法自助加时，请联系客服");
+        return;
+    }
+    setShowOvertimeDialog(true);
+  };
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -483,7 +492,7 @@ export default function OrderDetail() {
         {canRequestOvertime && (
             <Button
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
-                onClick={() => setShowOvertimeDialog(true)}
+                onClick={handleRequestOvertime}
             >
                 <Clock className="w-4 h-4 mr-2" />
                 申请加时服务
@@ -566,15 +575,13 @@ export default function OrderDetail() {
         onSuccess={handlePaymentSuccess}
       />
 
-      {order.pricePerHour && (
-          <OvertimeDialog 
-            isOpen={showOvertimeDialog}
-            onClose={() => setShowOvertimeDialog(false)}
-            orderId={order.id}
-            pricePerHour={order.pricePerHour}
-            onSuccess={handleOvertimeCreated}
-          />
-      )}
+      <OvertimeDialog 
+        isOpen={showOvertimeDialog}
+        onClose={() => setShowOvertimeDialog(false)}
+        orderId={order.id}
+        pricePerHour={order.pricePerHour || 0}
+        onSuccess={handleOvertimeCreated}
+      />
       
       {/* Overtime Payment Confirmation Dialog (Simple) */}
       {showOvertimePayment && pendingOvertime && (

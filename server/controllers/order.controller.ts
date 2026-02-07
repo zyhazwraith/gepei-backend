@@ -90,6 +90,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           serviceLng: validated.serviceLng.toString(),
           // serviceHours: 0, // Removed
           duration: validated.duration, // Use validated duration
+          totalDuration: validated.duration, // Initialize totalDuration
           amount: 15000, // 固定订金 150.00 -> 15000 (分)
           guideId: req.body.guideId || 0, // V2 Temporary: Must have guideId per schema, but custom flow might not have it yet.
           content: JSON.stringify({ // V2: Store requirements in content JSON
@@ -157,9 +158,11 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         serviceStartTime: startTime,
         serviceEndTime: endTime, // Initialize serviceEndTime
         duration: validated.duration,
+        totalDuration: validated.duration, // Initialize totalDuration
         serviceAddress: validated.serviceAddress,
         serviceLat: validated.serviceLat.toString(),
         serviceLng: validated.serviceLng.toString(),
+        pricePerHour: price, // Store snapshot price
         amount: amount, // int
         requirements: validated.requirements, // Now using requirements instead of remark
         createdAt: new Date(),
