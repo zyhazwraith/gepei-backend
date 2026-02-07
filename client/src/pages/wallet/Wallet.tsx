@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, Link } from 'wouter';
+import { useInView } from 'react-intersection-observer';
 import {
   Wallet,
   ArrowUp,
@@ -42,8 +43,11 @@ const WalletPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 5;
 
-  // Infinite Scroll Observer
-  const observerTarget = useRef<HTMLDivElement>(null);
+  // Infinite Scroll Hook
+  const { ref: observerRef, inView } = useInView({
+    threshold: 0.1,
+    rootMargin: '100px', // Preload when 100px before end
+  });
 
   const fetchSummary = async () => {
     try {
@@ -54,6 +58,7 @@ const WalletPage: React.FC = () => {
     }
   };
 
+  // Only fetch data, do not manage page increment logic here
   const fetchLogs = async (pageNum: number, isLoadMore = false) => {
     try {
       if (isLoadMore) {
@@ -72,8 +77,6 @@ const WalletPage: React.FC = () => {
           setLogs(newLogs);
         }
         
-        // Check if there are more pages
-        // Logic: If current page < total pages, there are more.
         const hasMoreData = pageNum < res.data.pagination.totalPages;
         setHasMore(hasMoreData);
       }
@@ -87,37 +90,17 @@ const WalletPage: React.FC = () => {
 
   useEffect(() => {
     fetchSummary();
-    fetchLogs(1);
+    fetchLogs(1); // Initial load
   }, []);
 
-  const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
+  // Handle Infinite Scroll
+  useEffect(() => {
+    if (inView && !loadingMore && hasMore && !loading) {
       const nextPage = page + 1;
       setPage(nextPage);
       fetchLogs(nextPage, true);
     }
-  }, [loadingMore, hasMore, page]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting) {
-          handleLoadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
-      }
-    };
-  }, [handleLoadMore]);
+  }, [inView, loadingMore, hasMore, loading]);
 
   const handleWithdrawSuccess = () => {
     fetchSummary();
@@ -247,13 +230,18 @@ const WalletPage: React.FC = () => {
         )}
 
         {/* Infinite Scroll Loader / End Message */}
-        <div ref={observerTarget} className="flex justify-center pt-4 min-h-[40px]">
-          {loadingMore && (
+        <div ref={observerRef} className="flex justify-center pt-4 min-h-[40px]">
+          {loadingMore ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               <span className="text-xs text-muted-foreground">加载中...</span>
             </>
+          ) : (
+             hasMore && logs.length > 0 && (
+                <p className="text-center text-xs text-muted-foreground opacity-50">上拉加载更多</p>
+             )
           )}
+          
           {!hasMore && !loadingMore && logs.length > 0 && (
             <p className="text-center text-xs text-muted-foreground">
               没有更多记录了
