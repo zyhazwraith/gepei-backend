@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check, Camera, Headphones } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, CreditCard, Clock, CheckCircle2, AlertCircle, Users, Check, Camera, Headphones, User as UserIcon, Phone, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User, payOvertime, getPublicConfigs } from "@/lib/api";
+import { getOrderById, getCandidates, selectGuide, checkInOrder, uploadAttachment, getCurrentUser, OrderDetailResponse, Candidate, User, payOvertime, getPublicConfigs, getGuideDetail, Guide } from "@/lib/api";
 import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
@@ -17,6 +17,7 @@ export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
   const [, setLocation] = useLocation();
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
+  const [guide, setGuide] = useState<Guide | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
   const [showCSDialog, setShowCSDialog] = useState(false);
@@ -60,9 +61,45 @@ export default function OrderDetail() {
     }
   }, [params?.id]);
 
-  // Check-in Logic
-  const handlePhotoClick = () => {
-    fileInputRef.current?.click();
+  const fetchOrder = async (id: number) => {
+    try {
+      const res = await getOrderById(id);
+      if (res.code === 0 && res.data) {
+        setOrder(res.data);
+        
+        // Fetch Guide Info if guideId exists
+        if (res.data.guideId) {
+          getGuideDetail(res.data.guideId).then(gRes => {
+            if (gRes.code === 0 && gRes.data) {
+              setGuide(gRes.data);
+            }
+          });
+        }
+
+        // 如果状态是 waiting_for_user，则获取候选地陪
+        if (res.data.status === 'waiting_for_user') {
+            fetchCandidates(id);
+        }
+      } else {
+        toast.error(res.message || "获取订单失败");
+      }
+    } catch (error) {
+      console.error("Fetch order error:", error);
+      toast.error("网络错误，请稍后重试");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchGuideInfo = async (guideId: number) => {
+    try {
+      const res = await getGuideDetail(guideId);
+      if (res.code === 0 && res.data) {
+        setGuide(res.data);
+      }
+    } catch (error) {
+      console.error("Fetch guide info error:", error);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,38 +184,9 @@ export default function OrderDetail() {
   const isServiceEnded = isGuideView && order?.status === 'service_ended'; // Or completed
   const canRequestOvertime = order?.status === 'in_service' && currentUser?.userId === order.userId;
 
-  const fetchOrder = async (id: number) => {
-    try {
-      const res = await getOrderById(id);
-      if (res.code === 0 && res.data) {
-        setOrder(res.data);
-        // 如果状态是 waiting_for_user，则获取候选地陪
-        if (res.data.status === 'waiting_for_user') {
-            fetchCandidates(id);
-        }
-      } else {
-        toast.error(res.message || "获取订单失败");
-      }
-    } catch (error) {
-      console.error("Fetch order error:", error);
-      toast.error("网络错误，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCandidates = async (orderId: number) => {
-    setLoadingCandidates(true);
-    try {
-        const res = await getCandidates(orderId);
-        if (res.code === 0 && res.data) {
-            setCandidates(res.data.list);
-        }
-    } catch (error) {
-        console.error("Fetch candidates error:", error);
-    } finally {
-        setLoadingCandidates(false);
-    }
+  // Check-in Logic
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleSelectGuide = async (guideId: number) => {
@@ -317,7 +325,7 @@ export default function OrderDetail() {
                '订单进行中'}
             </h2>
             <p className="text-sm text-orange-800/80">
-              {order.status === 'pending' ? '请在 30 分钟内完成支付' : 
+              {order.status === 'pending' ? '请在 1 小时内完成支付' : 
                order.status === 'paid' ? '系统正在为您匹配合适的地陪' : 
                order.status === 'waiting_for_user' ? '已有地陪报名，请选择一位为您服务' : 
                order.status === 'waiting_service' ? (isGuideView ? '请在到达约定地点后开始服务' : '地陪将按时为您服务') : 
@@ -339,71 +347,73 @@ export default function OrderDetail() {
           </CardContent>
         </Card>
 
-        {/* 候选地陪列表 (仅在 waiting_for_user 状态显示) */}
-        {order.status === 'waiting_for_user' && (
-            <Card className="border-purple-200 bg-purple-50/30">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center text-purple-900">
-                        <Users className="w-4 h-4 mr-2" />
-                        候选地陪
-                        <Badge className="ml-2 bg-purple-100 text-purple-800 hover:bg-purple-100">请选择一位</Badge>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {loadingCandidates ? (
-                        <div className="text-center py-4 text-gray-500">加载中...</div>
-                    ) : candidates.length > 0 ? (
-                        candidates.map(candidate => (
-                            <div key={candidate.guideId} className="bg-white p-3 rounded-lg border shadow-sm flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="w-10 h-10">
-                                        <AvatarImage src={candidate.avatarUrl} />
-                                        <AvatarFallback>{candidate.nickName?.slice(0, 1) || 'G'}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <div className="font-medium text-gray-900">{candidate.nickName}</div>
-                                        <div className="text-xs text-gray-500">{candidate.city} · <Price amount={candidate.hourlyPrice} />/小时</div>
-                                    </div>
-                                </div>
-                                <Button 
-                                    size="sm" 
-                                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                                    onClick={() => handleSelectGuide(candidate.guideId)}
-                                    disabled={selectingGuideId !== null}
-                                >
-                                    {selectingGuideId === candidate.guideId ? "提交中..." : "选择TA"}
-                                </Button>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-4 text-gray-500">暂无候选人</div>
-                    )}
-                </CardContent>
-            </Card>
-        )}
-
         {/* 基本信息 */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium flex justify-between items-center">
-              基本信息
+              订单信息
               {getStatusBadge(order.status)}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-500">订单编号</span>
-              <span className="font-mono">{order.orderNumber}</span>
+          <CardContent className="text-sm space-y-4">
+            
+            <div className="flex items-start gap-3">
+              <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div>
+                <span className="text-gray-500 block text-xs">服务时间</span>
+                <span>{new Date(order.serviceStartTime).toLocaleString()}</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">下单时间</span>
-              <span>{new Date(order.createdAt).toLocaleString()}</span>
+            
+            <div className="flex items-start gap-3">
+              <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div>
+                <span className="text-gray-500 block text-xs">预约时长</span>
+                <span>{order.duration} 小时</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">订单类型</span>
-              <Badge variant="outline" className={isCustom ? "text-orange-600 border-orange-200 bg-orange-50" : "text-blue-600 border-blue-200 bg-blue-50"}>
-                {isCustom ? "私人定制" : "普通预约"}
-              </Badge>
+
+            <div className="flex items-start gap-3">
+              <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div>
+                <span className="text-gray-500 block text-xs">约定地点</span>
+                <span>{order.serviceAddress}</span>
+              </div>
+            </div>
+
+            {/* 服务内容展示 */}
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div className="flex-1">
+                <span className="text-gray-500 block text-xs">服务内容</span>
+                <p className="text-gray-900 whitespace-pre-wrap">
+                  {order.content || (isCustom ? "私人定制行程服务" : "标准地陪陪游服务")}
+                </p>
+              </div>
+            </div>
+
+            {/* 备注展示 */}
+            {order.requirements && (
+                <div className="flex items-start gap-3">
+                <Info className="w-4 h-4 text-gray-400 mt-0.5" />
+                <div className="flex-1">
+                    <span className="text-gray-500 block text-xs">备注</span>
+                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-2 rounded whitespace-pre-wrap mt-1">
+                    {order.requirements}
+                    </p>
+                </div>
+                </div>
+            )}
+
+            <div className="pt-3 border-t mt-2">
+                <div className="flex justify-between text-xs text-gray-400">
+                    <span>订单编号</span>
+                    <span className="font-mono">{order.orderNumber}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>下单时间</span>
+                    <span>{new Date(order.createdAt).toLocaleString()}</span>
+                </div>
             </div>
           </CardContent>
         </Card>

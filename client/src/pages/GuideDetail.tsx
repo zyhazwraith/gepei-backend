@@ -14,6 +14,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 
 // 工具函数：计算距离 (Haversine Formula)
@@ -42,6 +43,24 @@ export default function GuideDetail() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  
+  // Carousel State
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
 
   useEffect(() => {
     // 获取用户位置用于计算距离
@@ -135,15 +154,20 @@ export default function GuideDetail() {
       {/* 照片轮播 */}
       <div className="relative h-96 bg-gray-100">
         {guide.photos && guide.photos.length > 0 ? (
-          <Carousel className="w-full h-full">
-            <CarouselContent>
-              {guide.photos.map((photo, index) => (
-                <CarouselItem key={index} className="h-96">
-                  <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
+          <>
+            <Carousel setApi={setApi} className="w-full h-full">
+              <CarouselContent>
+                {guide.photos.map((photo, index) => (
+                  <CarouselItem key={index} className="h-96">
+                    <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+            <div className="absolute bottom-10 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium z-10 pointer-events-none">
+              {current} / {count}
+            </div>
+          </>
         ) : (
           <img 
             src={guide.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`} 

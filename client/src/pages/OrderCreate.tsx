@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ArrowLeft, Calendar, Clock, Info } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Info, MapPin, ShieldCheck, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createOrder, getGuideDetail, Guide, CreateOrderRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +35,7 @@ export default function OrderCreate() {
     serviceLat: 0,
     serviceLng: 0,
     requirements: "", // 通用 (原 remark)
+    content: "", // 服务内容
   });
 
   useEffect(() => {
@@ -64,9 +66,10 @@ export default function OrderCreate() {
     }
   };
 
-  const totalPrice = guide && guide.hourlyPrice 
-    ? guide.hourlyPrice * formData.serviceHours
-    : 0;
+  // 优先使用 guide.price (通常等于 realPrice) 或 realPrice，兜底 expectedPrice
+  const unitPrice = guide ? (guide.price || guide.realPrice || guide.expectedPrice || 0) : 0;
+  
+  const totalPrice = unitPrice * formData.serviceHours;
 
   const handleSubmit = async () => {
     if (!user) {
@@ -89,6 +92,11 @@ export default function OrderCreate() {
         return;
     }
 
+    if (!formData.content) {
+      toast.error("请填写服务内容");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const serviceStartTime = new Date(`${formData.serviceDate}T${formData.serviceTime}:00`).toISOString();
@@ -102,12 +110,13 @@ export default function OrderCreate() {
         serviceLng: Number(formData.serviceLng),
         guideId: parseInt(guideId),
         requirements: formData.requirements,
+        content: formData.content, // Separate content field
       };
 
       const res = await createOrder(payload);
 
       if (res.code === 0) {
-        toast.success("预订成功！");
+        toast.success("下单成功，请尽快支付");
         // 跳转到订单详情页
         setLocation(`/orders/${res.data.orderId}`);
       } else {
@@ -135,62 +144,78 @@ export default function OrderCreate() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Top Nav */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-3 border-b flex items-center shadow-sm">
-        <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => window.history.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-lg font-bold">预订下单</h1>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <div className="bg-white px-4 py-4 shadow-sm border-b sticky top-0 z-10">
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" size="icon" className="-ml-2 hover:bg-gray-100" onClick={() => window.history.back()}>
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </Button>
+          <h1 className="text-lg font-bold text-gray-900">确认订单</h1>
+          <div className="w-10"></div> {/* Spacer for center alignment */}
+        </div>
+        
+        {/* Guide Card - Clean Style */}
+        {guide && (
+          <div className="flex items-center gap-4 bg-white border border-gray-100 shadow-lg rounded-2xl p-4 mt-2">
+             <img 
+                src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
+                className="w-16 h-16 rounded-full object-cover border border-gray-100 shadow-sm" 
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg text-gray-900">{guide.stageName || guide.nickName}</h3>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-none px-2 py-0.5 text-xs font-normal">
+                    <ShieldCheck className="w-3 h-3 mr-1" /> 已认证
+                  </Badge>
+                </div>
+                <div className="flex items-center text-gray-500 text-sm mt-1">
+                  <MapPin className="w-3 h-3 mr-1 text-gray-400" />
+                  {guide.city}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold text-orange-600"><Price amount={unitPrice} /></div>
+                <div className="text-xs text-gray-400">/小时</div>
+              </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Guide Card */}
-        {guide && (
-          <Card className="border-none shadow-sm overflow-hidden">
-            <CardContent className="p-0 flex h-24">
-              <img 
-                src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
-                className="w-24 h-24 object-cover" 
-              />
-              <div className="p-3 flex flex-col justify-center">
-                <h3 className="font-bold text-gray-900">{guide.stageName || guide.nickName}</h3>
-                <p className="text-sm text-gray-500">{guide.city}</p>
-                <div className="text-orange-500 font-bold mt-1"><Price amount={guide.hourlyPrice} />/小时</div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Form */}
-        <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
+        {/* Form Container */}
+        <div className="bg-white p-5 rounded-xl shadow-sm space-y-5 border border-gray-100">
           
           <div className="space-y-2">
-            <Label>服务时间</Label>
-            <div className="flex gap-2">
+            <Label className="text-gray-600">服务时间</Label>
+            <div className="flex gap-3">
                 <div className="relative flex-1">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type="date"
-                    className="pl-9"
+                    className="pl-9 bg-gray-50 border-gray-200"
                     min={new Date().toISOString().split("T")[0]}
                     value={formData.serviceDate}
                     onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
                   />
                 </div>
-                <div className="w-32">
-                  <Input
-                    type="time"
-                    value={formData.serviceTime}
-                    onChange={(e) => setFormData({ ...formData, serviceTime: e.target.value })}
-                  />
+                <div className="w-36">
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      type="time"
+                      className="pl-9 bg-gray-50 border-gray-200"
+                      value={formData.serviceTime}
+                      onChange={(e) => setFormData({ ...formData, serviceTime: e.target.value })}
+                    />
+                  </div>
                 </div>
             </div>
           </div>
 
-          {/* Location Picker (Unified) */}
+          {/* Location Picker */}
           <div className="space-y-2">
-            <Label>服务地点</Label>
+            <Label className="text-gray-600">集合地点</Label>
             <LocationPicker 
               value={formData.serviceAddress}
               lat={formData.serviceLat || undefined}
@@ -200,21 +225,34 @@ export default function OrderCreate() {
                 serviceAddress: loc.address,
                 serviceLat: loc.lat,
                 serviceLng: loc.lng,
-                // city: loc.city // Not needed for normal order unless stored
               })}
             />
           </div>
 
+          {/* 服务内容 (New Field) */}
+          <div className="space-y-2">
+            <Label className="text-gray-600">服务内容</Label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Textarea 
+                placeholder="例如：市内一日游、机场接送、商务翻译..."
+                className="pl-9 min-h-[80px] bg-gray-50 border-gray-200 resize-none"
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              />
+            </div>
+          </div>
+
           {/* 服务时长 */}
           <div className="space-y-2">
-            <Label>服务时长 (小时)</Label>
+            <Label className="text-gray-600">服务时长 (小时)</Label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="number"
                 min={1}
                 max={24}
-                className="pl-9"
+                className="pl-9 bg-gray-50 border-gray-200"
                 value={formData.serviceHours}
                 onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
               />
@@ -222,34 +260,39 @@ export default function OrderCreate() {
           </div>
 
           <div className="space-y-2">
-            <Label>备注 (可选)</Label>
+            <Label className="text-gray-600">备注 (可选)</Label>
             <div className="relative">
               <Info className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <Textarea
                 placeholder="其他特殊要求..."
-                className="pl-9 min-h-[80px]"
+                className="pl-9 min-h-[80px] bg-gray-50 border-gray-200 resize-none"
                 value={formData.requirements}
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
               />
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Price & Submit */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t flex items-center gap-4 z-20">
-          <div className="flex-1">
-            <p className="text-xs text-gray-500">总计</p>
-            <Price amount={totalPrice} className="text-2xl font-bold text-orange-600" />
+      {/* Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center gap-4 z-20">
+        <div className="flex-1">
+          <div className="flex items-baseline gap-1">
+             <span className="text-xs text-gray-500">总计</span>
+             <Price amount={totalPrice} className="text-2xl font-bold text-orange-600" />
           </div>
-          <Button 
-            size="lg" 
-            className="flex-[2] bg-orange-500 hover:bg-orange-600 text-white"
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? "提交中..." : "提交订单"}
-          </Button>
+          <div className="text-xs text-gray-400 mt-0.5">
+             <Price amount={unitPrice} /> x {formData.serviceHours}小时
+          </div>
         </div>
+        <Button 
+          size="lg" 
+          className="flex-[2] bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg shadow-orange-200 rounded-full text-lg font-medium"
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? "提交中..." : "提交订单"}
+        </Button>
       </div>
     </div>
   );

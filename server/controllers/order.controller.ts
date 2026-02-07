@@ -32,6 +32,7 @@ const createNormalOrderSchema = z.object({
   serviceLat: z.number().min(-90).max(90),
   serviceLng: z.number().min(-180).max(180),
   requirements: z.string().optional(),
+  content: z.string().optional(), // Add content field
 });
 
 // 模拟支付 Schema
@@ -152,6 +153,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
       const [order] = await db.insert(orders).values({
         orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
         userId,
+        creatorId: userId, // Record creator
         guideId: validated.guideId,
         type: 'standard', // V2: orderType -> type
         status: 'pending',
@@ -165,6 +167,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         pricePerHour: price, // Store snapshot price
         amount: amount, // int
         requirements: validated.requirements, // Now using requirements instead of remark
+        content: validated.content, // Store service content
         createdAt: new Date(),
       }).$returningId();
 
