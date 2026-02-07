@@ -228,7 +228,7 @@ export interface OrderDetailResponse {
   userId: number;
   guideId: number | null;
   orderType: 'normal' | 'custom';
-  status: 'pending' | 'paid' | 'waiting_for_user' | 'waiting_service' | 'in_service' | 'service_ended' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'paid' | 'waiting_service' | 'in_service' | 'service_ended' | 'completed' | 'cancelled' | 'refunded';
   serviceDate: string;
   serviceHours: number;
   serviceStartTime?: string;
@@ -239,7 +239,9 @@ export interface OrderDetailResponse {
   serviceAddress?: string;
   serviceLat?: number;
   serviceLng?: number;
-  amount: string;
+  amount: string; // Base Amount (Original Price)
+  totalAmount?: number; // Total Revenue (Base + Overtime)
+  guideIncome?: number; // Guide Income
   deposit: string;
   requirements: string | null;
   createdAt: string;
@@ -272,12 +274,17 @@ export async function payOvertime(overtimeId: number, paymentMethod: 'wechat' | 
 
 // ==================== API方法 ====================
 
+export interface GetOrdersResponse {
+  list: OrderDetailResponse[];
+  pagination: Pagination;
+}
+
 /**
  * 获取订单列表
- * @param role 'user' | 'guide' (optional, default 'user')
+ * @param viewAs 'customer' | 'guide' (optional, default 'customer')
  */
-export async function getOrders(status?: string, role: 'user' | 'guide' = 'user'): Promise<ApiResponse<OrderDetailResponse[]>> {
-  const params: { status?: string; role?: string } = { role };
+export async function getOrders(status?: string, viewAs: 'customer' | 'guide' = 'customer', page: number = 1, limit: number = 10): Promise<ApiResponse<GetOrdersResponse>> {
+  const params: { status?: string; viewAs?: string; page: number; limit: number } = { viewAs, page, limit };
   if (status && status !== 'all') {
     params.status = status;
   }

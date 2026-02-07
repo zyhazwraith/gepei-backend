@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { orders, payments, users, guides, overtimeRecords } from '../db/schema';
-import { eq, and, ne, or } from 'drizzle-orm';
+import { eq, and, ne, or, count, desc, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { ErrorCodes } from '../../shared/errorCodes.js';
+import { PLATFORM_COMMISSION_RATE } from '../shared/constants';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
@@ -93,6 +94,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           duration: validated.duration, // Use validated duration
           totalDuration: validated.duration, // Initialize totalDuration
           amount: 15000, // 固定订金 150.00 -> 15000 (分)
+          totalAmount: 15000, // Initial Total = Base Amount
+          guideIncome: Math.round(15000 * (1 - PLATFORM_COMMISSION_RATE)), // Initial Income
           guideId: req.body.guideId || 0, // V2 Temporary: Must have guideId per schema, but custom flow might not have it yet.
           content: JSON.stringify({ // V2: Store requirements in content JSON
             destination: validated.city,
@@ -166,6 +169,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         serviceLng: validated.serviceLng.toString(),
         pricePerHour: price, // Store snapshot price
         amount: amount, // int
+        totalAmount: amount, // Initial Total = Base Amount
+        guideIncome: Math.round(amount * (1 - PLATFORM_COMMISSION_RATE)), // Initial Income
         requirements: validated.requirements, // Now using requirements instead of remark
         content: validated.content, // Store service content
         createdAt: new Date(),
@@ -265,43 +270,58 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
  * 获取订单列表
  * Query Params:
  * - status: string (optional)
- * - role: 'user' | 'guide' (optional, default 'user')
+ * - viewAs: 'customer' | 'guide' (optional, default 'customer')
+ * - page: number (optional, default 1)
+ * - limit: number (optional, default 10)
  */
 export async function getOrders(req: Request, res: Response) {
   const userId = req.user!.id;
-  const { status, role } = req.query;
+  const { status, viewAs } = req.query; // Renamed role -> viewAs
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const offset = (page - 1) * limit;
 
   try {
     const conditions = [];
 
-    // 角色筛选逻辑
-    if (role === 'guide') {
-        // 作为地陪：查询 guideId = userId
-        // 注意：这里需要确保 userId 确实是地陪。虽然不校验也行，只是查不到数据。
+    // 角色筛选逻辑 (Refactored View Logic)
+    if (viewAs === 'guide') {
+        // Guide View: Show orders where I am the guide
         conditions.push(eq(orders.guideId, userId));
     } else {
-        // 作为用户 (默认)：查询 userId = userId
+        // Customer View (Default): Show orders where I am the creator/user
+        // AND EXCLUDE orders where I am also the guide (to avoid self-order pollution)
         conditions.push(eq(orders.userId, userId));
+        conditions.push(ne(orders.guideId, userId)); // Strict filtering
     }
     
     // 如果有状态筛选
     if (status && typeof status === 'string' && status !== 'all') {
-      // @ts-ignore
-      conditions.push(eq(orders.status, status));
+      if (status.includes(',')) {
+        const statuses = status.split(',');
+        // @ts-ignore
+        conditions.push(inArray(orders.status, statuses));
+      } else {
+        // @ts-ignore
+        conditions.push(eq(orders.status, status));
+      }
     }
 
-    const result = await db.select().from(orders)
-      .where(and(...conditions))
-      .orderBy(orders.createdAt); // 按创建时间倒序
+    const whereClause = and(...conditions);
 
+    // 1. Get Total Count
+    const [totalResult] = await db.select({ value: count() }).from(orders).where(whereClause);
+    const total = totalResult.value;
+    const totalPages = Math.ceil(total / limit);
+
+    // 2. Get Paginated Data
+    const result = await db.select().from(orders)
+      .where(whereClause)
+      .orderBy(desc(orders.createdAt)) // 按创建时间倒序
+      .limit(limit)
+      .offset(offset);
       
     // 补充：为了前端展示方便，可能需要关联一些信息，比如customRequirements
-    // 简单起见，先返回主表数据，前端根据 orderType 判断展示逻辑
-    // 或者我们这里做一个简单的聚合查询
-    
-    // 既然是 MVP，我们先直接返回订单列表，前端在详情页再查详细信息
-    // 或者如果列表页需要展示目的地，我们需要查出来
-    
     const enrichedOrders = result.map((order) => {
       let extra = {};
       if (order.type === 'custom' && order.content) {
@@ -321,7 +341,15 @@ export async function getOrders(req: Request, res: Response) {
     res.json({
       code: 0,
       message: '获取成功',
-      data: enrichedOrders,
+      data: {
+        list: enrichedOrders,
+        pagination: {
+          total,
+          page,
+          pageSize: limit,
+          totalPages
+        }
+      }
     });
   } catch (error) {
     throw error;

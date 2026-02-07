@@ -123,7 +123,9 @@ export const orders = mysqlTable('orders', {
   pricePerHour: int('price_per_hour'), // 单位: 分 (单价快照)
   duration: int('duration'), // 预约时长 (小时)
   totalDuration: int('total_duration'), // V2: 实际总时长 (预约 + 加时)
-  amount: int('amount').notNull(), // 总额 (单位: 分)
+  amount: int('amount').notNull(), // 原始订单金额 (单位: 分)
+  totalAmount: int('total_amount').default(0), // 订单总流水 (原始 + 加时)
+  guideIncome: int('guide_income').default(0), // 地陪总收入
   refundAmount: int('refund_amount').default(0), // 已退款金额 (单位: 分)
   content: text('content'), // 核心服务内容 (纯文本描述，如“三日包车游”)
   requirements: text('requirements'), // 备注/特殊要求
