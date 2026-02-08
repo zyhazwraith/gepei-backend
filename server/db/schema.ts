@@ -75,6 +75,7 @@ export const users = mysqlTable('users', {
 export const guides = mysqlTable('guides', {
   userId: int('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   stageName: varchar('stage_name', { length: 50 }).notNull(), // V2: Renamed from name to stageName
+  realName: varchar('real_name', { length: 50 }), // V2.1: Added for Real Name
   avatarId: int('avatar_id'), // V2: Moved from users
   idNumber: varchar('id_number', { length: 18 }).notNull().unique(),
   city: varchar('city', { length: 50 }).notNull(),

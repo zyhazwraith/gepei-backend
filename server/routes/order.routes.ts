@@ -14,6 +14,9 @@ router.get('/', asyncHandler(authenticate), asyncHandler(orderController.getOrde
 // POST /api/v1/orders/:id/payment - 支付订单
 router.post('/:id/payment', asyncHandler(authenticate), asyncHandler(orderController.payOrder));
 
+// POST /api/v1/orders/:id/refund - 用户申请退款
+router.post('/:id/refund', asyncHandler(authenticate), asyncHandler(orderController.refundOrder));
+
 // GET /api/v1/orders/:id - 获取订单详情
 router.get('/:id', asyncHandler(authenticate), asyncHandler(orderController.getOrderById));
 
