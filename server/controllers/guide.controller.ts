@@ -7,6 +7,7 @@ import {
   findAllGuides,
   createGuide,
   updateGuide,
+  GUIDE_SCOPE,
 } from '../models/guide.model.js';
 import { GuideService } from '../services/guide.service.js';
 import { db } from '../db/index.js';
@@ -26,8 +27,9 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    // Public API: Always force isGuide=true
-    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true);
+    // Public API: Always force isGuide=true and use 'public' scope
+    // Note: The default scope is now PUBLIC, but we pass it explicitly for clarity
+    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true, GUIDE_SCOPE.PUBLIC);
 
     // Enrich guides (Batch)
     const enrichedGuides = await GuideService.enrichGuides(guides);
@@ -73,7 +75,8 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
       return;
     }
 
-    const guide = await findGuideByUserId(userId);
+    // Public Scope
+    const guide = await findGuideByUserId(userId, GUIDE_SCOPE.PUBLIC);
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
@@ -120,6 +123,8 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     const {
       stageName, 
+      realName, // V2.1 New
+      idNumber, // V2.1 New (Editable)
       city,
       photoIds, 
       expectedPrice, 
@@ -133,14 +138,14 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     const safePhotoIds = (photoIds && Array.isArray(photoIds)) ? photoIds : [];
 
-    const currentGuide = await findGuideByUserId(user.id);
+    const currentGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN); // Need full access
 
     if (currentGuide) {
       // Update
       await updateGuide(
         user.id,
         stageName || currentGuide.stageName,
-        currentGuide.idNumber, 
+        idNumber || currentGuide.idNumber, // Allow update if provided
         city || currentGuide.city,
         intro || null,
         expectedPrice || null,
@@ -149,12 +154,15 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         address || null, 
         latitude || null,
         longitude || null,
-        avatarId ? Number(avatarId) : null
+        avatarId ? Number(avatarId) : null,
+        realName || currentGuide.realName // Allow update if provided
       );
     } else {
       // Create
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      const idToSave = `PENDING_ID_${user.id}`;
+      // For ID Number, if not provided, use a placeholder (should prompt user though)
+      // V2.1: Frontend should provide idNumber now. Fallback to placeholder if missing (legacy behavior)
+      const idToSave = idNumber || `PENDING_ID_${user.id}`;
       const cityToSave = city || "未知";
 
       await createGuide(
@@ -169,12 +177,13 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
         address || null, 
         latitude || null,
         longitude || null,
-        avatarId ? Number(avatarId) : null
+        avatarId ? Number(avatarId) : null,
+        realName || null
       );
     }
 
     // Return the guideId (and other essential info)
-    const updatedGuide = await findGuideByUserId(user.id);
+    const updatedGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN);
     successResponse(res, { 
       message: '更新成功',
       userId: user.id, // guideId -> userId
@@ -203,7 +212,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const guide = await findGuideByUserId(user.id);
+    const guide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN); // Owner sees everything
 
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪信息不存在');
@@ -216,7 +225,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
     const response = {
       userId: enriched.userId,
       stageName: enriched.stageName,
-      // idNumber: guide.idNumber, // Keep hidden or show if needed? Spec says "全量". Let's show it if it exists.
+      realName: enriched.realName, // V2.1
       idNumber: enriched.idNumber,
       city: enriched.city,
       address: enriched.address,

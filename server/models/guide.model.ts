@@ -22,11 +22,30 @@ function mapDbRowToGuide(row: any): Guide {
 
 // -------------------- Guide Profile Management --------------------
 
-export async function findGuideByUserId(userId: number): Promise<Guide | null> {
-  const result = await db.select({
-      ...getTableColumns(guides),
-      userNickName: users.nickname
-    })
+// Define Guide Scope Constants
+export const GUIDE_SCOPE = {
+  PUBLIC: 'public',
+  ADMIN: 'admin'
+} as const;
+
+export type GuideScopeType = typeof GUIDE_SCOPE[keyof typeof GUIDE_SCOPE];
+
+/**
+ * Public Guide Selection Columns
+ * Excludes sensitive fields like realName and idNumber using Destructuring Exclusion
+ */
+const allColumns = getTableColumns(guides);
+// Destructure sensitive fields to exclude them
+const { realName, idNumber, ...publicColumns } = allColumns;
+
+export const publicGuideSelect = publicColumns;
+
+export async function findGuideByUserId(userId: number, scope: GuideScopeType = GUIDE_SCOPE.PUBLIC): Promise<Guide | null> {
+  const selection = scope === GUIDE_SCOPE.PUBLIC 
+    ? { ...publicGuideSelect, userNickName: users.nickname }
+    : { ...getTableColumns(guides), userNickName: users.nickname };
+
+  const result = await db.select(selection)
     .from(guides)
     .leftJoin(users, eq(guides.userId, users.id))
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)))
@@ -67,7 +86,8 @@ export async function createGuide(
   address: string | null = null,
   latitude: number | null = null,
   longitude: number | null = null,
-  avatarId: number | null = null
+  avatarId: number | null = null,
+  realName: string | null = null
 ): Promise<number> {
   await db.insert(guides).values({
     userId,
@@ -82,6 +102,7 @@ export async function createGuide(
     latitude: latitude ? String(latitude) : null,
     longitude: longitude ? String(longitude) : null,
     avatarId,
+    realName,
     // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
   });
 
@@ -103,7 +124,8 @@ export async function updateGuide(
   address: string | null = null,
   latitude: number | null = null,
   longitude: number | null = null,
-  avatarId: number | null = null
+  avatarId: number | null = null,
+  realName: string | null = null
 ): Promise<boolean> {
   const result = await db.update(guides)
     .set({
@@ -118,6 +140,7 @@ export async function updateGuide(
       latitude: latitude ? String(latitude) : null,
       longitude: longitude ? String(longitude) : null,
       avatarId,
+      realName,
       // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
     })
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)));
@@ -128,6 +151,7 @@ export async function updateGuide(
 /**
  * 获取所有地陪列表（支持分页和筛选）
  * @param onlyVerified 如果为true，只返回已认证的地陪（前台使用）；如果为false，返回所有（后台使用）
+ * @param scope 'public' | 'admin' - public excludes sensitive fields
  */
 export async function findAllGuides(
   page: number = 1,
@@ -136,7 +160,8 @@ export async function findAllGuides(
   keyword?: string,
   userLat?: number,
   userLng?: number,
-  isGuide?: boolean
+  isGuide?: boolean,
+  scope: GuideScopeType = GUIDE_SCOPE.PUBLIC
 ): Promise<{ guides: (Guide & { distance?: number, isGuide?: boolean })[]; total: number }> {
   const offset = (page - 1) * pageSize;
   const conditions = [isNull(guides.deletedAt)];
@@ -169,6 +194,7 @@ export async function findAllGuides(
         * cos( radians( ${guides.longitude} ) - radians(${userLng}) )
         + sin ( radians(${userLat}) )
         * sin( radians( ${guides.latitude} ) )
+        * sin( radians( ${guides.latitude} ) )
       )
     )`.as('distance');
   }
@@ -181,14 +207,25 @@ export async function findAllGuides(
     
   const total = countResult.total;
 
+  // Select columns based on scope
+  const selection = scope === GUIDE_SCOPE.PUBLIC 
+    ? { 
+        ...publicGuideSelect,
+        userNickName: users.nickname,
+        phone: users.phone, 
+        isGuide: users.isGuide,
+        distance: distanceField
+      }
+    : {
+        ...getTableColumns(guides),
+        userNickName: users.nickname,
+        phone: users.phone,
+        isGuide: users.isGuide,
+        distance: distanceField
+      };
+
   const result = await db
-    .select({
-      ...getTableColumns(guides),
-      userNickName: users.nickname,
-      phone: users.phone, // Add phone
-      isGuide: users.isGuide, // Include isGuide status
-      distance: distanceField
-    })
+    .select(selection)
     .from(guides)
     .leftJoin(users, eq(guides.userId, users.id))
     .where(and(...conditions))

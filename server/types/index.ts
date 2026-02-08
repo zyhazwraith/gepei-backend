@@ -39,6 +39,7 @@ export interface LoginRequest {
 export interface Guide {
   userId: number;
   stageName: string; // V2: Renamed from name
+  realName?: string | null; // V2.1: Added
   avatarId: number | null; // V2: Added
   idNumber: string;
   city: string;

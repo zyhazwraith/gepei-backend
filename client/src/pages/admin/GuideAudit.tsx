@@ -144,6 +144,21 @@ export default function GuideAudit() {
                   </div>
                 </div>
 
+                {/* V2.1: Real Name & ID Number */}
+                <div className="space-y-1">
+                  <Label className="text-gray-500">真实姓名</Label>
+                  <div className="font-medium text-gray-900">
+                    {guide.realName || "-"}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-gray-500">身份证号</Label>
+                  <div className="font-mono text-gray-900">
+                    {guide.idNumber || "-"}
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <Label className="text-gray-500">常住城市</Label>
                   <div className="flex items-center gap-2">

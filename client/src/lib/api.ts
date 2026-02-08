@@ -125,6 +125,7 @@ export interface Guide {
   userId: number; // Primary ID (same as User ID)
   nickName?: string; // Fallback
   stageName: string; // V2: Main Display Name (花名)
+  realName?: string; // V2.1: Real Name (Private)
   avatarUrl: string;
   avatarId?: number; // Attachment ID
   city: string;
