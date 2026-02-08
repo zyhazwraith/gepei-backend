@@ -16,3 +16,12 @@ export const createCustomOrderSchema = z.object({
 });
 
 export type CreateCustomOrderInput = z.infer<typeof createCustomOrderSchema>;
+
+/**
+ * [F-5] Admin Update User Role Schema
+ */
+export const updateUserRoleSchema = z.object({
+  role: z.enum(['user', 'cs'], { 
+    message: '无效的角色类型，仅支持 user 或 cs' 
+  }),
+});

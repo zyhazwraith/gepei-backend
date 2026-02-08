@@ -234,14 +234,11 @@ export interface OrderDetailResponse {
   serviceStartTime?: string;
   serviceEndTime?: string; // S-3
   pricePerHour?: number; // S-3
-  duration?: number;
   totalDuration?: number; // S-3
   serviceAddress?: string;
   serviceLat?: number;
   serviceLng?: number;
-  amount: string; // Base Amount (Original Price)
-  totalAmount?: number; // Total Revenue (Base + Overtime)
-  guideIncome?: number; // Guide Income
+  totalAmout: string;
   deposit: string;
   requirements: string | null;
   createdAt: string;

@@ -243,7 +243,7 @@ export default function AdminOrderList() {
                               <Clock className="w-3 h-3 text-gray-400" />
                               <span>
                                 {order.serviceStartTime ? new Date(order.serviceStartTime).toLocaleString() : '-'} 
-                                {order.duration ? ` (${order.duration}h)` : ''}
+                                {order.totalDuration ? ` (${order.totalDuration}h)` : (order.duration ? ` (${order.duration}h)` : '')}
                               </span>
                            </div>
                         </div>

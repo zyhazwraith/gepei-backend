@@ -6,7 +6,7 @@ import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
-import { createCustomOrderSchema } from '../schemas/admin.schema.js';
+import { createCustomOrderSchema, updateUserRoleSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
 import { OrderStatus } from '../constants/index.js';
 
@@ -17,12 +17,12 @@ import { OrderStatus } from '../constants/index.js';
  * POST /api/v1/admin/custom-orders
  */
 export async function createCustomOrder(req: Request, res: Response) {
-  const operatorId = req.user!.id;
-
   try {
+    const operatorId = req.user!.id;
+
     const validated = createCustomOrderSchema.parse(req.body);
 
-    // 1. Find User
+  // 1. Find User
     const [user] = await db.select().from(users).where(eq(users.phone, validated.userPhone));
     if (!user) {
       throw new NotFoundError(`用户 ${validated.userPhone} 不存在`);
@@ -91,9 +91,6 @@ export async function createCustomOrder(req: Request, res: Response) {
     });
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new ValidationError('参数错误: ' + (error as any).errors.map((e: any) => e.message).join(', '));
-    }
     throw error;
   }
 }
@@ -223,10 +220,12 @@ export async function getOrders(req: Request, res: Response) {
       userId: orders.userId,
       orderType: orders.type,
       status: orders.status,
-      amount: orders.totalAmount, // Use totalAmount for display
+      amount: orders.amount, // Base Amount
+      totalAmount: orders.totalAmount, // Total Revenue (Base + Overtime)
       serviceStartTime: orders.serviceStartTime,
       serviceAddress: orders.serviceAddress,
-      duration: orders.duration,
+      duration: orders.duration, // Base Duration
+      totalDuration: orders.totalDuration, // Total Duration (Base + Overtime)
       createdAt: orders.createdAt,
       // User Info
       userPhone: users.phone,
@@ -365,48 +364,45 @@ export async function unbanUser(req: Request, res: Response) {
  */
 export async function updateUserRole(req: Request, res: Response) {
   const userId = parseInt(req.params.id);
-  const { role } = req.body;
   const operatorId = req.user!.id;
 
-  // 验证角色参数
-  if (!role || !['user', 'cs'].includes(role)) {
-    throw new ValidationError('无效的角色类型，仅支持 user 或 cs');
-  }
+  // 使用 Zod 校验
+  const { role } = updateUserRoleSchema.parse(req.body);
 
   // 1. Check User
-  const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
-  if (!targetUser) {
-    throw new NotFoundError('用户不存在');
-  }
+    const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (!targetUser) {
+      throw new NotFoundError('用户不存在');
+    }
 
-  // 2. Prevent changing Admin role or Self
-  if (targetUser.role === 'admin') {
-    throw new ForbiddenError('无法修改管理员角色');
-  }
+    // 2. Prevent changing Admin role or Self
+    if (targetUser.role === 'admin') {
+      throw new ForbiddenError('无法修改管理员角色');
+    }
 
-  // 3. Update Role
-  await db.update(users)
-    .set({ 
-      role: role,
-      updatedAt: new Date()
-    })
-    .where(eq(users.id, userId));
+    // 3. Update Role
+    await db.update(users)
+      .set({ 
+        role: role,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
 
-  // 4. Audit Log
-  await AuditService.log(
-    operatorId,
-    'update_user_role', // Using raw string if constant not available, or add to constants later
-    AuditTargets.USER,
-    userId,
-    { oldRole: targetUser.role, newRole: role },
-    getClientIp(req)
-  );
+    // 4. Audit Log
+    await AuditService.log(
+      operatorId,
+      AuditActions.UPDATE_USER_ROLE,
+      AuditTargets.USER,
+      userId,
+      { oldRole: targetUser.role, newRole: role },
+      getClientIp(req)
+    );
 
-  res.json({
-    code: 0,
-    message: '角色更新成功',
-    data: { userId, role }
-  });
+    res.json({
+      code: 0,
+      message: '角色更新成功',
+      data: { userId, role }
+    });
 }
 
 /**
@@ -617,13 +613,13 @@ export const assignGuide = async (req: Request, res: Response) => {
  * POST /api/v1/admin/orders/:id/refund
  */
 export async function refundOrder(req: Request, res: Response) {
-  const orderId = parseInt(req.params.id);
-  const operatorId = req.user!.id; 
-
   try {
-    const validated = refundOrderSchema.parse(req.body);
+    const orderId = parseInt(req.params.id);
+    const operatorId = req.user!.id; 
 
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+  const validated = refundOrderSchema.parse(req.body);
+
+  const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
     if (!order) {
       throw new NotFoundError('订单不存在');
     }
@@ -684,9 +680,6 @@ export async function refundOrder(req: Request, res: Response) {
     });
 
   } catch (error) {
-     if (error instanceof z.ZodError) {
-      throw new ValidationError('参数错误: ' + (error as any).errors.map((e: any) => e.message).join(', '));
-    }
     throw error;
   }
 }
