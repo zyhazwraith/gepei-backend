@@ -4,13 +4,14 @@ import { ArrowLeft, MapPin, Calendar, Clock, AlertCircle, Headphones, Info } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide } from "@/lib/api";
+import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide, OrderStatus } from "@/lib/api";
 import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
 import OvertimeDialog from "@/components/OvertimeDialog";
 import ContactCSDialog from "@/components/ContactCSDialog";
 import OrderStatusCard from "@/components/order/OrderStatusCard";
+import OrderSupportBar from "@/components/order/OrderSupportBar";
 import GuideActions from "@/components/order/GuideActions";
 import UserActions from "@/components/order/UserActions";
 import { Badge } from "@/components/ui/badge";
@@ -77,9 +78,9 @@ export default function OrderDetail() {
   };
 
   const isGuideView = currentUser && order && currentUser.userId === order.guideId;
-  const canStartService = isGuideView && order?.status === 'waiting_service';
-  const canEndService = isGuideView && order?.status === 'in_service';
-  const canRequestOvertime = order?.status === 'in_service' && currentUser?.userId === order.userId;
+  const canStartService = isGuideView && order?.status === OrderStatus.WAITING_SERVICE;
+  const canEndService = isGuideView && order?.status === OrderStatus.IN_SERVICE;
+  const canRequestOvertime = order?.status === OrderStatus.IN_SERVICE && currentUser?.userId === order.userId;
 
   const handlePaymentSuccess = () => {
     if (order) {
@@ -123,14 +124,14 @@ export default function OrderDetail() {
   // 简化的状态Badge获取
   const getStatusBadge = (status: string) => {
     const map: Record<string, { label: string, className: string }> = {
-      pending: { label: '待支付', className: 'bg-yellow-100 text-yellow-800' },
-      paid: { label: '待接单', className: 'bg-blue-100 text-blue-800' },
-      waiting_service: { label: '待服务', className: 'bg-blue-100 text-blue-800' },
-      in_service: { label: '服务中', className: 'bg-green-100 text-green-800' },
-      service_ended: { label: '服务结束', className: 'bg-gray-100 text-gray-800' },
-      completed: { label: '已完成', className: 'bg-gray-100 text-gray-800' },
-      cancelled: { label: '已取消', className: 'bg-red-100 text-red-800' },
-      refunded: { label: '已退款', className: 'bg-gray-100 text-gray-800' },
+      [OrderStatus.PENDING]: { label: '待支付', className: 'bg-yellow-100 text-yellow-800' },
+      [OrderStatus.PAID]: { label: '待接单', className: 'bg-blue-100 text-blue-800' },
+      [OrderStatus.WAITING_SERVICE]: { label: '待服务', className: 'bg-blue-100 text-blue-800' },
+      [OrderStatus.IN_SERVICE]: { label: '服务中', className: 'bg-green-100 text-green-800' },
+      [OrderStatus.SERVICE_ENDED]: { label: '服务结束', className: 'bg-gray-100 text-gray-800' },
+      [OrderStatus.COMPLETED]: { label: '已完成', className: 'bg-gray-100 text-gray-800' },
+      [OrderStatus.CANCELLED]: { label: '已取消', className: 'bg-red-100 text-red-800' },
+      [OrderStatus.REFUNDED]: { label: '已退款', className: 'bg-gray-100 text-gray-800' },
     };
     
     const config = map[status];
@@ -176,6 +177,11 @@ export default function OrderDetail() {
           isGuideView={isGuideView || false} 
           csQrCode={csQrCode} 
         />
+
+        {/* 客服强引导 - 仅在待服务和服务中显示 */}
+        {[OrderStatus.WAITING_SERVICE, OrderStatus.IN_SERVICE].includes(order.status as any) && (
+          <OrderSupportBar onContactClick={() => setShowCSDialog(true)} />
+        )}
 
         {/* 基本信息 */}
         <Card>
@@ -387,7 +393,7 @@ export default function OrderDetail() {
           </div>
       )}
 
-      {order.status !== 'pending' && !canStartService && !canEndService && !canRequestOvertime && <BottomNav />}
+      {order.status !== OrderStatus.PENDING && !canStartService && !canEndService && !canRequestOvertime && <BottomNav />}
       
       <ContactCSDialog isOpen={showCSDialog} onClose={() => setShowCSDialog(false)} />
     </div>

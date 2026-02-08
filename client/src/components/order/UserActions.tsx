@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
 import Price from "@/components/Price";
-import { OrderDetailResponse, User } from "@/lib/api";
+import { OrderDetailResponse, User, OrderStatus } from "@/lib/api";
 
 interface UserActionsProps {
   order: OrderDetailResponse;
@@ -11,8 +11,8 @@ interface UserActionsProps {
 }
 
 export default function UserActions({ order, currentUser, onShowPayment, onRequestOvertime }: UserActionsProps) {
-  const canRequestOvertime = order.status === 'in_service' && currentUser?.userId === order.userId;
-  const isPending = order.status === 'pending';
+  const canRequestOvertime = order.status === OrderStatus.IN_SERVICE && currentUser?.userId === order.userId;
+  const isPending = order.status === OrderStatus.PENDING;
 
   if (!isPending && !canRequestOvertime) {
     return null;
