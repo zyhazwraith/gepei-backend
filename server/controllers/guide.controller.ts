@@ -138,7 +138,7 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     const safePhotoIds = (photoIds && Array.isArray(photoIds)) ? photoIds : [];
 
-    const currentGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN); // Need full access
+    const currentGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL); // Need full access
 
     if (currentGuide) {
       // Update
@@ -183,7 +183,7 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
     }
 
     // Return the guideId (and other essential info)
-    const updatedGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN);
+    const updatedGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL);
     successResponse(res, { 
       message: '更新成功',
       userId: user.id, // guideId -> userId
@@ -212,7 +212,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const guide = await findGuideByUserId(user.id, GUIDE_SCOPE.ADMIN); // Owner sees everything
+    const guide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL); // Owner sees everything
 
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪信息不存在');

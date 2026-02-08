@@ -25,7 +25,7 @@ function mapDbRowToGuide(row: any): Guide {
 // Define Guide Scope Constants
 export const GUIDE_SCOPE = {
   PUBLIC: 'public',
-  ADMIN: 'admin'
+  FULL: 'full'
 } as const;
 
 export type GuideScopeType = typeof GUIDE_SCOPE[keyof typeof GUIDE_SCOPE];
@@ -42,8 +42,8 @@ export const publicGuideSelect = publicColumns;
 
 export async function findGuideByUserId(userId: number, scope: GuideScopeType = GUIDE_SCOPE.PUBLIC): Promise<Guide | null> {
   const selection = scope === GUIDE_SCOPE.PUBLIC 
-    ? { ...publicGuideSelect, userNickName: users.nickname }
-    : { ...getTableColumns(guides), userNickName: users.nickname };
+    ? { ...publicGuideSelect, userNickName: users.nickname, phone: users.phone, isGuide: users.isGuide }
+    : { ...getTableColumns(guides), userNickName: users.nickname, phone: users.phone, isGuide: users.isGuide };
 
   const result = await db.select(selection)
     .from(guides)

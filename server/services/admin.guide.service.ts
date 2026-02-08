@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { users, guides } from '../db/schema';
 import { eq, sql, desc, count, getTableColumns, isNull } from 'drizzle-orm';
-import { findAllGuides, findGuideByUserId } from '../models/guide.model';
+import { findAllGuides, findGuideByUserId, GUIDE_SCOPE } from '../models/guide.model';
 import { GuideService } from './guide.service';
 import { AuditService } from './audit.service';
 import { AuditActions, AuditTargets } from '../constants/audit';
@@ -24,7 +24,8 @@ export class AdminGuideService {
       params.keyword, 
       undefined, 
       undefined, 
-      params.isGuide
+      params.isGuide,
+      GUIDE_SCOPE.FULL // Admin needs full access potentially, though list view is summary
     );
     
     // Enrich with photos/avatar (Batch)
@@ -45,45 +46,21 @@ export class AdminGuideService {
    * Get full guide details including sensitive user info
    */
   static async getGuideDetail(userId: number) {
-    const [fullProfile] = await db
-      .select({
-        ...getTableColumns(guides),
-        userNickName: users.nickname,
-        isGuide: users.isGuide,
-        userPhone: users.phone, // Sensitive info for admin
-      })
-      .from(guides)
-      .leftJoin(users, eq(guides.userId, users.id))
-      .where(eq(guides.userId, userId))
-      .limit(1);
+    // Refactored to use Model function with FULL scope
+    const guide = await findGuideByUserId(userId, GUIDE_SCOPE.FULL);
 
-    if (!fullProfile) return null;
-
-    // Parse JSON fields
-    const tags = typeof fullProfile.tags === 'string' ? JSON.parse(fullProfile.tags) : fullProfile.tags;
-    const photoIds = typeof fullProfile.photoIds === 'string' ? JSON.parse(fullProfile.photoIds) : fullProfile.photoIds;
-
-    // Construct base object
-    const baseGuide = {
-        ...fullProfile,
-        tags,
-        photoIds,
-        expectedPrice: fullProfile.expectedPrice ? Number(fullProfile.expectedPrice) : 0,
-        realPrice: fullProfile.realPrice ? Number(fullProfile.realPrice) : 0,
-        latitude: fullProfile.latitude ? Number(fullProfile.latitude) : null,
-        longitude: fullProfile.longitude ? Number(fullProfile.longitude) : null,
-    };
+    if (!guide) return null;
 
     // Enrich
-    const enriched = await GuideService.enrichGuide(baseGuide as any);
+    const enriched = await GuideService.enrichGuide(guide);
 
-    // Remove photoIds from response as photos contains full info
-    const { photoIds: _, ...cleanEnriched } = enriched;
-
-    return {
-        ...cleanEnriched,
-        phone: fullProfile.userPhone, // Map userPhone to phone
-    };
+    // Ensure phone is present (it should be if findGuideByUserId includes joined user data)
+    // Note: findGuideByUserId needs to ensure it selects phone/nickname from users table
+    // Let's verify guide.model.ts adds these fields.
+    // Yes, the refactored model adds userNickName. Does it add phone?
+    // We need to check guide.model.ts again.
+    
+    return enriched;
   }
 
   /**
