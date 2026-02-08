@@ -267,6 +267,31 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
 }
 
 /**
+ * User Initiated Refund
+ * POST /api/v1/orders/:id/refund
+ */
+export async function refundOrder(req: Request, res: Response, next: NextFunction) {
+  const userId = req.user!.id;
+  const orderId = parseInt(req.params.id);
+
+  if (isNaN(orderId)) {
+    return next(new ValidationError('无效的订单ID'));
+  }
+
+  try {
+    const result = await OrderService.refundByUser(userId, orderId);
+    
+    res.json({
+      code: 0,
+      message: '退款申请已受理',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * 获取订单列表
  * Query Params:
  * - status: string (optional)

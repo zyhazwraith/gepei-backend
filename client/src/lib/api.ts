@@ -255,8 +255,18 @@ export interface OrderDetailResponse {
   deposit: string;
   requirements: string | null;
   createdAt: string;
+  paidAt?: string; // Added for refund logic
   customRequirements?: CustomRequirements | null;
   overtimeRecords?: OvertimeRecord[]; // S-3
+  amount: number; // 订单原价
+  totalAmount?: number; // 订单总流水
+  guideIncome?: number; // 地陪收入
+  refundAmount?: number; // 已退款金额
+  refund_records?: Array<{ // 退款流水
+    amount: number;
+    reason: string;
+    createdAt: string;
+  }>;
 }
 
 export interface CreateOvertimeResponse {
@@ -774,10 +784,22 @@ export interface RefundOrderRequest {
 }
 
 /**
- * 订单退款 (管理员)
+ * 订单退款 (管理员) - Deprecated/Removed
  */
-export async function refundOrder(orderId: number, data: RefundOrderRequest): Promise<ApiResponse<any>> {
-  return apiClient.post(`/admin/orders/${orderId}/refund`, data);
+// export async function refundOrderAdmin(orderId: number, data: RefundOrderRequest): Promise<ApiResponse<any>> {
+//   return apiClient.post(`/admin/orders/${orderId}/refund`, data);
+// }
+
+/**
+ * 订单退款 (用户自助)
+ */
+export async function refundOrder(orderId: number): Promise<ApiResponse<{
+  success: boolean;
+  refundedAmount: number;
+  penaltyApplied: boolean;
+  message: string;
+}>> {
+  return apiClient.post(`/orders/${orderId}/refund`);
 }
 
 export default apiClient;
