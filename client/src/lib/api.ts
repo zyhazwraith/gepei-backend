@@ -396,7 +396,12 @@ export async function updateAdminGuideStatus(userId: number, data: { isGuide?: b
 
 export interface AdminOrder extends OrderDetailResponse {
   userPhone?: string;
-  userNickname?: string;
+  userName?: string;
+  creatorId?: number;
+  creatorPhone?: string;
+  creatorName?: string;
+  guideName?: string;
+  guidePhone?: string;
 }
 
 /**
@@ -415,10 +420,11 @@ export interface AdminUser {
   id: number;
   phone: string;
   nickName: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'cs';
   isGuide: boolean;
   balance: string;
   createdAt: string;
+  lastLoginAt?: string | null;
   status: 'active' | 'banned';
   banReason?: string;
 }
@@ -465,9 +471,10 @@ export async function getOrderDetails(id: number): Promise<ApiResponse<AdminOrde
 /**
  * 获取所有订单 (管理员)
  */
-export async function getAdminOrders(page: number = 1, pageSize: number = 20, keyword?: string): Promise<ApiResponse<GetAdminOrdersResponse>> {
+export async function getAdminOrders(page: number = 1, pageSize: number = 20, keyword?: string, status?: string): Promise<ApiResponse<GetAdminOrdersResponse>> {
   const params: any = { page, limit: pageSize };
   if (keyword) params.keyword = keyword;
+  if (status && status !== 'all') params.status = status;
   return apiClient.get('/admin/orders', { params });
 }
 
@@ -478,6 +485,14 @@ export async function getAdminUsers(page: number = 1, pageSize: number = 20, key
   const params: any = { page, limit: pageSize };
   if (keyword) params.keyword = keyword;
   return apiClient.get('/admin/users', { params });
+}
+
+/**
+ * 更新用户角色 (管理员)
+ * @param role 'user' | 'cs'
+ */
+export async function updateUserRole(userId: number, role: 'user' | 'cs'): Promise<ApiResponse<any>> {
+  return apiClient.put(`/admin/users/${userId}/role`, { role });
 }
 
 /**
@@ -495,11 +510,11 @@ export async function unbanUser(userId: number): Promise<ApiResponse<any>> {
 }
 
 /**
- * 更新订单状态 (管理员)
+ * 更新订单状态 (管理员) - REMOVED
  */
-export async function updateOrderStatus(id: number, status: string): Promise<ApiResponse<any>> {
-  return apiClient.put(`/admin/orders/${id}/status`, { status });
-}
+// export async function updateOrderStatus(id: number, status: string): Promise<ApiResponse<any>> {
+//   return apiClient.put(`/admin/orders/${id}/status`, { status });
+// }
 
 /**
  * 指派地陪 (管理员)

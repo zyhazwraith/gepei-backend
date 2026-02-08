@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -46,8 +47,11 @@ export function createApp(): Application {
 
   // 静态文件服务（前端构建产物）
   // 生产环境下，Express 托管前端静态文件
-  // 注意：需要确保 client/dist 目录存在
-  const clientDistPath = path.join(__dirname, '../../client/dist');
+  // 适配 Dev (server/../dist/public) 和 Prod (dist/server/../public) 两种路径
+  let clientDistPath = path.join(__dirname, '../dist/public');
+  if (!fs.existsSync(clientDistPath)) {
+    clientDistPath = path.join(__dirname, '../public');
+  }
   app.use(express.static(clientDistPath));
 
   // API 路由（添加/v1版本号）

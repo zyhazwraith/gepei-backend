@@ -55,10 +55,11 @@ export const users = mysqlTable('users', {
   password: varchar('password', { length: 255 }).notNull(),
   nickname: varchar('nickname', { length: 50 }),
   isGuide: boolean('is_guide').default(false),
-  role: mysqlEnum('role', ['user', 'admin', 'cs']).default('user'),
+  role: mysqlEnum('role', ['user', 'admin', 'cs']).notNull().default('user'),
   balance: int('balance').default(0), // 单位: 分
   status: mysqlEnum('status', ['active', 'banned']).default('active'),
   banReason: varchar('ban_reason', { length: 255 }),
+  lastLoginAt: timestamp('last_login_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   deletedAt: timestamp('deleted_at'),

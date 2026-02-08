@@ -171,23 +171,49 @@ export async function getOrders(req: Request, res: Response) {
   const offset = (page - 1) * limit;
 
   try {
-    // 构建查询条件
+    // 1. Define aliases first (Must be before conditions)
+    const creator = alias(users, 'creator');
+    const guideUser = alias(users, 'guideUser');
+    const guideProfile = alias(guides, 'guideProfile');
+
+    // 2. Build Query Conditions
     const conditions = [];
     if (keyword) {
       conditions.push(
         or(
           like(orders.orderNumber, `%${keyword}%`),
+          // User (Customer)
           like(users.phone, `%${keyword}%`),
-          like(users.nickname, `%${keyword}%`)
+          like(users.nickname, `%${keyword}%`),
+          // Creator (CS/Admin)
+          like(creator.phone, `%${keyword}%`),
+          like(creator.nickname, `%${keyword}%`),
+          // Guide
+          like(guideProfile.stageName, `%${keyword}%`),
+          like(guideUser.phone, `%${keyword}%`)
         )
       );
     }
-    
-    // 1. 查询总数
+
+    // Status Filter
+    if (req.query.status && req.query.status !== 'all') {
+       const statusParam = req.query.status as string;
+       if (statusParam.includes(',')) {
+          // Support multi-status filtering (e.g. "cancelled,refunded")
+          conditions.push(inArray(orders.status, statusParam.split(',') as any[]));
+       } else {
+          // Type casting for enum compatibility
+          conditions.push(eq(orders.status, statusParam as any));
+       }
+    }
+
     const [{ value: total }] = await db
       .select({ value: count() })
       .from(orders)
-      .leftJoin(users, eq(orders.userId, users.id)) 
+      .leftJoin(users, eq(orders.userId, users.id))
+      .leftJoin(creator, eq(orders.creatorId, creator.id))
+      .leftJoin(guideUser, eq(orders.guideId, guideUser.id))
+      .leftJoin(guideProfile, eq(orders.guideId, guideProfile.userId))
       .where(and(...conditions));
 
     // 2. 分页查询
@@ -197,15 +223,29 @@ export async function getOrders(req: Request, res: Response) {
       userId: orders.userId,
       orderType: orders.type,
       status: orders.status,
-      amount: orders.amount,
+      amount: orders.totalAmount, // Use totalAmount for display
       serviceStartTime: orders.serviceStartTime,
+      serviceAddress: orders.serviceAddress,
+      duration: orders.duration,
       createdAt: orders.createdAt,
+      // User Info
       userPhone: users.phone,
-      userNickname: users.nickname,
+      userName: users.nickname, // Unified to userName
+      // Creator Info
+      creatorId: creator.id,
+      creatorPhone: creator.phone,
+      creatorName: creator.nickname, // Unified to creatorName
+      // Guide Info
+      guideId: guideUser.id,
+      guideName: guideProfile.stageName, // Unified to guideName (from stageName)
+      guidePhone: guideUser.phone,
       content: orders.content,
     })
     .from(orders)
     .leftJoin(users, eq(orders.userId, users.id))
+    .leftJoin(creator, eq(orders.creatorId, creator.id))
+    .leftJoin(guideUser, eq(orders.guideId, guideUser.id))
+    .leftJoin(guideProfile, eq(orders.guideId, guideProfile.userId))
     .where(and(...conditions))
     .orderBy(desc(orders.createdAt))
     .limit(limit)
@@ -320,6 +360,56 @@ export async function unbanUser(req: Request, res: Response) {
 }
 
 /**
+ * 更新用户角色 (Admin)
+ * PUT /api/v1/admin/users/:id/role
+ */
+export async function updateUserRole(req: Request, res: Response) {
+  const userId = parseInt(req.params.id);
+  const { role } = req.body;
+  const operatorId = req.user!.id;
+
+  // 验证角色参数
+  if (!role || !['user', 'cs'].includes(role)) {
+    throw new ValidationError('无效的角色类型，仅支持 user 或 cs');
+  }
+
+  // 1. Check User
+  const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+  if (!targetUser) {
+    throw new NotFoundError('用户不存在');
+  }
+
+  // 2. Prevent changing Admin role or Self
+  if (targetUser.role === 'admin') {
+    throw new ForbiddenError('无法修改管理员角色');
+  }
+
+  // 3. Update Role
+  await db.update(users)
+    .set({ 
+      role: role,
+      updatedAt: new Date()
+    })
+    .where(eq(users.id, userId));
+
+  // 4. Audit Log
+  await AuditService.log(
+    operatorId,
+    'update_user_role', // Using raw string if constant not available, or add to constants later
+    AuditTargets.USER,
+    userId,
+    { oldRole: targetUser.role, newRole: role },
+    getClientIp(req)
+  );
+
+  res.json({
+    code: 0,
+    message: '角色更新成功',
+    data: { userId, role }
+  });
+}
+
+/**
  * 获取订单详情 (管理员)
  * GET /api/v1/admin/orders/:id
  */
@@ -393,49 +483,6 @@ export async function getOrderDetails(req: Request, res: Response) {
 }
 
 /**
- * 更新订单状态 (管理员)
- */
-export async function updateOrderStatus(req: Request, res: Response, next: NextFunction) {
-  const orderId = parseInt(req.params.id);
-  
-  try {
-    const validated = updateStatusSchema.parse(req.body);
-
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-
-    // 状态流转校验 (除非强制)
-    if (!validated.force) {
-      const currentStatus = order.status || 'pending';
-      const allowed = VALID_TRANSITIONS[currentStatus] || [];
-      if (!allowed.includes(validated.status)) {
-        throw new ValidationError(
-          `非法状态流转: ${currentStatus} -> ${validated.status}。允许的目标状态: ${allowed.join(', ')}`
-        );
-      }
-    }
-
-    await db.update(orders)
-      .set({ status: validated.status })
-      .where(eq(orders.id, orderId));
-
-    res.json({
-      code: 0,
-      message: '状态更新成功',
-      data: { id: orderId, status: validated.status }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(new ValidationError('参数错误'));
-    }
-    next(error);
-  }
-}
-
-
-/**
  * 管理员获取用户列表
  */
 export async function listUsers(req: Request, res: Response) {
@@ -467,6 +514,7 @@ export async function listUsers(req: Request, res: Response) {
       createdAt: users.createdAt,
       status: users.status,
       banReason: users.banReason,
+      lastLoginAt: users.lastLoginAt,
     })
     .from(users)
     .where(whereCondition)

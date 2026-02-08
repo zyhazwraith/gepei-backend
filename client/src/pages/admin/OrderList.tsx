@@ -11,19 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search, Plus, Eye } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search, Plus, Eye, MapPin, Clock } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // 状态映射
 const STATUS_MAP: Record<string, { label: string; color: string; textColor: string }> = {
   pending: { label: "待支付", color: "bg-orange-100 border-orange-200", textColor: "text-orange-800" },
-  paid: { label: "待服务", color: "bg-blue-100 border-blue-200", textColor: "text-blue-800" },
-  waiting_for_user: { label: "待确认", color: "bg-yellow-100 border-yellow-200", textColor: "text-yellow-800" },
-  in_progress: { label: "进行中", color: "bg-purple-100 border-purple-200", textColor: "text-purple-800" },
-  completed: { label: "已完成", color: "bg-green-100 border-green-200", textColor: "text-green-800" },
-  cancelled: { label: "已取消", color: "bg-gray-100 border-gray-200", textColor: "text-gray-800" },
+  paid: { label: "已支付", color: "bg-blue-100 border-blue-200", textColor: "text-blue-800" },
+  waiting_service: { label: "待服务", color: "bg-indigo-100 border-indigo-200", textColor: "text-indigo-800" },
+  in_service: { label: "服务中", color: "bg-green-100 border-green-200", textColor: "text-green-800" },
+  service_ended: { label: "服务结束", color: "bg-emerald-100 border-emerald-200", textColor: "text-emerald-800" },
+  completed: { label: "已完成", color: "bg-slate-100 border-slate-200", textColor: "text-slate-800" },
+  cancelled: { label: "已取消", color: "bg-gray-100 border-gray-200", textColor: "text-gray-500" },
+  refunded: { label: "已退款", color: "bg-red-100 border-red-200", textColor: "text-red-800" },
 };
+
+const ORDER_TABS = [
+  { value: "all", label: "全部" },
+  { value: "pending", label: "待支付" },
+  { value: "paid,waiting_service", label: "待服务" },
+  { value: "in_service", label: "服务中" },
+  { value: "service_ended,completed", label: "已完成" },
+  { value: "cancelled,refunded", label: "取消/退款" },
+];
 
 export default function AdminOrderList() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -32,6 +44,7 @@ export default function AdminOrderList() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState("");
+  const [status, setStatus] = useState("all");
 
   // Create & Detail Dialog States
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -48,12 +61,12 @@ export default function AdminOrderList() {
 
   useEffect(() => {
     fetchOrders(page);
-  }, [page]);
+  }, [page, status]);
 
   const fetchOrders = async (p: number) => {
     setLoading(true);
     try {
-      const res = await getAdminOrders(p, 20, keyword);
+      const res = await getAdminOrders(p, 20, keyword, status);
       if (res.code === 0 && res.data) {
         setOrders(res.data.list);
         setPagination(res.data.pagination);
@@ -67,10 +80,15 @@ export default function AdminOrderList() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1); // 重置到第一页
+    setPage(1);
     fetchOrders(1);
   };
 
+  const handleTabChange = (val: string) => {
+    setStatus(val);
+    setPage(1);
+  };
+  
   const handleCreateSuccess = (newOrderId: number) => {
     fetchOrders(1);
     handleViewDetail(newOrderId);
@@ -81,36 +99,26 @@ export default function AdminOrderList() {
     setDetailDialogOpen(true);
   };
 
-  const handleStatusChange = async (orderId: number, newStatus: string) => {
-    setUpdatingId(orderId);
+  const handleAssignConfirm = async () => {
+    // Note: Assign feature might be moved to Detail Dialog in future,
+    // but we keep it here if we want to support list-view assignment.
+    // Currently, the "Assign" button was removed from the list view during cleanup.
+    // If we want to restore it, we need to add the button back to columns.
+    // For now, this function is only used by the Dialog which is rendered at the bottom.
+    if (!selectedOrder || selectedGuideIds.length === 0) return;
+    
+    setAssigning(true);
     try {
-      const res = await updateOrderStatus(orderId, newStatus);
+      const res = await assignGuide(selectedOrder.id, selectedGuideIds);
       if (res.code === 0) {
-        toast.success("状态更新成功");
-        setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
-      } else {
-        toast.error(res.message || "更新失败");
+        toast.success("指派成功");
+        setAssignDialogOpen(false);
+        fetchOrders(page);
       }
     } catch (error) {
-      toast.error("网络错误，更新失败");
+      toast.error("指派失败");
     } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleAssignClick = async (order: AdminOrder) => {
-    setSelectedOrder(order);
-    setAssignDialogOpen(true);
-    setLoadingGuides(true);
-    try {
-      const res = await getGuides();
-      if (res.code === 0 && res.data) {
-        setGuideList(res.data.list);
-      }
-    } catch (error) {
-      toast.error("获取地陪列表失败");
-    } finally {
-      setLoadingGuides(false);
+      setAssigning(false);
     }
   };
 
@@ -122,52 +130,43 @@ export default function AdminOrderList() {
     );
   };
 
-  const handleAssignConfirm = async () => {
-    if (!selectedOrder || selectedGuideIds.length === 0) return;
-    
-    setAssigning(true);
-    try {
-      const res = await assignGuide(selectedOrder.id, selectedGuideIds);
-      if (res.code === 0) {
-        toast.success("指派成功");
-        setAssignDialogOpen(false);
-        const newStatus = selectedOrder.orderType === 'custom' ? 'waiting_for_user' : 'in_progress';
-        setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: newStatus as any } : o));
-      } else {
-        toast.error(res.message || "指派失败");
-      }
-    } catch (error) {
-      toast.error("操作失败，请重试");
-    } finally {
-      setAssigning(false);
-    }
-  };
-
   return (
     <AdminLayout title="订单管理">
       <div className="bg-white text-slate-900 rounded-lg border shadow-sm flex flex-col h-full">
         {/* 工具栏 */}
-        <div className="p-4 border-b flex justify-between items-center">
-          <form onSubmit={handleSearch} className="flex gap-2 max-w-sm">
+        <div className="p-4 border-b flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4 flex-1">
+              <Tabs value={status} onValueChange={handleTabChange} className="w-full max-w-2xl">
+                <TabsList>
+                  {ORDER_TABS.map(tab => (
+                    <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+            <Button 
+              onClick={() => setCreateDialogOpen(true)} 
+              size="sm"
+              data-testid="create-custom-order-btn"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              创建定制订单
+            </Button>
+          </div>
+
+          <form onSubmit={handleSearch} className="flex gap-2 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="搜索订单号 / 手机号"
+                placeholder="搜索订单号 / 用户手机 / 创建人 / 地陪 / 用户昵称"
                 className="pl-9 h-9"
               />
             </div>
             <Button type="submit" size="sm">搜索</Button>
           </form>
-          <Button 
-            onClick={() => setCreateDialogOpen(true)} 
-            size="sm"
-            data-testid="create-custom-order-btn"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            创建定制订单
-          </Button>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -179,81 +178,93 @@ export default function AdminOrderList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>订单号</TableHead>
+                  <TableHead className="w-[180px]">订单信息</TableHead>
                   <TableHead>用户</TableHead>
-                  <TableHead>类型</TableHead>
-                  <TableHead>目的地/服务</TableHead>
+                  <TableHead>创建人</TableHead>
+                  <TableHead>地陪</TableHead>
+                  <TableHead>服务信息</TableHead>
                   <TableHead>金额</TableHead>
-                  <TableHead>服务日期</TableHead>
-                  <TableHead>当前状态</TableHead>
-                  <TableHead>操作 (强制改状态)</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {orders.map((order) => {
-                  const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-gray-100", textColor: "text-gray-800" };
+                  const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-gray-100", textColor: "text-gray-500" };
+                  
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium text-gray-900">
-                        <div 
-                          className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors group"
-                          onClick={() => handleViewDetail(order.id)}
-                        >
-                          {order.orderNumber}
-                          <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono font-medium">{order.orderNumber}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(order.createdAt).toLocaleString()}
+                          </span>
+                          <Badge variant="outline" className="w-fit">
+                            {order.orderType === 'custom' ? '定制单' : '普通单'}
+                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-gray-900">{order.userNickname}</span>
-                          <span className="text-xs text-gray-500">{order.userPhone}</span>
+                          <span className="font-medium">{order.userName}</span>
+                          <span className="text-xs text-gray-500 font-mono">{order.userPhone}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-900">
-                        {order.orderType === 'custom' ? '定制单' : '普通单'}
-                      </TableCell>
-                      <TableCell className="text-gray-900">
-                        {order.customRequirements?.destination || '-'}
-                      </TableCell>
-                      <TableCell className="text-gray-900"><Price amount={order.amount} /></TableCell>
-                      <TableCell className="text-gray-900">{order.serviceDate}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`${statusInfo.color} ${statusInfo.textColor} border`}>
+                         {order.creatorId ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm">{order.creatorName}</span>
+                              <span className="text-xs text-gray-500 font-mono">{order.creatorPhone}</span>
+                            </div>
+                         ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                         )}
+                      </TableCell>
+                      <TableCell>
+                         {order.guideId ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{order.guideName}</span>
+                              <span className="text-xs text-gray-500 font-mono">{order.guidePhone}</span>
+                            </div>
+                         ) : (
+                            <span className="text-gray-400 text-xs">未指派</span>
+                         )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 text-sm">
+                           <div className="flex items-center gap-1 text-gray-700">
+                              <MapPin className="w-3 h-3 text-gray-400" />
+                              <span className="truncate max-w-[150px]" title={order.serviceAddress}>
+                                {order.serviceAddress || '-'}
+                              </span>
+                           </div>
+                           <div className="flex items-center gap-1 text-gray-500 text-xs">
+                              <Clock className="w-3 h-3 text-gray-400" />
+                              <span>
+                                {order.serviceStartTime ? new Date(order.serviceStartTime).toLocaleString() : '-'} 
+                                {order.duration ? ` (${order.duration}h)` : ''}
+                              </span>
+                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Price amount={order.totalAmount || order.amount} className="font-bold" />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={`${statusInfo.color} ${statusInfo.textColor} border-0`}>
                           {statusInfo.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {order.orderType === 'custom' && ['pending', 'paid'].includes(order.status) && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              data-testid={`assign-btn-${order.id}`}
-                              onClick={() => handleAssignClick(order)}
-                            >
-                              <UserPlus className="w-4 h-4 mr-1" />
-                              指派
-                            </Button>
-                          )}
-                          
-                          <Select
-                            disabled={updatingId === order.id}
-                            onValueChange={(val) => handleStatusChange(order.id, val as AdminOrder['status'])}
-                            value={order.status}
-                          >
-                            <SelectTrigger className="w-[120px] h-8">
-                              <SelectValue placeholder="修改状态" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">待支付</SelectItem>
-                              <SelectItem value="paid">待服务</SelectItem>
-                              <SelectItem value="waiting_for_user">待确认</SelectItem>
-                              <SelectItem value="in_progress">进行中</SelectItem>
-                              <SelectItem value="completed">已完成</SelectItem>
-                              <SelectItem value="cancelled">已取消</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewDetail(order.id)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          详情
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
