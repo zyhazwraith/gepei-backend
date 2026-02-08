@@ -261,6 +261,9 @@ export const refundRecords = mysqlTable('refund_records', {
   orderId: int('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   amount: int('amount').notNull(), // 单位: 分
   reason: varchar('reason', { length: 255 }),
+  outRefundNo: varchar('out_refund_no', { length: 64 }).unique(),
+  refundTransactionId: varchar('refund_transaction_id', { length: 64 }),
+  status: mysqlEnum('status', ['pending', 'success', 'failed']).default('success'),
   operatorId: int('operator_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => {

@@ -4,12 +4,13 @@ import { ArrowLeft, MapPin, Calendar, Clock, AlertCircle, Headphones, Info } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide, OrderStatus } from "@/lib/api";
+import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide, OrderStatus, refundOrder } from "@/lib/api";
 import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
 import OvertimeDialog from "@/components/OvertimeDialog";
 import ContactCSDialog from "@/components/ContactCSDialog";
+import RefundConfirmDialog from "@/components/RefundConfirmDialog";
 import OrderStatusCard from "@/components/order/OrderStatusCard";
 import OrderSupportBar from "@/components/order/OrderSupportBar";
 import GuideActions from "@/components/order/GuideActions";
@@ -25,6 +26,9 @@ export default function OrderDetail() {
   const [showPayment, setShowPayment] = useState(false);
   const [showCSDialog, setShowCSDialog] = useState(false);
   const [csQrCode, setCsQrCode] = useState<string | null>(null);
+  
+  // Refund State
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
   
   // Overtime States
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
@@ -81,6 +85,8 @@ export default function OrderDetail() {
   const canStartService = isGuideView && order?.status === OrderStatus.WAITING_SERVICE;
   const canEndService = isGuideView && order?.status === OrderStatus.IN_SERVICE;
   const canRequestOvertime = order?.status === OrderStatus.IN_SERVICE && currentUser?.userId === order.userId;
+  // Use == for loose equality to handle string/number mismatch
+  const canRefund = order && [OrderStatus.PAID, OrderStatus.WAITING_SERVICE].includes(order.status) && currentUser && currentUser.userId == order.userId;
 
   const handlePaymentSuccess = () => {
     if (order) {
@@ -119,6 +125,23 @@ export default function OrderDetail() {
         return;
     }
     setShowOvertimeDialog(true);
+  };
+
+  const handleRefundConfirm = async () => {
+    if (!order) return;
+    const toastId = toast.loading("正在处理退款申请...");
+    try {
+      const res = await refundOrder(order.id);
+      if (res.code === 0 && res.data) {
+        toast.success(res.data.message || "退款申请成功", { id: toastId });
+        setShowRefundDialog(false);
+        fetchOrder(order.id); // Refresh
+      } else {
+        toast.error(res.message || "退款申请失败", { id: toastId });
+      }
+    } catch (error: any) {
+      toast.error(error.message || "网络错误，请稍后重试", { id: toastId });
+    }
   };
 
   // 简化的状态Badge获取
@@ -323,14 +346,42 @@ export default function OrderDetail() {
                     ))}
                 </div>
             )}
+            
+            {/* Refund Info - Removed redundant red row */}
+
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="font-medium">{isGuideView ? '本单收入' : '实付总额'}</span>
               {isGuideView ? (
                 <Price amount={order.guideIncome} className="text-lg font-bold text-red-600" />
               ) : (
-                <Price amount={order.totalAmount || order.amount} className="text-lg font-bold text-gray-900" />
+                <div className="text-right">
+                  <Price 
+                    amount={order.totalAmount || order.amount} 
+                    className={`text-lg font-bold ${order.status === OrderStatus.REFUNDED ? 'text-gray-400 line-through' : 'text-gray-900'}`} 
+                  />
+                </div>
               )}
             </div>
+
+            {order.status === OrderStatus.REFUNDED && order.refundAmount && (
+              <div className="pt-4 mt-2 border-t flex flex-col items-center">
+                <span className="text-sm text-gray-500 mb-1">已退款金额</span>
+                <Price amount={order.refundAmount} className="text-xl font-bold text-green-600" />
+                <span className="text-xs text-gray-400 mt-1">资金预计1-3个工作日到账</span>
+              </div>
+            )}
+
+            {canRefund && (
+              <div className="pt-4 mt-2 border-t flex justify-center">
+                <Button 
+                  variant="ghost" 
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full"
+                  onClick={() => setShowRefundDialog(true)}
+                >
+                  申请退款
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -363,6 +414,20 @@ export default function OrderDetail() {
         onClose={() => setShowPayment(false)}
         onSuccess={handlePaymentSuccess}
       />
+
+      {order && (
+        <RefundConfirmDialog 
+          isOpen={showRefundDialog}
+          onClose={() => setShowRefundDialog(false)}
+          onConfirm={handleRefundConfirm}
+          hoursSincePaid={(() => {
+             if (!order.paidAt) return 0;
+             const paidTime = new Date(order.paidAt).getTime();
+             const now = Date.now();
+             return (now - paidTime) / (1000 * 60 * 60);
+          })()} 
+        />
+      )}
 
       <OvertimeDialog 
         isOpen={showOvertimeDialog}

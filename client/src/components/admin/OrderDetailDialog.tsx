@@ -2,12 +2,9 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { getOrderDetails, AdminOrder, refundOrder } from "@/lib/api";
-import { Loader2, User, MapPin, Clock, Calendar, Wallet, Undo2, AlertTriangle } from "lucide-react";
+import { getOrderDetails, AdminOrder } from "@/lib/api";
+import { Loader2, User, MapPin, Clock, Calendar, Wallet, Undo2 } from "lucide-react";
 import Price from "@/components/Price";
 
 interface Props {
@@ -19,12 +16,6 @@ interface Props {
 export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props) {
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Refund Dialog State
-  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [refundAmount, setRefundAmount] = useState<number>(0); // In Yuan (for input)
-  const [refundReason, setRefundReason] = useState("");
-  const [refunding, setRefunding] = useState(false);
 
   useEffect(() => {
     if (open && orderId) {
@@ -50,48 +41,7 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
     }
   };
 
-  const handleOpenRefund = () => {
-    if (!order) return;
-    const amountInCents = parseInt(order.amount);
-    // Default: Deduct 150 Yuan (15000 cents) penalty
-    const defaultRefundCents = Math.max(0, amountInCents - 15000);
-    
-    setRefundAmount(defaultRefundCents / 100);
-    setRefundReason("用户取消，扣除违约金 ¥150");
-    setRefundDialogOpen(true);
-  };
-
-  const handleConfirmRefund = async () => {
-    if (!order) return;
-    
-    const amountInCents = Math.floor(refundAmount * 100);
-    if (amountInCents <= 0 || amountInCents > parseInt(order.amount)) {
-      toast.error("退款金额无效");
-      return;
-    }
-
-    setRefunding(true);
-    try {
-      const res = await refundOrder(order.id, {
-        amount: amountInCents,
-        reason: refundReason
-      });
-      if (res.code === 0) {
-        toast.success("退款成功");
-        setRefundDialogOpen(false);
-        fetchDetail(order.id); // Refresh detail
-      } else {
-        toast.error(res.message || "退款失败");
-      }
-    } catch (error) {
-      toast.error("操作失败");
-    } finally {
-      setRefunding(false);
-    }
-  };
-
   return (
-    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -204,73 +154,9 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          {order && ['paid', 'waiting_service'].includes(order.status) && (
-             <Button variant="destructive" onClick={handleOpenRefund}>
-                退款
-             </Button>
-          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>关闭</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
-    {/* Refund Confirmation Dialog */}
-    <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-red-600">
-                    <AlertTriangle className="w-5 h-5" />
-                    确认退款
-                </DialogTitle>
-                <DialogDescription>
-                    退款操作不可逆，请确认金额。
-                </DialogDescription>
-            </DialogHeader>
-
-            {order && (
-                <div className="space-y-4 py-4">
-                    <div className="flex justify-between items-center bg-gray-50 p-3 rounded text-sm">
-                        <span className="text-gray-600">订单总额</span>
-                        <Price amount={order.amount} className="font-bold" />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>退款金额 (元)</Label>
-                        <Input 
-                            type="number" 
-                            value={refundAmount} 
-                            onChange={(e) => setRefundAmount(parseFloat(e.target.value))}
-                            className="text-lg font-bold"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500 px-1 items-center">
-                           <span>违约金扣除: </span>
-                           <Price amount={parseInt(order.amount) - Math.floor(refundAmount * 100)} className="text-gray-700 font-medium" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>退款原因</Label>
-                        <Textarea 
-                            value={refundReason} 
-                            onChange={(e) => setRefundReason(e.target.value)}
-                            placeholder="请输入退款原因..."
-                            className="min-h-[80px]"
-                        />
-                    </div>
-                </div>
-            )}
-
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setRefundDialogOpen(false)} disabled={refunding}>
-                    取消
-                </Button>
-                <Button variant="destructive" onClick={handleConfirmRefund} disabled={refunding}>
-                    {refunding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    确认退款
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    </>
   );
 }

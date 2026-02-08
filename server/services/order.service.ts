@@ -70,10 +70,12 @@ export class OrderService {
     }
 
     // 5. Process Refund via Payment Provider
+    const outRefundNo = `REF_${order.orderNumber}_${Date.now()}`;
     const paymentResult = await paymentProvider.refund(
       order.orderNumber,
       refundAmount,
       payment.transactionId,
+      outRefundNo,
       reason
     );
 
@@ -97,6 +99,9 @@ export class OrderService {
         orderId: order.id,
         amount: refundAmount,
         reason: reason,
+        outRefundNo: outRefundNo,
+        refundTransactionId: paymentResult.refundTransactionId,
+        status: 'success',
         operatorId: userId, // User himself
         createdAt: new Date()
       });
