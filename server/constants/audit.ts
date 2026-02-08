@@ -6,6 +6,7 @@ export const AuditActions = {
   REFUND_ORDER: 'refund_order',
   CREATE_CUSTOM_ORDER: 'create_custom_order',
   UPDATE_CONFIG: 'update_config',
+  UPDATE_USER_ROLE: 'update_user_role',
 } as const;
 
 export const AuditTargets = {

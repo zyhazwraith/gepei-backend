@@ -10,6 +10,7 @@ export interface User {
   banReason?: string | null;
   balance: number;
   created_at: Date;
+  last_login_at?: Date | null;
   updated_at: Date;
   deleted_at: Date | null;
 }

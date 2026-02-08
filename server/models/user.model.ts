@@ -25,6 +25,7 @@ export async function findUserByPhone(phone: string): Promise<User | null> {
     banReason: user.banReason,
     balance: Number(user.balance),
     created_at: user.createdAt as Date,
+    last_login_at: user.lastLoginAt,
     updated_at: user.updatedAt as Date,
     deleted_at: user.deletedAt,
   } as User;
@@ -52,6 +53,7 @@ export async function findUserById(id: number): Promise<User | null> {
     banReason: user.banReason,
     balance: Number(user.balance),
     created_at: user.createdAt as Date,
+    last_login_at: user.lastLoginAt,
     updated_at: user.updatedAt as Date,
     deleted_at: user.deletedAt,
   } as User;

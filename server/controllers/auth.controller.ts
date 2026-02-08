@@ -1,3 +1,6 @@
+import { db } from '../db/index.js';
+import { users } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { ErrorCodes } from '../../shared/errorCodes.js';
@@ -120,6 +123,11 @@ export async function login(req: Request, res: Response): Promise<void> {
       errorResponse(res, ErrorCodes.INVALID_CREDENTIALS);
       return;
     }
+
+    // 更新最后登录时间
+    await db.update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, user.id));
 
     // 生成 Token
     const token = generateToken({

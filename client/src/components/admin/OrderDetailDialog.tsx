@@ -140,7 +140,7 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3" /> 时长</div>
-                <div className="text-sm font-medium">{order.duration} 小时</div>
+                <div className="text-sm font-medium">{order.totalDuration || order.duration} 小时</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> 地点</div>
@@ -150,7 +150,7 @@ export default function OrderDetailDialog({ orderId, open, onOpenChange }: Props
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 flex items-center gap-1"><Wallet className="w-3 h-3" /> 总金额</div>
-                <Price amount={order.amount} className="text-sm font-bold text-orange-600" />
+                <Price amount={order.totalAmount || order.amount} className="text-sm font-bold text-orange-600" />
               </div>
             </div>
 

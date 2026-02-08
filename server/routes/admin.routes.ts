@@ -4,12 +4,12 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { 
   listUsers, 
   getOrders, 
-  updateOrderStatus, 
   assignGuide,
   getOrderDetails,
   refundOrder,
   banUser,
   unbanUser,
+  updateUserRole,
   createCustomOrder
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
@@ -37,9 +37,6 @@ router.get('/orders/:id', authorize(['admin', 'cs']), asyncHandler(getOrderDetai
 
 // POST /api/v1/admin/custom-orders (T-2)
 router.post('/custom-orders', authorize(['admin', 'cs']), asyncHandler(createCustomOrder));
-
-// PUT /api/v1/admin/orders/:id/status
-router.put('/orders/:id/status', authorize(['admin', 'cs']), asyncHandler(updateOrderStatus));
 
 // POST /api/v1/admin/orders/:id/assign
 router.post('/orders/:id/assign', authorize(['admin', 'cs']), asyncHandler(assignGuide));
@@ -69,6 +66,9 @@ router.put('/users/:id/ban', requireAdmin, asyncHandler(banUser));
 
 // PUT /api/v1/admin/users/:id/unban
 router.put('/users/:id/unban', requireAdmin, asyncHandler(unbanUser));
+
+// PUT /api/v1/admin/users/:id/role - 更新用户角色
+router.put('/users/:id/role', authorize(['admin']), asyncHandler(updateUserRole));
 
 // POST /api/v1/admin/orders/:id/refund - 订单退款
 router.post('/orders/:id/refund', requireAdmin, asyncHandler(refundOrder));
