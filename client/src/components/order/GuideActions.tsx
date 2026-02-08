@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { uploadAttachment, checkInOrder, OrderDetailResponse } from "@/lib/api";
+import { uploadAttachment, checkInOrder, OrderDetailResponse, OrderStatus } from "@/lib/api";
 
 interface GuideActionsProps {
   order: OrderDetailResponse;
@@ -16,9 +16,9 @@ export default function GuideActions({ order, onOrderUpdated }: GuideActionsProp
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canStartService = order.status === 'waiting_service';
-  const canEndService = order.status === 'in_service';
-  const isServiceEnded = order.status === 'service_ended';
+  const canStartService = order.status === OrderStatus.WAITING_SERVICE;
+  const canEndService = order.status === OrderStatus.IN_SERVICE;
+  const isServiceEnded = order.status === OrderStatus.SERVICE_ENDED;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -29,7 +29,7 @@ export default function GuideActions({ order, onOrderUpdated }: GuideActionsProp
 
     try {
       // Determine slot based on status
-      const slot = order.status === 'waiting_service' ? 'start' : 'end';
+      const slot = order.status === OrderStatus.WAITING_SERVICE ? 'start' : 'end';
       const uploadRes = await uploadAttachment(file, 'check_in', order.id.toString(), slot);
       if (uploadRes.code !== 0) throw new Error(uploadRes.message || '图片上传失败');
       
@@ -69,7 +69,7 @@ export default function GuideActions({ order, onOrderUpdated }: GuideActionsProp
       });
 
       // Submit Check-in
-      const type = order.status === 'waiting_service' ? 'start' : 'end';
+      const type = order.status === OrderStatus.WAITING_SERVICE ? 'start' : 'end';
       const checkInRes = await checkInOrder(order.id, {
         type,
         attachmentId: uploadedAttachmentId,

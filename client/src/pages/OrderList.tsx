@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { getOrders, OrderDetailResponse } from "@/lib/api";
+import { getOrders, OrderDetailResponse, OrderStatus } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Price from "@/components/Price";
@@ -16,28 +16,28 @@ import EmptyState from "@/components/EmptyState";
 
 // 订单状态映射
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "待支付", color: "text-orange-600 bg-orange-50 border-orange-200", icon: Clock },
-  paid: { label: "待接单", color: "text-blue-600 bg-blue-50 border-blue-200", icon: Package },
-  waiting_service: { label: "待服务", color: "text-purple-600 bg-purple-50 border-purple-200", icon: CheckCircle },
-  in_service: { label: "服务中", color: "text-indigo-600 bg-indigo-50 border-indigo-200", icon: Package },
-  service_ended: { label: "服务结束", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle },
-  completed: { label: "已完成", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle },
-  cancelled: { label: "已取消", color: "text-gray-600 bg-gray-50 border-gray-200", icon: XCircle },
-  refunded: { label: "已退款", color: "text-gray-600 bg-gray-50 border-gray-200", icon: XCircle },
+  [OrderStatus.PENDING]: { label: "待支付", color: "text-orange-600 bg-orange-50 border-orange-200", icon: Clock },
+  [OrderStatus.PAID]: { label: "待接单", color: "text-blue-600 bg-blue-50 border-blue-200", icon: Package },
+  [OrderStatus.WAITING_SERVICE]: { label: "待服务", color: "text-purple-600 bg-purple-50 border-purple-200", icon: CheckCircle },
+  [OrderStatus.IN_SERVICE]: { label: "服务中", color: "text-indigo-600 bg-indigo-50 border-indigo-200", icon: Package },
+  [OrderStatus.SERVICE_ENDED]: { label: "服务结束", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle },
+  [OrderStatus.COMPLETED]: { label: "已完成", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle },
+  [OrderStatus.CANCELLED]: { label: "已取消", color: "text-gray-600 bg-gray-50 border-gray-200", icon: XCircle },
+  [OrderStatus.REFUNDED]: { label: "已退款", color: "text-gray-600 bg-gray-50 border-gray-200", icon: XCircle },
 };
 
 const CUSTOMER_TABS = [
   { id: 'all', label: '全部' },
-  { id: 'pending', label: '待支付' },
-  { id: 'paid,waiting_service,in_service', label: '进行中' },
-  { id: 'service_ended,completed', label: '已完成' },
-  { id: 'cancelled,refunded', label: '已取消' },
+  { id: OrderStatus.PENDING, label: '待支付' },
+  { id: [OrderStatus.PAID, OrderStatus.WAITING_SERVICE, OrderStatus.IN_SERVICE].join(','), label: '进行中' },
+  { id: [OrderStatus.SERVICE_ENDED, OrderStatus.COMPLETED].join(','), label: '已完成' },
+  { id: [OrderStatus.CANCELLED, OrderStatus.REFUNDED].join(','), label: '已取消' },
 ];
 
 const GUIDE_TABS = [
-  { id: 'paid,waiting_service,in_service,service_ended,completed', label: '全部' },
-  { id: 'paid,waiting_service,in_service', label: '进行中' },
-  { id: 'service_ended,completed', label: '已完成' },
+  { id: [OrderStatus.PAID, OrderStatus.WAITING_SERVICE, OrderStatus.IN_SERVICE, OrderStatus.SERVICE_ENDED, OrderStatus.COMPLETED].join(','), label: '全部' },
+  { id: [OrderStatus.PAID, OrderStatus.WAITING_SERVICE, OrderStatus.IN_SERVICE].join(','), label: '进行中' },
+  { id: [OrderStatus.SERVICE_ENDED, OrderStatus.COMPLETED].join(','), label: '已完成' },
 ];
 
 export default function OrderList() {
