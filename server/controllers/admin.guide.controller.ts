@@ -3,6 +3,8 @@ import { ErrorCodes } from '../../shared/errorCodes.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { AdminGuideService } from '../services/admin.guide.service.js';
 import { AppError } from '../utils/errors.js';
+import { createGuideSchema, updateGuideSchema } from '../schemas/guide.schema.js';
+import { ZodError } from 'zod';
 
 /**
  * Admin Get Guide List
@@ -15,10 +17,13 @@ export async function listGuides(req: Request, res: Response): Promise<void> {
     const city = req.query.city as string;
     const keyword = req.query.keyword as string;
     
-    // Parse is_guide param directly
+    // Parse isGuide param (camelCase enforced in query too?)
+    // Query params are usually handled manually, but let's keep it consistent.
     let isGuide: boolean | undefined = undefined;
-    if (req.query.is_guide === 'true') isGuide = true;
-    if (req.query.is_guide === 'false') isGuide = false;
+    if (req.query.isGuide === 'true') isGuide = true;
+    if (req.query.isGuide === 'false') isGuide = false;
+    // Fallback for snake_case during transition if needed, but we said "No Compatibility"
+    // But query params are less strict than body. Let's stick to camelCase `isGuide`.
 
     const result = await AdminGuideService.listGuides({
       page,
@@ -71,47 +76,33 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
  */
 export async function createGuide(req: Request, res: Response): Promise<void> {
     try {
-        const {
-            userId,
-            stageName,
-            realName,
-            idNumber,
-            city,
-            intro,
-            expectedPrice,
-            realPrice,
-            tags,
-            photoIds,
-            address,
-            latitude,
-            longitude,
-            avatarId,
-            isGuide,
-            status
-        } = req.body;
-
-        if (!userId || !stageName || !realName || !idNumber || !city) {
-            errorResponse(res, ErrorCodes.INVALID_PARAMS, 'Missing required fields');
+        // Zod Validation
+        const validation = createGuideSchema.safeParse(req.body);
+        
+        if (!validation.success) {
+            errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.message);
             return;
         }
 
+        const data = validation.data;
+
         const result = await AdminGuideService.createGuideProfile({
-            userId: Number(userId),
-            stageName,
-            realName,
-            idNumber,
-            city,
-            intro,
-            expectedPrice: expectedPrice ? Number(expectedPrice) : undefined,
-            realPrice: realPrice ? Number(realPrice) : undefined,
-            tags,
-            photoIds,
-            address,
-            latitude: latitude ? Number(latitude) : undefined,
-            longitude: longitude ? Number(longitude) : undefined,
-            avatarId: avatarId ? Number(avatarId) : undefined,
-            isGuide: isGuide,
-            status: status
+            userId: data.userId,
+            stageName: data.stageName,
+            realName: data.realName,
+            idNumber: data.idNumber,
+            city: data.city,
+            intro: data.intro || undefined, // undefined vs null handling in service/model
+            expectedPrice: data.expectedPrice || undefined,
+            realPrice: data.realPrice || undefined,
+            tags: data.tags || undefined,
+            photoIds: data.photoIds || undefined,
+            address: data.address || undefined,
+            latitude: data.latitude || undefined,
+            longitude: data.longitude || undefined,
+            avatarId: data.avatarId || undefined,
+            isGuide: data.isGuide,
+            status: data.status || undefined
         });
 
         successResponse(res, result);
@@ -132,41 +123,35 @@ export async function createGuide(req: Request, res: Response): Promise<void> {
 export async function updateGuide(req: Request, res: Response): Promise<void> {
   try {
     const userId = parseInt(req.params.userId);
-    // V2.2: Support full profile update
-    const { 
-        is_guide, 
-        real_price, 
-        status,
-        stageName,
-        realName,
-        idNumber,
-        city,
-        intro,
-        expectedPrice,
-        tags,
-        photoIds,
-        address,
-        latitude,
-        longitude,
-        avatarId
-    } = req.body;
+    
+    // Zod Validation
+    const validation = updateGuideSchema.safeParse(req.body);
+        
+    if (!validation.success) {
+        errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.message);
+        return;
+    }
+
+    const data = validation.data;
 
     const updated = await AdminGuideService.updateGuideProfile(userId, {
-      isGuide: is_guide,
-      realPrice: real_price,
-      status: status,
-      stageName,
-      realName,
-      idNumber,
-      city,
-      intro,
-      expectedPrice,
-      tags,
-      photoIds,
-      address,
-      latitude,
-      longitude,
-      avatarId
+      ...data,
+      // Ensure nulls are handled if Zod returns null
+      intro: data.intro || undefined,
+      tags: data.tags || undefined,
+      photoIds: data.photoIds || undefined,
+      address: data.address || undefined,
+      realName: data.realName || undefined,
+      stageName: data.stageName || undefined,
+      city: data.city || undefined,
+      idNumber: data.idNumber || undefined,
+      // Numbers
+      realPrice: data.realPrice || undefined,
+      expectedPrice: data.expectedPrice || undefined,
+      latitude: data.latitude || undefined,
+      longitude: data.longitude || undefined,
+      avatarId: data.avatarId || undefined,
+      status: data.status || undefined
     });
 
     if (!updated) {
