@@ -30,6 +30,8 @@ export default function GuideEdit() {
   
   // 表单状态
   const [stageName, setStageName] = useState(''); // V2: Renamed from name
+  const [realName, setRealName] = useState(''); // V2.1: Real Name
+  const [idNumber, setIdNumber] = useState(''); // V2.1: ID Number (Editable)
   const [city, setCity] = useState('');
   
   // V2: Photos state (Array of 5 slots, nullable)
@@ -62,6 +64,8 @@ export default function GuideEdit() {
         const data = (response as any).data;
         
         if (data.stageName) setStageName(data.stageName);
+        if (data.realName) setRealName(data.realName);
+        if (data.idNumber) setIdNumber(data.idNumber);
         if (data.city) setCity(data.city);
         
         // Handle Photos
@@ -168,6 +172,8 @@ export default function GuideEdit() {
     try {
       const response = await apiClient.put('/guides/profile', {
         stageName, // V2: Use stageName
+        realName, // V2.1
+        idNumber, // V2.1
         city,
         address,
         photoIds: photoIds.length > 0 ? photoIds : undefined,
@@ -244,6 +250,34 @@ export default function GuideEdit() {
             maxLength={20}
           />
           <p className="text-xs text-gray-500 mt-1">此名称将向游客公开展示</p>
+        </div>
+
+        {/* V2.1: Real Name & ID Number (Private) */}
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              真实姓名
+            </label>
+            <Input
+              value={realName}
+              onChange={(e) => setRealName(e.target.value)}
+              placeholder="请输入您的真实姓名"
+              maxLength={50}
+            />
+            <p className="text-xs text-gray-500 mt-1">仅用于平台备案，不对外展示</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              身份证号
+            </label>
+            <Input
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              placeholder="请输入您的身份证号码"
+              maxLength={18}
+            />
+            <p className="text-xs text-gray-500 mt-1">仅用于平台备案，不对外展示</p>
+          </div>
         </div>
 
         {/* 所在城市（搜索） */}

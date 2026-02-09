@@ -22,11 +22,58 @@ function mapDbRowToGuide(row: any): Guide {
 
 // -------------------- Guide Profile Management --------------------
 
-export async function findGuideByUserId(userId: number): Promise<Guide | null> {
-  const result = await db.select({
-      ...getTableColumns(guides),
-      userNickName: users.nickname
-    })
+// Define Guide Scope Constants
+export const GUIDE_SCOPE = {
+  PUBLIC: 'public',
+  FULL: 'full'
+} as const;
+
+// V2.2: Define Guide Status Constants
+export const GUIDE_STATUS = {
+  ONLINE: 'online',
+  OFFLINE: 'offline'
+} as const;
+
+export type GuideScopeType = typeof GUIDE_SCOPE[keyof typeof GUIDE_SCOPE];
+export type GuideStatusType = typeof GUIDE_STATUS[keyof typeof GUIDE_STATUS];
+
+export interface CreateGuideDTO {
+  userId: number;
+  stageName: string;
+  idNumber: string;
+  city: string;
+  intro?: string | null;
+  expectedPrice?: number | null;
+  tags?: string[] | null;
+  photoIds?: number[] | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  avatarId?: number | null;
+  realName?: string | null;
+  status?: GuideStatusType | null;
+}
+
+export interface UpdateGuideDTO extends Partial<Omit<CreateGuideDTO, 'userId'>> {
+  // All fields optional
+}
+
+/**
+ * Public Guide Selection Columns
+ * Excludes sensitive fields like realName and idNumber using Destructuring Exclusion
+ */
+const allColumns = getTableColumns(guides);
+// Destructure sensitive fields to exclude them
+const { realName, idNumber, ...publicColumns } = allColumns;
+
+export const publicGuideSelect = publicColumns;
+
+export async function findGuideByUserId(userId: number, scope: GuideScopeType = GUIDE_SCOPE.PUBLIC): Promise<Guide | null> {
+  const selection = scope === GUIDE_SCOPE.PUBLIC 
+    ? { ...publicGuideSelect, userNickName: users.nickname, phone: users.phone, isGuide: users.isGuide }
+    : { ...getTableColumns(guides), userNickName: users.nickname, phone: users.phone, isGuide: users.isGuide };
+
+  const result = await db.select(selection)
     .from(guides)
     .leftJoin(users, eq(guides.userId, users.id))
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)))
@@ -55,37 +102,26 @@ export async function findGuideByIdNumber(idNumber: string): Promise<Guide | nul
 /**
  * 创建地陪信息
  */
-export async function createGuide(
-  userId: number,
-  stageName: string,
-  idNumber: string,
-  city: string,
-  intro: string | null,
-  expectedPrice: number | null,
-  tags: string[] | null,
-  photoIds: number[] | null,
-  address: string | null = null,
-  latitude: number | null = null,
-  longitude: number | null = null,
-  avatarId: number | null = null
-): Promise<number> {
+export async function createGuide(data: CreateGuideDTO): Promise<number> {
   await db.insert(guides).values({
-    userId,
-    stageName,
-    idNumber,
-    city,
-    intro,
-    expectedPrice,
-    tags: tags as any,
-    photoIds: photoIds as any,
-    address,
-    latitude: latitude ? String(latitude) : null,
-    longitude: longitude ? String(longitude) : null,
-    avatarId,
+    userId: data.userId,
+    stageName: data.stageName,
+    idNumber: data.idNumber,
+    city: data.city,
+    intro: data.intro || null,
+    expectedPrice: data.expectedPrice || null,
+    tags: data.tags as any,
+    photoIds: data.photoIds as any,
+    address: data.address || null,
+    latitude: data.latitude ? String(data.latitude) : null,
+    longitude: data.longitude ? String(data.longitude) : null,
+    avatarId: data.avatarId || null,
+    realName: data.realName || null,
     // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
+    status: data.status || 'offline', // Default to offline
   });
 
-  return userId;
+  return data.userId;
 }
 
 /**
@@ -93,33 +129,21 @@ export async function createGuide(
  */
 export async function updateGuide(
   userId: number,
-  stageName: string,
-  idNumber: string,
-  city: string,
-  intro: string | null,
-  expectedPrice: number | null,
-  tags: string[] | null,
-  photoIds: number[] | null,
-  address: string | null = null,
-  latitude: number | null = null,
-  longitude: number | null = null,
-  avatarId: number | null = null
+  data: UpdateGuideDTO
 ): Promise<boolean> {
+  const updateData: any = {
+      ...data,
+      latitude: data.latitude ? String(data.latitude) : undefined,
+      longitude: data.longitude ? String(data.longitude) : undefined,
+  };
+  
+  // Remove undefined keys
+  Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+  if (Object.keys(updateData).length === 0) return false;
+
   const result = await db.update(guides)
-    .set({
-      stageName,
-      idNumber,
-      city,
-      intro,
-      expectedPrice,
-      tags: tags as any,
-      photoIds: photoIds as any,
-      address,
-      latitude: latitude ? String(latitude) : null,
-      longitude: longitude ? String(longitude) : null,
-      avatarId,
-      // idVerifiedAt: new Date(), // V2: Removed. Set by Admin only.
-    })
+    .set(updateData)
     .where(and(eq(guides.userId, userId), isNull(guides.deletedAt)));
 
   return result[0].affectedRows > 0;
@@ -128,6 +152,7 @@ export async function updateGuide(
 /**
  * 获取所有地陪列表（支持分页和筛选）
  * @param onlyVerified 如果为true，只返回已认证的地陪（前台使用）；如果为false，返回所有（后台使用）
+ * @param scope 'public' | 'admin' - public excludes sensitive fields
  */
 export async function findAllGuides(
   page: number = 1,
@@ -136,13 +161,14 @@ export async function findAllGuides(
   keyword?: string,
   userLat?: number,
   userLng?: number,
-  isGuide?: boolean
+  status?: GuideStatusType, // V2.2: Replace isGuide with status filter
+  scope: GuideScopeType = GUIDE_SCOPE.PUBLIC
 ): Promise<{ guides: (Guide & { distance?: number, isGuide?: boolean })[]; total: number }> {
   const offset = (page - 1) * pageSize;
   const conditions = [isNull(guides.deletedAt)];
 
-  if (isGuide !== undefined) {
-    conditions.push(eq(users.isGuide, isGuide));
+  if (status) {
+    conditions.push(eq(guides.status, status));
   }
 
   if (city) {
@@ -169,6 +195,7 @@ export async function findAllGuides(
         * cos( radians( ${guides.longitude} ) - radians(${userLng}) )
         + sin ( radians(${userLat}) )
         * sin( radians( ${guides.latitude} ) )
+        * sin( radians( ${guides.latitude} ) )
       )
     )`.as('distance');
   }
@@ -181,14 +208,30 @@ export async function findAllGuides(
     
   const total = countResult.total;
 
+  // Select columns based on scope
+  const selection = scope === GUIDE_SCOPE.PUBLIC 
+    ? { 
+        ...publicGuideSelect,
+        userNickName: users.nickname,
+        phone: users.phone, 
+        isGuide: users.isGuide,
+        distance: distanceField,
+        status: guides.status // Add status
+      }
+    : {
+        ...getTableColumns(guides),
+        userNickName: users.nickname,
+        phone: users.phone,
+        isGuide: users.isGuide,
+        distance: distanceField
+      };
+
+  // V2.2: Public Scope -> Filter by status='online' instead of users.isGuide
+  // Logic simplified: status param handles filtering. 
+  // We can enforce status=ONLINE if PUBLIC scope and no status provided, but better to let caller handle it.
+  
   const result = await db
-    .select({
-      ...getTableColumns(guides),
-      userNickName: users.nickname,
-      phone: users.phone, // Add phone
-      isGuide: users.isGuide, // Include isGuide status
-      distance: distanceField
-    })
+    .select(selection)
     .from(guides)
     .leftJoin(users, eq(guides.userId, users.id))
     .where(and(...conditions))

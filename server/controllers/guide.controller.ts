@@ -7,6 +7,10 @@ import {
   findAllGuides,
   createGuide,
   updateGuide,
+  GUIDE_SCOPE,
+  GUIDE_STATUS,
+  CreateGuideDTO,
+  UpdateGuideDTO
 } from '../models/guide.model.js';
 import { GuideService } from '../services/guide.service.js';
 import { db } from '../db/index.js';
@@ -26,8 +30,17 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    // Public API: Always force isGuide=true
-    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true);
+    // Public API: Force status=ONLINE
+    const { guides, total } = await findAllGuides(
+        page, 
+        pageSize, 
+        city, 
+        keyword, 
+        lat, 
+        lng, 
+        GUIDE_STATUS.ONLINE, // V2.2: Explicit status filter
+        GUIDE_SCOPE.PUBLIC
+    );
 
     // Enrich guides (Batch)
     const enrichedGuides = await GuideService.enrichGuides(guides);
@@ -73,10 +86,20 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
       return;
     }
 
-    const guide = await findGuideByUserId(userId);
+    // Public Scope
+    const guide = await findGuideByUserId(userId, GUIDE_SCOPE.PUBLIC);
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
+    }
+    
+    // V2.2: Ensure status is ONLINE for public access
+    // Although findAllGuides filters by status, findGuideByUserId doesn't enforce it by default unless we add logic there too.
+    // For now, check manually or let it be (if direct link access is allowed).
+    // Requirement says "is_online" controls visibility. So we should check.
+    if (guide.status !== GUIDE_STATUS.ONLINE) {
+        errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪未上架'); // Treat as not found
+        return;
     }
 
     // Enrich guide
@@ -120,6 +143,8 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     const {
       stageName, 
+      realName, // V2.1 New
+      idNumber, // V2.1 New (Editable)
       city,
       photoIds, 
       expectedPrice, 
@@ -133,48 +158,54 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     const safePhotoIds = (photoIds && Array.isArray(photoIds)) ? photoIds : [];
 
-    const currentGuide = await findGuideByUserId(user.id);
+    const currentGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL); // Need full access
 
     if (currentGuide) {
       // Update
-      await updateGuide(
-        user.id,
-        stageName || currentGuide.stageName,
-        currentGuide.idNumber, 
-        city || currentGuide.city,
-        intro || null,
-        expectedPrice || null,
-        tags || null,
-        safePhotoIds.length > 0 ? safePhotoIds : null,
-        address || null, 
-        latitude || null,
-        longitude || null,
-        avatarId ? Number(avatarId) : null
-      );
+      const updateData: UpdateGuideDTO = {
+        stageName: stageName || currentGuide.stageName,
+        idNumber: idNumber || currentGuide.idNumber,
+        city: city || currentGuide.city,
+        intro: intro || null,
+        expectedPrice: expectedPrice || null,
+        tags: tags || null,
+        photoIds: safePhotoIds.length > 0 ? safePhotoIds : null,
+        address: address || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        avatarId: avatarId ? Number(avatarId) : null,
+        realName: realName || currentGuide.realName
+      };
+      
+      await updateGuide(user.id, updateData);
     } else {
       // Create
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      const idToSave = `PENDING_ID_${user.id}`;
+      const idToSave = idNumber || `PENDING_ID_${user.id}`;
       const cityToSave = city || "未知";
 
-      await createGuide(
-        user.id,
-        nameToSave,
-        idToSave,
-        cityToSave,
-        intro || null,
-        expectedPrice || null,
-        tags || null,
-        safePhotoIds.length > 0 ? safePhotoIds : null,
-        address || null, 
-        latitude || null,
-        longitude || null,
-        avatarId ? Number(avatarId) : null
-      );
+      const createData: CreateGuideDTO = {
+        userId: user.id,
+        stageName: nameToSave,
+        idNumber: idToSave,
+        city: cityToSave,
+        intro: intro || null,
+        expectedPrice: expectedPrice || null,
+        tags: tags || null,
+        photoIds: safePhotoIds.length > 0 ? safePhotoIds : null,
+        address: address || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        avatarId: avatarId ? Number(avatarId) : null,
+        realName: realName || null,
+        status: GUIDE_STATUS.OFFLINE // Default
+      };
+
+      await createGuide(createData);
     }
 
     // Return the guideId (and other essential info)
-    const updatedGuide = await findGuideByUserId(user.id);
+    const updatedGuide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL);
     successResponse(res, { 
       message: '更新成功',
       userId: user.id, // guideId -> userId
@@ -203,7 +234,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const guide = await findGuideByUserId(user.id);
+    const guide = await findGuideByUserId(user.id, GUIDE_SCOPE.FULL); // Owner sees everything
 
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪信息不存在');
@@ -216,7 +247,7 @@ export async function getMyProfile(req: Request, res: Response): Promise<void> {
     const response = {
       userId: enriched.userId,
       stageName: enriched.stageName,
-      // idNumber: guide.idNumber, // Keep hidden or show if needed? Spec says "全量". Let's show it if it exists.
+      realName: enriched.realName, // V2.1
       idNumber: enriched.idNumber,
       city: enriched.city,
       address: enriched.address,
