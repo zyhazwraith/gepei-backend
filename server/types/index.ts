@@ -47,6 +47,8 @@ export interface Guide {
   intro: string | null;
   expectedPrice: number | null; // 期望价格
   realPrice: number | null;     // 真实/展示价格
+  status?: 'online' | 'offline' | null; // V2.2: Visibility Status
+  isGuide?: boolean;            // V2.2: Certification Status (Joined from User)
   tags: string[] | null;
   photoIds: number[] | null;    // 附件ID列表
   latitude: number | null;

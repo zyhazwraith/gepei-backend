@@ -1,61 +1,55 @@
+import { ErrorCodes, ErrorCodeToHttpStatus } from '../../shared/errorCodes';
+export { ErrorCodes as ERROR_CODES } from '../../shared/errorCodes';
+
 // 自定义错误类
 export class AppError extends Error {
   public statusCode: number;
-  public code: string;
+  public code: number;
   public isOperational: boolean;
 
-  constructor(message: string, statusCode: number, code: string) {
+  // Refactored: code is mandatory, statusCode is optional (auto-lookup)
+  constructor(message: string, code: number, statusCode?: number) {
     super(message);
-    this.statusCode = statusCode;
     this.code = code;
+    this.statusCode = statusCode || ErrorCodeToHttpStatus[code] || 500;
     this.isOperational = true;
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, code: string = 'VALIDATION_ERROR') {
-    super(message, 400, code);
+  constructor(message: string, code: number = ErrorCodes.VALIDATION_ERROR) {
+    super(message, code); // Auto-lookup 400
     this.message = message;
     this.name = 'ValidationError'; 
-    // Re-enable setPrototypeOf but use standard Object.setPrototypeOf
     Object.setPrototypeOf(this, ValidationError.prototype); 
   }
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message: string, code: string = 'AUTHENTICATION_ERROR') {
-    super(message, 401, code);
+  constructor(message: string, code: number = ErrorCodes.INVALID_CREDENTIALS) {
+    super(message, code); // Auto-lookup 401
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string, code: string = 'NOT_FOUND') {
-    super(message, 404, code);
+  constructor(message: string, code: number = ErrorCodes.USER_NOT_FOUND) {
+    super(message, code); // Auto-lookup 404
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string, code: string = 'CONFLICT') {
-    super(message, 409, code);
+  constructor(message: string, code: number = ErrorCodes.INVALID_PARAMS) { 
+    super(message, code); // Auto-lookup 409 (Wait, INVALID_PARAMS is 400. Need override?)
+    // If we want 409, we should manually pass it or use a 409-mapped code.
+    // But ErrorCodes.INVALID_PARAMS maps to 400.
+    // Let's force 409 if intended.
+    this.statusCode = 409; 
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string, code: string = 'FORBIDDEN') {
-    super(message, 403, code);
+  constructor(message: string, code: number = ErrorCodes.PERMISSION_DENIED) {
+    super(message, code); // Auto-lookup 403
   }
 }
-
-export const ERROR_CODES = {
-  PHONE_EXISTS: 'PHONE_EXISTS',
-  INVALID_PHONE: 'INVALID_PHONE',
-  INVALID_PASSWORD: 'INVALID_PASSWORD',
-  INVALID_TOKEN: 'INVALID_TOKEN',
-  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  USER_NOT_FOUND: 'USER_NOT_FOUND',
-  USER_BANNED: 'USER_BANNED',
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-} as const;

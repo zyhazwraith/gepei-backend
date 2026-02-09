@@ -26,9 +26,9 @@ export function verifyToken(token: string): TokenPayload {
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new AuthenticationError('Token已过期', ERROR_CODES.TOKEN_EXPIRED);
+      throw new AuthenticationError('Token已过期', ERROR_CODES.TOKEN_INVALID);
     }
-    throw new AuthenticationError('Token无效', ERROR_CODES.INVALID_TOKEN);
+    throw new AuthenticationError('Token无效', ERROR_CODES.TOKEN_INVALID);
   }
 }
 

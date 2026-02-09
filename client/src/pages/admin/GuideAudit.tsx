@@ -24,6 +24,7 @@ export default function GuideAudit() {
   // Form State
   const [realPrice, setRealPrice] = useState("");
   const [isGuide, setIsGuide] = useState(false);
+  const [status, setStatus] = useState<'online' | 'offline'>('offline');
 
   useEffect(() => {
     if (userId) {
@@ -41,6 +42,7 @@ export default function GuideAudit() {
         // Convert cents to yuan for display/input
         setRealPrice(data.realPrice ? (data.realPrice / 100).toString() : "");
         setIsGuide(data.isGuide);
+        setStatus(data.status || 'offline');
       }
     } catch (error) {
       toast.error("获取地陪详情失败");
@@ -63,6 +65,7 @@ export default function GuideAudit() {
 
       const res = await updateAdminGuideStatus(userId, {
         isGuide,
+        status,
         realPrice: priceCents
       });
 
@@ -104,11 +107,17 @@ export default function GuideAudit() {
             <ChevronLeft className="w-4 h-4 mr-2" /> 返回列表
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">当前状态:</span>
+            <span className="text-sm text-gray-500">认证:</span>
             {guide.isGuide ? (
               <Badge className="bg-green-100 text-green-800 hover:bg-green-100">已认证</Badge>
             ) : (
               <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">待审核</Badge>
+            )}
+            <span className="text-sm text-gray-500 ml-2">上架:</span>
+            {guide.status === 'online' ? (
+              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">已上架</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-gray-500">已下架</Badge>
             )}
           </div>
         </div>
@@ -267,17 +276,35 @@ export default function GuideAudit() {
                   </p>
                 </div>
 
-                {/* Status Switch */}
+                {/* Status Switch 1: Certification */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
                   <div className="space-y-0.5">
-                    <Label className="text-base">认证状态</Label>
+                    <Label className="text-base">认证状态 (isGuide)</Label>
                     <p className="text-xs text-gray-500">
-                      开启后将在前台列表展示
+                      开启代表用户已通过资质审核
                     </p>
                   </div>
                   <Switch 
                     checked={isGuide}
-                    onCheckedChange={setIsGuide}
+                    onCheckedChange={(val) => {
+                        setIsGuide(val);
+                        if (!val) setStatus('offline');
+                    }}
+                  />
+                </div>
+
+                {/* Status Switch 2: Visibility */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">上架状态 (Status)</Label>
+                    <p className="text-xs text-gray-500">
+                      开启代表用户在前台可见 (需先认证)
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={status === 'online'}
+                    onCheckedChange={(val) => setStatus(val ? 'online' : 'offline')}
+                    disabled={!isGuide}
                   />
                 </div>
 

@@ -28,7 +28,7 @@ export const guideBaseSchema = z.object({
 
 // Create Schema
 export const createGuideSchema = guideBaseSchema.extend({
-  userId: z.coerce.number({ required_error: 'User ID is required' })
+  userId: z.coerce.number()
 });
 
 // Update Schema (Partial)

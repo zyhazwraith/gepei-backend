@@ -1,12 +1,6 @@
-import { db   /**
-   * Helper: Validate guide status consistency
-   */
-  private static validateGuideStatus(isGuide: boolean, status: string) {
-      if (status === GUIDE_STATUS.ONLINE && !isGuide) {
-          throw new AppError(ErrorCodes.VALIDATION_ERROR, '无法上架未认证的地陪。请同时勾选认证(isGuide)或保持认证状态。');
-      }
-  }
-}
+import { db } from '../db';
+import { users, guides } from '../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { 
     findAllGuides, 
     findGuideByUserId, 
@@ -20,10 +14,19 @@ import {
 import { GuideService } from './guide.service';
 import { AuditService } from './audit.service';
 import { AuditActions, AuditTargets } from '../constants/audit';
-import { AppError } from '../utils/errors';
+import { AppError, ValidationError, NotFoundError } from '../utils/errors';
 import { ErrorCodes } from '../../shared/errorCodes';
 
 export class AdminGuideService {
+  /**
+   * Helper: Validate guide status consistency
+   */
+  private static validateGuideStatus(isGuide: boolean, status: string) {
+      if (status === GUIDE_STATUS.ONLINE && !isGuide) {
+          throw new ValidationError('无法上架未认证的地陪。请同时勾选认证(isGuide)或保持认证状态。');
+      }
+  }
+
   /**
    * List all guides with filtering
    */
@@ -103,10 +106,10 @@ export class AdminGuideService {
       // 1. Validation Logic
       const [user] = await db.select().from(users).where(eq(users.id, data.userId));
       if (!user) {
-          throw new AppError(ErrorCodes.USER_NOT_FOUND, '用户不存在');
+          throw new NotFoundError('用户不存在');
       }
 
-      const finalIsGuide = data.isGuide !== undefined ? data.isGuide : user.isGuide;
+      const finalIsGuide = data.isGuide !== undefined ? data.isGuide : (user.isGuide || false);
       const finalStatus = data.status || GUIDE_STATUS.OFFLINE;
 
       this.validateGuideStatus(finalIsGuide, finalStatus);
@@ -163,7 +166,7 @@ export class AdminGuideService {
     // 1. Fetch current state for validation
     const guide = await findGuideByUserId(userId, GUIDE_SCOPE.FULL);
     if (!guide) {
-        throw new AppError(ErrorCodes.USER_NOT_FOUND, '地陪资料不存在');
+        throw new NotFoundError('地陪资料不存在');
     }
     
     // guide.isGuide comes from users table join
@@ -171,7 +174,7 @@ export class AdminGuideService {
     const currentStatus = guide.status || GUIDE_STATUS.OFFLINE;
 
     const nextIsGuide = data.isGuide !== undefined ? data.isGuide : currentIsGuide;
-    const nextStatus = data.status !== undefined ? data.status : currentStatus;
+    const nextStatus = data.status !== undefined ? (data.status || GUIDE_STATUS.OFFLINE) : currentStatus;
 
     // 2. Validation: Online requires Verified
     this.validateGuideStatus(nextIsGuide, nextStatus);

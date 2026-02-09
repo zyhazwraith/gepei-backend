@@ -111,7 +111,8 @@ export default function GuideList() {
                   <TableHead>城市</TableHead>
                   <TableHead>期望价格</TableHead>
                   <TableHead>系统价格</TableHead>
-                  <TableHead>状态</TableHead>
+                  <TableHead>认证状态</TableHead>
+                  <TableHead>上架状态</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -129,6 +130,13 @@ export default function GuideList() {
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">已认证</Badge>
                       ) : (
                         <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">待审核</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {guide.status === 'online' ? (
+                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">已上架</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-gray-500">已下架</Badge>
                       )}
                     </TableCell>
                     <TableCell>

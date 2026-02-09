@@ -369,6 +369,7 @@ export async function login(data: LoginRequest): Promise<ApiResponse<LoginRespon
 export interface AdminGuide extends Guide {
   phone?: string;
   isGuide: boolean;
+  status?: 'online' | 'offline'; // V2.2: Visibility Status
   updatedAt?: string;
 }
 
@@ -406,10 +407,11 @@ export async function getAdminGuideDetail(userId: number): Promise<ApiResponse<A
 /**
  * 审核地陪 (Admin)
  */
-export async function updateAdminGuideStatus(userId: number, data: { isGuide?: boolean; realPrice?: number }): Promise<ApiResponse<AdminGuide>> {
+export async function updateAdminGuideStatus(userId: number, data: { isGuide?: boolean; status?: 'online' | 'offline'; realPrice?: number }): Promise<ApiResponse<AdminGuide>> {
   // Map camelCase to snake_case for backend
   const payload: any = {};
   if (data.isGuide !== undefined) payload.is_guide = data.isGuide;
+  if (data.status !== undefined) payload.status = data.status;
   if (data.realPrice !== undefined) payload.real_price = data.realPrice;
   
   return apiClient.put(`/admin/guides/${userId}`, payload);

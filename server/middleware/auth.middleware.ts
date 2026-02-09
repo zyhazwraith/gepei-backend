@@ -25,7 +25,7 @@ export async function authenticate(
     // 从请求头中提取Token
     const token = extractTokenFromHeader(req.headers.authorization);
     if (!token) {
-      throw new AuthenticationError('未提供认证Token', ERROR_CODES.UNAUTHORIZED);
+      throw new AuthenticationError('未提供认证Token', ERROR_CODES.TOKEN_INVALID);
     }
 
     // 验证Token
@@ -39,10 +39,10 @@ export async function authenticate(
 
     // [New] Check Ban Status (Double Guard: Middleware Layer)
     if (user.status === 'banned') {
-      throw new ForbiddenError('账号已被封禁: ' + (user.banReason || '无'), ERROR_CODES.USER_BANNED);
-    }
+    throw new ForbiddenError('账号已被封禁: ' + (user.banReason || '无'), ERROR_CODES.USER_BANNED);
+  }
 
-    // 将用户信息和Token payload附加到请求对象
+  // 将用户信息和Token payload附加到请求对象
     req.user = user;
     req.tokenPayload = payload;
 
@@ -66,14 +66,14 @@ export function requireAdmin(
   next: NextFunction
 ): void {
   if (!req.user) {
-    next(new AuthenticationError('未登录', ERROR_CODES.UNAUTHORIZED));
-    return;
-  }
+      next(new AuthenticationError('未登录', ERROR_CODES.TOKEN_INVALID));
+      return;
+    }
 
-  if (req.user.role !== 'admin') {
-    next(new ForbiddenError('需要管理员权限'));
-    return;
-  }
+    if (req.user.role !== 'admin') {
+      next(new ForbiddenError('需要管理员权限'));
+      return;
+    }
 
   next();
 }
@@ -82,7 +82,7 @@ export function requireAdmin(
 export function authorize(roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      next(new AuthenticationError('未登录', ERROR_CODES.UNAUTHORIZED));
+      next(new AuthenticationError('未登录', ERROR_CODES.TOKEN_INVALID));
       return;
     }
 

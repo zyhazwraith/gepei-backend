@@ -51,6 +51,7 @@ export interface CreateGuideDTO {
   longitude?: number | null;
   avatarId?: number | null;
   realName?: string | null;
+  realPrice?: number | null;
   status?: GuideStatusType | null;
 }
 
