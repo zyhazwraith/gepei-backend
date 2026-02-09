@@ -12,7 +12,7 @@ import {
   createCustomOrder
 } from '../controllers/admin.controller.js';
 import { updateConfigs } from '../controllers/system-config.controller.js';
-import { updateGuideStatus, listGuides, getGuideDetail } from '../controllers/admin.guide.controller.js';
+import { updateGuide, listGuides, getGuideDetail, createGuide } from '../controllers/admin.guide.controller.js';
 import { listAuditLogs } from '../controllers/admin/audit-logs.controller.js';
 import { AdminWithdrawController } from '../controllers/admin-withdraw.controller.js';
 import { AdminStatsController } from '../controllers/admin-stats.controller.js';
@@ -44,11 +44,14 @@ router.post('/orders/:id/assign', authorize(['admin', 'cs']), asyncHandler(assig
 // GET /api/v1/admin/guides - 获取地陪列表
 router.get('/guides', authorize(['admin', 'cs']), asyncHandler(listGuides));
 
+// POST /api/v1/admin/guides - 创建地陪档案 (Admin Create)
+router.post('/guides', authorize(['admin', 'cs']), asyncHandler(createGuide));
+
 // GET /api/v1/admin/guides/:userId - 获取地陪详情
 router.get('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(getGuideDetail));
 
 // PUT /api/v1/admin/guides/:userId - 更新地陪状态与定价 (Audit)
-router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGuideStatus));
+router.put('/guides/:userId', authorize(['admin', 'cs']), asyncHandler(updateGuide));
 
 // GET /api/v1/admin/audit-logs - 获取审计日志
 router.get('/audit-logs', authorize(['admin', 'cs']), asyncHandler(listAuditLogs));

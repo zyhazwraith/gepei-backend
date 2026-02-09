@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ErrorCodes } from '../../shared/errorCodes.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { AdminGuideService } from '../services/admin.guide.service.js';
+import { AppError } from '../utils/errors.js';
 
 /**
  * Admin Get Guide List
@@ -65,17 +66,107 @@ export async function getGuideDetail(req: Request, res: Response): Promise<void>
 }
 
 /**
- * Admin Update Guide Status & Price
+ * Admin Create Guide Profile
+ * POST /api/v1/admin/guides
+ */
+export async function createGuide(req: Request, res: Response): Promise<void> {
+    try {
+        const {
+            userId,
+            stageName,
+            realName,
+            idNumber,
+            city,
+            intro,
+            expectedPrice,
+            realPrice,
+            tags,
+            photoIds,
+            address,
+            latitude,
+            longitude,
+            avatarId,
+            isGuide,
+            status
+        } = req.body;
+
+        if (!userId || !stageName || !realName || !idNumber || !city) {
+            errorResponse(res, ErrorCodes.INVALID_PARAMS, 'Missing required fields');
+            return;
+        }
+
+        const result = await AdminGuideService.createGuideProfile({
+            userId: Number(userId),
+            stageName,
+            realName,
+            idNumber,
+            city,
+            intro,
+            expectedPrice: expectedPrice ? Number(expectedPrice) : undefined,
+            realPrice: realPrice ? Number(realPrice) : undefined,
+            tags,
+            photoIds,
+            address,
+            latitude: latitude ? Number(latitude) : undefined,
+            longitude: longitude ? Number(longitude) : undefined,
+            avatarId: avatarId ? Number(avatarId) : undefined,
+            isGuide: isGuide,
+            status: status
+        });
+
+        successResponse(res, result);
+    } catch (error) {
+        console.error('Admin create guide failed:', error);
+        if (error instanceof AppError) {
+            errorResponse(res, error.code, error.message, error.statusCode);
+        } else {
+            errorResponse(res, ErrorCodes.INTERNAL_ERROR);
+        }
+    }
+}
+
+/**
+ * Admin Update Guide Status & Profile
  * PUT /api/v1/admin/guides/:userId
  */
-export async function updateGuideStatus(req: Request, res: Response): Promise<void> {
+export async function updateGuide(req: Request, res: Response): Promise<void> {
   try {
     const userId = parseInt(req.params.userId);
-    const { is_guide, real_price } = req.body;
+    // V2.2: Support full profile update
+    const { 
+        is_guide, 
+        real_price, 
+        status,
+        stageName,
+        realName,
+        idNumber,
+        city,
+        intro,
+        expectedPrice,
+        tags,
+        photoIds,
+        address,
+        latitude,
+        longitude,
+        avatarId
+    } = req.body;
 
-    const updated = await AdminGuideService.updateGuideStatus(userId, {
+    const updated = await AdminGuideService.updateGuideProfile(userId, {
       isGuide: is_guide,
-      realPrice: real_price
+      realPrice: real_price,
+      status: status,
+      stageName,
+      realName,
+      idNumber,
+      city,
+      intro,
+      expectedPrice,
+      tags,
+      photoIds,
+      address,
+      latitude,
+      longitude,
+      avatarId
     });
 
     if (!updated) {
@@ -87,6 +178,10 @@ export async function updateGuideStatus(req: Request, res: Response): Promise<vo
 
   } catch (error) {
     console.error('Admin update guide failed:', error);
-    errorResponse(res, ErrorCodes.INTERNAL_ERROR);
+    if (error instanceof AppError) {
+        errorResponse(res, error.code, error.message, error.statusCode);
+    } else {
+        errorResponse(res, ErrorCodes.INTERNAL_ERROR);
+    }
   }
 }

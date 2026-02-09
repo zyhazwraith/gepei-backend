@@ -85,6 +85,7 @@ export const guides = mysqlTable('guides', {
   realPrice: int('real_price'), // 单位: 分
   tags: json('tags'),
   photoIds: json('photo_ids'), // Array of attachment IDs
+  status: mysqlEnum('status', ['online', 'offline']).default('offline').notNull(), // V2.2: Visibility control
   latitude: decimal('latitude', { precision: 10, scale: 6 }),
   longitude: decimal('longitude', { precision: 10, scale: 6 }),
   idVerifiedAt: timestamp('id_verified_at'),

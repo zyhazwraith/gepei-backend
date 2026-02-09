@@ -8,6 +8,9 @@ import {
   createGuide,
   updateGuide,
   GUIDE_SCOPE,
+  GUIDE_STATUS,
+  CreateGuideDTO,
+  UpdateGuideDTO
 } from '../models/guide.model.js';
 import { GuideService } from '../services/guide.service.js';
 import { db } from '../db/index.js';
@@ -27,9 +30,17 @@ export async function listPublicGuides(req: Request, res: Response): Promise<voi
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
 
-    // Public API: Always force isGuide=true and use 'public' scope
-    // Note: The default scope is now PUBLIC, but we pass it explicitly for clarity
-    const { guides, total } = await findAllGuides(page, pageSize, city, keyword, lat, lng, true, GUIDE_SCOPE.PUBLIC);
+    // Public API: Force status=ONLINE
+    const { guides, total } = await findAllGuides(
+        page, 
+        pageSize, 
+        city, 
+        keyword, 
+        lat, 
+        lng, 
+        GUIDE_STATUS.ONLINE, // V2.2: Explicit status filter
+        GUIDE_SCOPE.PUBLIC
+    );
 
     // Enrich guides (Batch)
     const enrichedGuides = await GuideService.enrichGuides(guides);
@@ -80,6 +91,15 @@ export async function getPublicGuideDetail(req: Request, res: Response): Promise
     if (!guide) {
       errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪不存在');
       return;
+    }
+    
+    // V2.2: Ensure status is ONLINE for public access
+    // Although findAllGuides filters by status, findGuideByUserId doesn't enforce it by default unless we add logic there too.
+    // For now, check manually or let it be (if direct link access is allowed).
+    // Requirement says "is_online" controls visibility. So we should check.
+    if (guide.status !== GUIDE_STATUS.ONLINE) {
+        errorResponse(res, ErrorCodes.USER_NOT_FOUND, '地陪未上架'); // Treat as not found
+        return;
     }
 
     // Enrich guide
@@ -142,44 +162,46 @@ export async function updateMyProfile(req: Request, res: Response): Promise<void
 
     if (currentGuide) {
       // Update
-      await updateGuide(
-        user.id,
-        stageName || currentGuide.stageName,
-        idNumber || currentGuide.idNumber, // Allow update if provided
-        city || currentGuide.city,
-        intro || null,
-        expectedPrice || null,
-        tags || null,
-        safePhotoIds.length > 0 ? safePhotoIds : null,
-        address || null, 
-        latitude || null,
-        longitude || null,
-        avatarId ? Number(avatarId) : null,
-        realName || currentGuide.realName // Allow update if provided
-      );
+      const updateData: UpdateGuideDTO = {
+        stageName: stageName || currentGuide.stageName,
+        idNumber: idNumber || currentGuide.idNumber,
+        city: city || currentGuide.city,
+        intro: intro || null,
+        expectedPrice: expectedPrice || null,
+        tags: tags || null,
+        photoIds: safePhotoIds.length > 0 ? safePhotoIds : null,
+        address: address || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        avatarId: avatarId ? Number(avatarId) : null,
+        realName: realName || currentGuide.realName
+      };
+      
+      await updateGuide(user.id, updateData);
     } else {
       // Create
       const nameToSave = stageName || user.nickname || `User${user.id}`;
-      // For ID Number, if not provided, use a placeholder (should prompt user though)
-      // V2.1: Frontend should provide idNumber now. Fallback to placeholder if missing (legacy behavior)
       const idToSave = idNumber || `PENDING_ID_${user.id}`;
       const cityToSave = city || "未知";
 
-      await createGuide(
-        user.id,
-        nameToSave,
-        idToSave,
-        cityToSave,
-        intro || null,
-        expectedPrice || null,
-        tags || null,
-        safePhotoIds.length > 0 ? safePhotoIds : null,
-        address || null, 
-        latitude || null,
-        longitude || null,
-        avatarId ? Number(avatarId) : null,
-        realName || null
-      );
+      const createData: CreateGuideDTO = {
+        userId: user.id,
+        stageName: nameToSave,
+        idNumber: idToSave,
+        city: cityToSave,
+        intro: intro || null,
+        expectedPrice: expectedPrice || null,
+        tags: tags || null,
+        photoIds: safePhotoIds.length > 0 ? safePhotoIds : null,
+        address: address || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        avatarId: avatarId ? Number(avatarId) : null,
+        realName: realName || null,
+        status: GUIDE_STATUS.OFFLINE // Default
+      };
+
+      await createGuide(createData);
     }
 
     // Return the guideId (and other essential info)
