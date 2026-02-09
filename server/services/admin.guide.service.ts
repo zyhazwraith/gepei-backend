@@ -1,6 +1,12 @@
-import { db } from '../db';
-import { users, guides } from '../db/schema';
-import { eq, sql, desc, count, getTableColumns, isNull, and } from 'drizzle-orm';
+import { db   /**
+   * Helper: Validate guide status consistency
+   */
+  private static validateGuideStatus(isGuide: boolean, status: string) {
+      if (status === GUIDE_STATUS.ONLINE && !isGuide) {
+          throw new AppError(ErrorCodes.VALIDATION_ERROR, '无法上架未认证的地陪。请同时勾选认证(isGuide)或保持认证状态。');
+      }
+  }
+}
 import { 
     findAllGuides, 
     findGuideByUserId, 
@@ -103,9 +109,7 @@ export class AdminGuideService {
       const finalIsGuide = data.isGuide !== undefined ? data.isGuide : user.isGuide;
       const finalStatus = data.status || GUIDE_STATUS.OFFLINE;
 
-      if (finalStatus === GUIDE_STATUS.ONLINE && !finalIsGuide) {
-          throw new AppError(ErrorCodes.VALIDATION_ERROR, '无法上架未认证的地陪。请同时勾选认证(isGuide)或先进行认证。');
-      }
+      this.validateGuideStatus(finalIsGuide, finalStatus);
 
       await db.transaction(async (tx) => {
           // 1. Create Guide Record
@@ -170,9 +174,7 @@ export class AdminGuideService {
     const nextStatus = data.status !== undefined ? data.status : currentStatus;
 
     // 2. Validation: Online requires Verified
-    if (nextStatus === GUIDE_STATUS.ONLINE && !nextIsGuide) {
-        throw new AppError(ErrorCodes.VALIDATION_ERROR, '无法上架未认证的地陪。请同时勾选认证(isGuide)或保持认证状态。');
-    }
+    this.validateGuideStatus(nextIsGuide, nextStatus);
 
     let actionType: 'enable' | 'disable' | null = null;
     if (data.isGuide !== undefined && data.isGuide !== currentIsGuide) {
