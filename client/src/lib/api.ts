@@ -134,7 +134,7 @@ export interface Guide {
   realPrice?: number; // Verified price
   price?: number; // Display price (usually same as realPrice)
   tags?: string[];
-  photos: { id: number; url: string }[]; // V2: Object array
+  photos: { id: number; url: string; slot?: number }[]; // V2: Object array with optional slot
   distance?: number;
   idNumber?: string; // Sensitive
   idVerifiedAt?: string;
@@ -404,17 +404,44 @@ export async function getAdminGuideDetail(userId: number): Promise<ApiResponse<A
   return apiClient.get(`/admin/guides/${userId}`);
 }
 
+export interface CreateGuideDTO {
+  userId: number;
+  stageName: string;
+  realName: string;
+  idNumber: string;
+  city: string;
+  intro?: string;
+  expectedPrice?: number;
+  realPrice?: number;
+  tags?: string[];
+  photoIds?: number[];
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  avatarId?: number;
+  isGuide?: boolean;
+  status?: 'online' | 'offline';
+}
+
 /**
- * 审核地陪 (Admin)
+ * Admin Create Guide Profile
+ */
+export async function createGuideProfile(data: CreateGuideDTO): Promise<ApiResponse<AdminGuide>> {
+  return apiClient.post('/admin/guides', data);
+}
+
+/**
+ * Admin Update Guide Profile (Full)
+ */
+export async function updateGuideProfile(userId: number, data: Partial<CreateGuideDTO>): Promise<ApiResponse<AdminGuide>> {
+  return apiClient.put(`/admin/guides/${userId}`, data);
+}
+
+/**
+ * 审核地陪 (Admin) - Deprecated, use updateGuideProfile
  */
 export async function updateAdminGuideStatus(userId: number, data: { isGuide?: boolean; status?: 'online' | 'offline'; realPrice?: number }): Promise<ApiResponse<AdminGuide>> {
-  // Map camelCase to snake_case for backend
-  const payload: any = {};
-  if (data.isGuide !== undefined) payload.is_guide = data.isGuide;
-  if (data.status !== undefined) payload.status = data.status;
-  if (data.realPrice !== undefined) payload.real_price = data.realPrice;
-  
-  return apiClient.put(`/admin/guides/${userId}`, payload);
+  return updateGuideProfile(userId, data);
 }
 
 export interface AdminOrder extends OrderDetailResponse {

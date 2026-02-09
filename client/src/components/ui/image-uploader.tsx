@@ -9,6 +9,7 @@ interface ImageUploaderProps {
   onChange: (url: string, id?: number) => void;
   usage: "system" | "avatar" | "chat" | "guide_photo";
   slot?: string;
+  contextId?: string | number; // Added contextId
   className?: string;
   minimal?: boolean; // If true, hide text
 }
@@ -18,6 +19,7 @@ export function ImageUploader({
   onChange,
   usage,
   slot,
+  contextId,
   className,
   minimal = false,
 }: ImageUploaderProps) {
@@ -45,6 +47,7 @@ export function ImageUploader({
     formData.append("file", file);
     formData.append("usage", usage);
     if (slot) formData.append("slot", slot);
+    if (contextId) formData.append("contextId", String(contextId));
 
     try {
       // Use axios directly or via apiClient wrapper if it supports FormData

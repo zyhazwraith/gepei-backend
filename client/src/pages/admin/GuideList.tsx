@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, Search, Eye } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Search, Eye, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -93,6 +93,9 @@ export default function GuideList() {
               />
             </div>
             <Button onClick={handleSearch}>搜索</Button>
+            <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => setLocation("/admin/guides/create")}>
+                <Plus className="w-4 h-4 mr-2" /> 新建地陪
+            </Button>
           </div>
         </div>
 

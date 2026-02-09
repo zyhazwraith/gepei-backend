@@ -23,6 +23,7 @@ import AdminOrderList from "./pages/admin/OrderList";
 import AdminUserList from "./pages/admin/UserList";
 import AdminGuideList from "./pages/admin/GuideList";
 import AdminGuideAudit from "./pages/admin/GuideAudit";
+import AdminGuideCreate from "./pages/admin/GuideCreate";
 import AdminSettings from "./pages/admin/SettingsPage";
 import AdminAuditLogList from "./pages/admin/AuditLogList";
 import AdminWithdrawList from "./pages/admin/withdrawals/WithdrawList";
@@ -51,6 +52,7 @@ function Router() {
       <Route path={"/admin/orders"} component={AdminOrderList} />
       <Route path={"/admin/users"} component={AdminUserList} />
       <Route path={"/admin/guides"} component={AdminGuideList} />
+      <Route path={"/admin/guides/create"} component={AdminGuideCreate} />
       <Route path={"/admin/guides/:id"} component={AdminGuideAudit} />
       <Route path={"/admin/withdrawals"} component={AdminWithdrawList} />
       <Route path={"/admin/stats"} component={AdminStats} />

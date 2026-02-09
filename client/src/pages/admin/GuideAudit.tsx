@@ -1,16 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { getAdminGuideDetail, updateAdminGuideStatus, AdminGuide } from "@/lib/api";
-import Price from "@/components/Price";
+import { getAdminGuideDetail, updateGuideProfile, AdminGuide } from "@/lib/api";
+import { GuideForm } from "@/components/admin/GuideForm";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, Save, MapPin, User, Phone, Calendar } from "lucide-react";
+import { Loader2, ChevronLeft } from "lucide-react";
 
 export default function GuideAudit() {
   const [, setLocation] = useLocation();
@@ -20,11 +16,6 @@ export default function GuideAudit() {
   const [guide, setGuide] = useState<AdminGuide | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // Form State
-  const [realPrice, setRealPrice] = useState("");
-  const [isGuide, setIsGuide] = useState(false);
-  const [status, setStatus] = useState<'online' | 'offline'>('offline');
 
   useEffect(() => {
     if (userId) {
@@ -37,12 +28,7 @@ export default function GuideAudit() {
     try {
       const res = await getAdminGuideDetail(userId);
       if (res.code === 0 && res.data) {
-        const data = res.data;
-        setGuide(data);
-        // Convert cents to yuan for display/input
-        setRealPrice(data.realPrice ? (data.realPrice / 100).toString() : "");
-        setIsGuide(data.isGuide);
-        setStatus(data.status || 'offline');
+        setGuide(res.data);
       }
     } catch (error) {
       toast.error("获取地陪详情失败");
@@ -51,30 +37,18 @@ export default function GuideAudit() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (data: any) => {
     setSaving(true);
     try {
-      const priceYuan = parseFloat(realPrice);
-      if (isNaN(priceYuan) || priceYuan < 0) {
-        toast.error("请输入有效的系统价格");
-        setSaving(false);
-        return;
-      }
-      
-      const priceCents = Math.round(priceYuan * 100);
-
-      const res = await updateAdminGuideStatus(userId, {
-        isGuide,
-        status,
-        realPrice: priceCents
-      });
-
+      const res = await updateGuideProfile(userId, data);
       if (res.code === 0) {
         toast.success("保存成功");
-        fetchGuide(); // Refresh
+        setGuide(res.data || null);
+      } else {
+        toast.error(res.message || "保存失败");
       }
-    } catch (error) {
-      toast.error("保存失败");
+    } catch (error: any) {
+      toast.error(error.message || "保存出错");
     } finally {
       setSaving(false);
     }
@@ -82,7 +56,7 @@ export default function GuideAudit() {
 
   if (loading) {
     return (
-      <AdminLayout title="审核地陪">
+      <AdminLayout title="编辑地陪资料">
         <div className="flex justify-center items-center h-full">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
@@ -92,14 +66,17 @@ export default function GuideAudit() {
 
   if (!guide) {
     return (
-      <AdminLayout title="审核地陪">
+      <AdminLayout title="编辑地陪资料">
         <div className="text-center p-8">未找到地陪信息</div>
       </AdminLayout>
     );
   }
 
+  // Transform tags array to string for form
+  const tagsString = guide.tags?.join(", ") || "";
+
   return (
-    <AdminLayout title="审核地陪">
+    <AdminLayout title="编辑地陪资料">
       <div className="space-y-6 max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -122,210 +99,36 @@ export default function GuideAudit() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left: Profile Info (2/3) */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Basic Info Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="w-5 h-5" /> 基本信息
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 flex items-center gap-4">
-                  <img 
-                    src={guide.avatarUrl || "https://placehold.co/100x100?text=Avatar"} 
-                    alt="Avatar" 
-                    className="w-20 h-20 rounded-full object-cover border"
-                  />
-                  <div>
-                    <h3 className="text-xl font-bold">{guide.stageName}</h3>
-                    <p className="text-sm text-gray-500">ID: {guide.userId}</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <Label className="text-gray-500">手机号</Label>
-                  <div className="font-mono flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    {guide.phone || "-"}
-                  </div>
-                </div>
-
-                {/* V2.1: Real Name & ID Number */}
-                <div className="space-y-1">
-                  <Label className="text-gray-500">真实姓名</Label>
-                  <div className="font-medium text-gray-900">
-                    {guide.realName || "-"}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-gray-500">身份证号</Label>
-                  <div className="font-mono text-gray-900">
-                    {guide.idNumber || "-"}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-gray-500">常住城市</Label>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    {guide.city}
-                  </div>
-                </div>
-
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-gray-500">详细地址</Label>
-                  <div className="text-gray-900">{guide.address || "-"}</div>
-                </div>
-
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-gray-500">个人简介</Label>
-                  <div className="p-3 bg-gray-50 rounded-md text-sm leading-relaxed">
-                    {guide.intro || "暂无简介"}
-                  </div>
-                </div>
-
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-gray-500">技能标签</Label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {guide.tags && guide.tags.length > 0 ? (
-                      guide.tags.map(tag => (
-                        <Badge key={tag} variant="secondary">{tag}</Badge>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-400">无标签</span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Photos Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="w-5 h-5" /> 照片墙 ({guide.photos?.length || 0})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {guide.photos && guide.photos.length > 0 ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {guide.photos
-                      .sort((a: any, b: any) => (a.slot ?? 99) - (b.slot ?? 99))
-                      .map((photo: any) => (
-                      <div key={photo.id} className="aspect-square relative group">
-                        <img 
-                          src={photo.url} 
-                          alt={`Guide Photo Slot ${photo.slot}`} 
-                          className="w-full h-full object-cover rounded-lg border hover:scale-105 transition-transform cursor-pointer"
-                          onClick={() => window.open(photo.url, '_blank')}
-                        />
-                        {photo.slot !== undefined && (
-                          <div className="absolute top-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded backdrop-blur-sm">
-                            #{photo.slot + 1}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                    暂无照片
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right: Audit Actions (1/3) */}
-          <div className="md:col-span-1 space-y-6">
-            <Card className="border-orange-200 shadow-md">
-              <CardHeader className="bg-orange-50 border-b border-orange-100">
-                <CardTitle className="text-orange-800 flex items-center gap-2">
-                  <Save className="w-5 h-5" /> 审核操作
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                
-                {/* Expected Price Display */}
-                <div className="space-y-2">
-                  <Label className="text-gray-500">用户期望时薪</Label>
-                  <div className="text-2xl font-bold text-gray-400">
-                    <Price amount={guide.expectedPrice || 0} />
-                  </div>
-                </div>
-
-                {/* Real Price Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="realPrice">系统定价 (展示给用户)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-gray-500">¥</span>
-                    <Input 
-                      id="realPrice"
-                      type="number" 
-                      className="pl-7 font-bold text-lg"
-                      value={realPrice}
-                      onChange={(e) => setRealPrice(e.target.value)}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    设置此价格将覆盖期望价格，并在前台展示。
-                  </p>
-                </div>
-
-                {/* Status Switch 1: Certification */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">认证状态 (isGuide)</Label>
-                    <p className="text-xs text-gray-500">
-                      开启代表用户已通过资质审核
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={isGuide}
-                    onCheckedChange={(val) => {
-                        setIsGuide(val);
-                        if (!val) setStatus('offline');
-                    }}
-                  />
-                </div>
-
-                {/* Status Switch 2: Visibility */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">上架状态 (Status)</Label>
-                    <p className="text-xs text-gray-500">
-                      开启代表用户在前台可见 (需先认证)
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={status === 'online'}
-                    onCheckedChange={(val) => setStatus(val ? 'online' : 'offline')}
-                    disabled={!isGuide}
-                  />
-                </div>
-
-                {/* Save Button */}
-                <Button 
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 保存中...</>
-                  ) : (
-                    "保存审核结果"
-                  )}
-                </Button>
-
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        {/* Guide Form */}
+        <GuideForm 
+            userId={userId}
+            mode="edit"
+            onSubmit={handleSubmit}
+            loading={saving}
+            initialData={{
+                stageName: guide.stageName,
+                realName: guide.realName || "",
+                idNumber: guide.idNumber,
+                city: guide.city,
+                address: guide.address || "",
+                intro: guide.intro || "",
+                phone: guide.phone,
+                expectedPrice: guide.expectedPrice || 0, // Pass Cents, Form will convert to Yuan
+                realPrice: guide.realPrice || 0, // Pass Cents, Form will convert to Yuan
+                tags: tagsString,
+                avatarUrl: guide.avatarUrl,
+                avatarId: guide.avatarId,
+                photos: guide.photos?.map((p) => ({
+                    id: p.id,
+                    url: p.url,
+                    // Directly use backend slot. Trust the backend.
+                    // GuideForm handles filtering based on slot matching.
+                    slot: p.slot
+                })) as any,
+                isGuide: guide.isGuide,
+                status: guide.status || 'offline'
+            }}
+        />
       </div>
     </AdminLayout>
   );
