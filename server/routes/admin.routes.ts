@@ -72,8 +72,7 @@ router.put('/users/:id/unban', requireAdmin, asyncHandler(unbanUser));
 // PUT /api/v1/admin/users/:id/role - 更新用户角色
 router.put('/users/:id/role', authorize(['admin']), asyncHandler(updateUserRole));
 
-// POST /api/v1/admin/orders/:id/refund - 订单退款 (Removed: Use user-initiated refund flow)
-// router.post('/orders/:id/refund', requireAdmin, asyncHandler(refundOrder));
+
 
 // PUT /api/v1/admin/system-configs - 更新系统配置
 router.put('/system-configs', requireAdmin, asyncHandler(updateConfigs));

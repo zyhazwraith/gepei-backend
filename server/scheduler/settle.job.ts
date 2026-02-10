@@ -4,6 +4,7 @@ import { db } from '../db';
 import { orders, users, walletLogs } from '../db/schema';
 import { eq, and, lt, sql } from 'drizzle-orm';
 import { OrderStatus, WalletLogType } from '../constants';
+import { GUIDE_INCOME_RATIO } from '../shared/constants';
 
 /**
  * Core Logic for Settle Job (Exported for Testing)
@@ -46,8 +47,9 @@ export async function executeSettle() {
             if (freshOrder.status !== OrderStatus.SERVICE_ENDED) return;
 
             // Calculate Income
-            // Rule: Guide Income = Order Amount * 75%
-            const income = Math.floor(freshOrder.amount * 0.75);
+            // Rule: Use pre-calculated guideIncome from DB (includes overtime)
+            // Fallback: Calculate from amount if guideIncome is missing (legacy data support)
+            const income = freshOrder.guideIncome ?? Math.floor(freshOrder.amount * GUIDE_INCOME_RATIO);
 
             // A. Update Order Status
             await tx.update(orders)

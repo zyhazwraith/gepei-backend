@@ -195,9 +195,8 @@ export interface CreateOrderRequest {
   serviceDate: string;
   serviceStartTime?: string;
   // Custom Order Fields
-  city?: string;
   content?: string;
-  budget?: number;
+  price?: number; // Cents
   requirements?: string;
   // Normal Order Fields
   guideId?: number;

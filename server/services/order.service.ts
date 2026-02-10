@@ -3,7 +3,7 @@ import { orders, checkInRecords, attachments, overtimeRecords, payments, refundR
 import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
-import { PLATFORM_COMMISSION_RATE } from '../shared/constants';
+import { GUIDE_INCOME_RATIO } from '../shared/constants';
 import { paymentProvider } from './payment/payment.provider';
 
 interface CheckInPayload {
@@ -292,7 +292,7 @@ export class OrderService {
         const newEndTime = new Date(baseTime.getTime() + overtime.duration * 60 * 60 * 1000);
 
         // Calculate Guide Income Increment
-        const guideIncomeInc = Math.round(overtime.fee * (1 - PLATFORM_COMMISSION_RATE));
+        const guideIncomeInc = Math.round(overtime.fee * GUIDE_INCOME_RATIO);
 
         await tx.update(orders)
             .set({ 

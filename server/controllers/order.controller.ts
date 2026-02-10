@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { ErrorCodes } from '../../shared/errorCodes.js';
-import { PLATFORM_COMMISSION_RATE } from '../shared/constants';
+import { PLATFORM_COMMISSION_RATE, GUIDE_INCOME_RATIO } from '../shared/constants';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
@@ -18,9 +18,8 @@ const createCustomOrderSchema = z.object({
   duration: z.number().int().min(1).default(8), // Add duration with default 8
   
   // Custom specific fields
-  city: z.string().min(1, '城市不能为空'),
   content: z.string().min(1, '服务内容不能为空'),
-  budget: z.number().min(0, '预算必须大于等于0'),
+  price: z.number().int().min(1, '单价必须大于0'), // Changed from budget to price (unit: cents)
   requirements: z.string().optional(),
 });
 
@@ -79,6 +78,11 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         const startTime = new Date(validated.serviceStartTime);
         const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
 
+        // Create Custom Order
+        // Logic: Amount = Price * Duration
+        const pricePerUnit = validated.price; // Unit: Cents
+        const amount = pricePerUnit * validated.duration; // Total Amount in Cents
+
         // 创建订单主记录
         const [order] = await tx.insert(orders).values({
           orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
@@ -93,18 +97,12 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
           // serviceHours: 0, // Removed
           duration: validated.duration, // Use validated duration
           totalDuration: validated.duration, // Initialize totalDuration
-          amount: 15000, // 固定订金 150.00 -> 15000 (分)
-          totalAmount: 15000, // Initial Total = Base Amount
-          guideIncome: Math.round(15000 * (1 - PLATFORM_COMMISSION_RATE)), // Initial Income
+          amount: amount, 
+          totalAmount: amount, // Initial Total = Base Amount
+          pricePerHour: pricePerUnit, // Persist Unit Price for Overtime calculation
+          guideIncome: Math.round(amount * GUIDE_INCOME_RATIO), // Initial Income
           guideId: req.body.guideId || 0, // V2 Temporary: Must have guideId per schema, but custom flow might not have it yet.
-          content: JSON.stringify({ // V2: Store requirements in content JSON
-            destination: validated.city,
-            startDate: validated.serviceStartTime.split('T')[0],
-            endDate: validated.serviceStartTime.split('T')[0],
-            peopleCount: 1,
-            budget: validated.budget.toString(),
-            specialRequirements: validated.content
-          }),
+          content: validated.content, // Directly store content
           requirements: validated.requirements, // Additional remarks
           createdAt: new Date(),
         }).$returningId();
@@ -119,8 +117,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         message: '订单创建成功',
         data: {
           orderId: result.id,
-          amount: 150.00, // Response in Yuan for frontend compat? Or 15000? Let's keep 150.00 for now or change frontend.
-          // Assuming frontend expects Yuan, we might need to divide. But for Type check, just ensuring DB insert is correct.
+          amount: (validated.price * validated.duration) / 100, // Response in Yuan for frontend compat
         },
       });
 
@@ -170,7 +167,7 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
         pricePerHour: price, // Store snapshot price
         amount: amount, // int
         totalAmount: amount, // Initial Total = Base Amount
-        guideIncome: Math.round(amount * (1 - PLATFORM_COMMISSION_RATE)), // Initial Income
+        guideIncome: Math.round(amount * GUIDE_INCOME_RATIO), // Initial Income
         requirements: validated.requirements, // Now using requirements instead of remark
         content: validated.content, // Store service content
         createdAt: new Date(),
@@ -348,19 +345,8 @@ export async function getOrders(req: Request, res: Response) {
       
     // 补充：为了前端展示方便，可能需要关联一些信息，比如customRequirements
     const enrichedOrders = result.map((order) => {
-      let extra = {};
-      if (order.type === 'custom' && order.content) {
-         try {
-            const contentObj = JSON.parse(order.content as string);
-            extra = { 
-                destination: contentObj.destination, 
-                startDate: contentObj.startDate 
-            }; 
-         } catch (e) {
-            // ignore
-         }
-      }
-      return { ...order, ...extra };
+      // V2: Content is now plain text, no JSON parsing needed
+      return order;
     });
 
     res.json({
