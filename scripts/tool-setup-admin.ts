@@ -7,11 +7,17 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 async function createAdmin() {
-  const phone = '19999999999';
-  const password = 'AdminPassword123'; // 初始密码 (修改为符合复杂度要求：8+位，含字母数字)
-  const nickname = '超级管理员';
+  // 优先从环境变量读取，否则使用默认值
+  const phone = process.env.ADMIN_PHONE || '19999999999';
+  const password = process.env.ADMIN_PASSWORD || 'AdminPassword123';
+  const nickname = process.env.ADMIN_NICKNAME || '超级管理员';
 
-  console.log('🚀 Creating admin user...');
+  console.log('🚀 Creating/Updating admin user...');
+  console.log(`📝 Target Phone: ${phone}`);
+
+  if (password === 'AdminPassword123' && !process.env.ADMIN_PASSWORD) {
+    console.warn('⚠️  WARNING: Using default insecure password. Set ADMIN_PASSWORD env var in production!');
+  }
 
   try {
     // Check if admin exists
