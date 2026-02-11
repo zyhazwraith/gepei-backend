@@ -5,9 +5,11 @@
 ## 1. 环境准备
 
 请确保服务器已安装以下软件：
-- **Node.js**: v18+
+- **Node.js**: v20+ (必需)
 - **MySQL**: 8.0+
 - **PM2**: `npm install -g pm2`
+
+> **注意**: 本项目使用 React 19 和 Vite 7，**不支持 Node.js 18**，请务必升级到 Node.js 20 LTS。
 
 ## 2. 代码与依赖
 
@@ -16,6 +18,8 @@
 cd gepei-backend
 
 # 2. 安装依赖
+# 注意：项目已包含 .npmrc 配置文件，会自动处理 peer-deps 冲突，无需额外参数
+# 生产环境仍需安装 devDependencies 以支持 build 和运维脚本，请勿使用 --production
 npm install
 ```
 

@@ -2,6 +2,9 @@
   "name": "gepei-app",
   "version": "1.0.0",
   "description": "地陪应用全栈项目",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
