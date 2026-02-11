@@ -171,6 +171,7 @@ export default function Guides() {
           })
         ) : (
           <EmptyState 
+            icon={Search}
             title="暂无符合条件的地陪" 
             description="换个关键词或城市试试看？"
             action={
