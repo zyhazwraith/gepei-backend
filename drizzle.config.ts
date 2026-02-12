@@ -1,13 +1,14 @@
 import { defineConfig } from "drizzle-kit";
+import dotenv from "dotenv";
+
+// 确保加载 .env 文件
+dotenv.config();
 
 export default defineConfig({
   schema: "./server/db/schema.ts",
   out: "./drizzle",
   dialect: "mysql",
   dbCredentials: {
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "gepei_db",
+    url: process.env.DATABASE_URL || "mysql://root:@localhost:3306/gepei_db",
   },
 });
