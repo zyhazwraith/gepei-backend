@@ -49,6 +49,17 @@ VITE_TENCENT_MAP_KEY=您的腾讯地图Key
 
 ## 4. 系统初始化
 
+**步骤 0：创建数据库**
+如果使用的是新部署的 MySQL，需手动创建数据库：
+```bash
+# 登录 MySQL
+mysql -u root -p
+
+# 执行创建语句
+CREATE DATABASE gepei_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+```
+
 **步骤 1：同步数据库结构**
 ```bash
 npm run db:push
