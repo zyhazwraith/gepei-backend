@@ -7,11 +7,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // 创建数据库连接池
+const connectionString = process.env.DATABASE_URL || "mysql://root:@localhost:3306/gepei_db";
+
 const poolConnection = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "gepei_db",
+  uri: connectionString,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
