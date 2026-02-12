@@ -36,17 +36,16 @@ vim .env
 **`.env` 必填项说明：**
 
 ```ini
-# 数据库配置
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=您的数据库密码
-DB_NAME=gepei_db
-# 务必修改 DATABASE_URL 中的用户名和密码，使其与上面一致
-DATABASE_URL=mysql://root:您的数据库密码@localhost:3306/gepei_db
+# 数据库连接串 (优先使用)
+# 格式: mysql://用户名:密码@主机名:端口/数据库名
+# 注意: 如果密码包含特殊字符(如 @ # /), 必须进行 URL 编码 (例如 @ -> %40)
+DATABASE_URL=mysql://root:your_secure_password@localhost:3306/gepei_db
 
 # 腾讯地图 Key (必须保留 VITE_ 前缀)
 VITE_TENCENT_MAP_KEY=您的腾讯地图Key
 ```
+
+> **注意**: 环境变量优先级为 `系统环境变量` > `.env 文件`。如果在 PM2 配置或系统环境中设置了同名变量，将覆盖 `.env` 中的值。
 
 ## 4. 系统初始化
 
