@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { requireAdmin, authenticate, authorize } from '../middleware/auth.middleware';
-import { asyncHandler } from '../middleware/errorHandler';
+import { requireAdmin, authenticate, authorize } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import { 
   listUsers, 
   getOrders, 

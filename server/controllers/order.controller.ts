@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '../db';
-import { orders, payments, users, guides, overtimeRecords } from '../db/schema';
+import { db } from '../db/index.js';
+import { orders, payments, users, guides, overtimeRecords } from '../db/schema.js';
 import { eq, and, ne, or, count, desc, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { ErrorCodes } from '../../shared/errorCodes.js';
-import { PLATFORM_COMMISSION_RATE, GUIDE_INCOME_RATIO } from '../shared/constants';
+import { PLATFORM_COMMISSION_RATE, GUIDE_INCOME_RATIO } from '../shared/constants.js';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({

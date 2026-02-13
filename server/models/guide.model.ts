@@ -1,8 +1,8 @@
-import { db } from '../db';
-import { guides, users, attachments } from '../db/schema';
+import { db } from '../db/index.js';
+import { guides, users, attachments } from '../db/schema.js';
 import { eq, and, isNull, sql, desc, or, like, count, getTableColumns, inArray, gt } from 'drizzle-orm';
-import { Guide } from '../types';
-import { parseJsonField } from '../utils/jsonHelper';
+import { Guide } from '../types/index.js';
+import { parseJsonField } from '../utils/jsonHelper.js';
 
 /**
  * Helper: Map DB row to Guide entity

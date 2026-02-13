@@ -1,6 +1,6 @@
 
-import { db } from '../db';
-import { orders } from '../db/schema';
+import { db } from '../db/index.js';
+import { orders } from '../db/schema.js';
 import { eq, isNull, and, sql } from 'drizzle-orm';
 
 async function main() {

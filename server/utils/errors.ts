@@ -1,5 +1,5 @@
-import { ErrorCodes, ErrorCodeToHttpStatus } from '../../shared/errorCodes';
-export { ErrorCodes as ERROR_CODES } from '../../shared/errorCodes';
+import { ErrorCodes, ErrorCodeToHttpStatus } from '../../shared/errorCodes.js';
+export { ErrorCodes as ERROR_CODES } from '../../shared/errorCodes.js';
 
 // 自定义错误类
 export class AppError extends Error {

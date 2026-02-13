@@ -1,10 +1,10 @@
-import { db } from '../db';
-import { orders, checkInRecords, attachments, overtimeRecords, payments, refundRecords } from '../db/schema';
+import { db } from '../db/index.js';
+import { orders, checkInRecords, attachments, overtimeRecords, payments, refundRecords } from '../db/schema.js';
 import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
-import { GUIDE_INCOME_RATIO } from '../shared/constants';
-import { paymentProvider } from './payment/payment.provider';
+import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
+import { paymentProvider } from './payment/payment.provider.js';
 
 interface CheckInPayload {
   type: 'start' | 'end';

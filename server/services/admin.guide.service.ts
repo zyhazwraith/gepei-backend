@@ -1,5 +1,5 @@
-import { db } from '../db';
-import { users, guides } from '../db/schema';
+import { db } from '../db/index.js';
+import { users, guides } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 import { 
     findAllGuides, 
@@ -10,12 +10,12 @@ import {
     GUIDE_STATUS,
     CreateGuideDTO,
     UpdateGuideDTO
-} from '../models/guide.model';
-import { GuideService } from './guide.service';
-import { AuditService } from './audit.service';
-import { AuditActions, AuditTargets } from '../constants/audit';
-import { AppError, ValidationError, NotFoundError } from '../utils/errors';
-import { ErrorCodes } from '../../shared/errorCodes';
+} from '../models/guide.model.js';
+import { GuideService } from './guide.service.js';
+import { AuditService } from './audit.service.js';
+import { AuditActions, AuditTargets } from '../constants/audit.js';
+import { AppError, ValidationError, NotFoundError } from '../utils/errors.js';
+import { ErrorCodes } from '../../shared/errorCodes.js';
 
 export class AdminGuideService {
   /**

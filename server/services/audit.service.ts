@@ -1,8 +1,8 @@
-import { db } from '../db';
-import { auditLogs } from '../db/schema';
-import { AuditActionType, AuditTargetType } from '../constants/audit';
+import { db } from '../db/index.js';
+import { auditLogs } from '../db/schema.js';
+import { AuditActionType, AuditTargetType } from '../constants/audit.js';
 import { desc, eq, and, sql } from 'drizzle-orm';
-import { Context } from '../utils/context';
+import { Context } from '../utils/context.js';
 
 interface CreateLogParams {
   operatorId: number;

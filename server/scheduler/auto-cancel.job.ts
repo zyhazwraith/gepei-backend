@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { OrderService } from '../services/order.service';
+import { OrderService } from '../services/order.service.js';
 
 /**
  * Auto Cancel Job

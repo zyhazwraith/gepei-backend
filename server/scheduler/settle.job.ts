@@ -1,10 +1,10 @@
 
 import cron from 'node-cron';
-import { db } from '../db';
-import { orders, users, walletLogs } from '../db/schema';
+import { db } from '../db/index.js';
+import { orders, users, walletLogs } from '../db/schema.js';
 import { eq, and, lt, sql } from 'drizzle-orm';
-import { OrderStatus, WalletLogType } from '../constants';
-import { GUIDE_INCOME_RATIO } from '../shared/constants';
+import { OrderStatus, WalletLogType } from '../constants/index.js';
+import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
 
 /**
  * Core Logic for Settle Job (Exported for Testing)

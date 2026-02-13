@@ -1,8 +1,7 @@
-import { db } from '../db';
-import { attachments } from '../db/schema';
+import { db } from '../db/index.js';
+import { attachments } from '../db/schema.js';
 import { inArray } from 'drizzle-orm';
-import { Guide } from '../types';
-
+import { Guide } from '../types/index.js';
 const SLOT_REGEX = /_p_(\d+)\./;
 
 /**

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { updateUser, findUserById } from '../models/user.model';
-import { ErrorCodes } from '../../shared/errorCodes';
+import { updateUser, findUserById } from '../models/user.model.js';
+import { ErrorCodes } from '../../shared/errorCodes.js';
 
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {

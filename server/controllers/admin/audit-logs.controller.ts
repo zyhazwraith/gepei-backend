@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { auditService } from '../../services/audit.service';
+import { auditService } from '../../services/audit.service.js';
 import { z } from 'zod';
 
 // Validation schema for query params
