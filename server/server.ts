@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
-import { testConnection } from './config/database.js';
+import { db } from './db/index.js';
+import { sql } from 'drizzle-orm';
 import { startScheduler } from './scheduler/index.js';
 
 const PORT = process.env.PORT || 3000;
@@ -9,9 +10,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // 启动服务器
 async function startServer() {
   try {
-    // 测试数据库连接
-    const dbConnected = await testConnection();
-    if (!dbConnected) {
+    // 测试数据库连接 (Using Drizzle)
+    try {
+      await db.execute(sql`SELECT 1`);
+      console.log('✓ Database connected successfully');
+    } catch (error) {
+      console.error('✗ Database connection failed:', error);
       console.error('Failed to connect to database. Exiting...');
       process.exit(1);
     }
