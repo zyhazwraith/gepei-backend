@@ -46,11 +46,21 @@ export class SmsService {
       const resp = await client.sendSmsVerifyCodeWithOptions(sendSmsVerifyCodeRequest, runtime);
       
       // 检查 code 是否为 OK
+      // 注意：SendSmsVerifyCode 返回的 code 为 "OK" 表示请求成功，
+      // 但实际发送结果可能在 model 中，或者 code 本身就代表成功。
+      // 根据文档，SendSmsVerifyCode 返回体结构如下：
+      // {
+      //   "Code": "OK",
+      //   "Message": "OK",
+      //   "RequestId": "...",
+      //   "Model": { ... }
+      // }
       if (resp.body?.code === 'OK') {
         return true;
       } else {
         // 记录更详细的错误信息
         console.error('Aliyun Dypns SMS Error:', {
+          fullBody: resp.body, // Log full body to debug 'UNKNOWN'
           code: resp.body?.code,
           message: resp.body?.message,
           requestId: resp.body?.requestId,
