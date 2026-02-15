@@ -19,15 +19,16 @@ export class SmsService {
     return this.client;
   }
 
-  static async sendVerificationCode(phone: string, code: string): Promise<boolean> {
+  static async sendVerificationCode(phone: string): Promise<boolean> {
     try {
       const client = this.createClient();
       
       // 构造 TemplateParam
-      // 注意：SendSmsVerifyCode 的 templateParam 也是 JSON 字符串
+      // 根据阿里云 DypnsAPI SendSmsVerifyCode 文档
+      // TemplateParam: "{\"code\":\"##code##\"}"
+      // 只要包含 code 且值为 ##code##，阿里云会自动生成验证码
       const templateParam = {
-        code: code,
-        min: "5"
+         code: "##code##"
       };
 
       // 构造 SendSmsVerifyCodeRequest

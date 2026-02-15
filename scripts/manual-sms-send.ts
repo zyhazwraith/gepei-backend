@@ -32,15 +32,14 @@ const testCode = Math.floor(100000 + Math.random() * 900000).toString();
 
 async function testSend() {
   console.log('--- 阿里云短信发送测试 ---');
-  console.log(`目标手机: ${targetPhone}`);
-  console.log(`验证码: ${testCode}`);
-  console.log(`签名: ${process.env.ALIYUN_SMS_SIGN_NAME}`);
-  console.log(`模版: ${process.env.ALIYUN_SMS_TEMPLATE_CODE}`);
+  console.log('目标手机:', targetPhone);
+  console.log('签名:', process.env.ALIYUN_SMS_SIGN_NAME);
+  console.log('模版:', process.env.ALIYUN_SMS_TEMPLATE_CODE);
   console.log('--------------------------');
 
   try {
     console.log('正在发送...');
-    const success = await SmsService.sendVerificationCode(targetPhone, testCode);
+    const success = await SmsService.sendVerificationCode(targetPhone);
 
     if (success) {
       console.log('✅ 发送成功！请检查手机是否收到短信。');
