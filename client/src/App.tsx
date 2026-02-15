@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Guides from "./pages/Guides";
@@ -35,6 +36,7 @@ function Router() {
       {/* 客户端路由 */}
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/register"} component={Register} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/guides"} component={Guides} />

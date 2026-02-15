@@ -109,7 +109,19 @@ export interface RegisterResponse {
 
 export interface LoginRequest {
   phone: string;
-  password: string;
+  password?: string;
+  code?: string;
+}
+
+export interface SendVerificationCodeRequest {
+  phone: string;
+  usage: 'login' | 'reset_password';
+}
+
+export interface ResetPasswordRequest {
+  phone: string;
+  code: string;
+  newPassword?: string; // Optional if just verifying
 }
 
 export interface LoginResponse {
@@ -356,6 +368,20 @@ export async function getGuideDetail(id: number): Promise<ApiResponse<Guide>> {
  */
 export async function register(data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
   return apiClient.post('/auth/register', data);
+}
+
+/**
+ * 发送验证码
+ */
+export async function sendVerificationCode(data: SendVerificationCodeRequest): Promise<ApiResponse<void>> {
+  return apiClient.post('/auth/verification-code', data);
+}
+
+/**
+ * 重置密码
+ */
+export async function resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<void>> {
+  return apiClient.post('/auth/reset-password', data);
 }
 
 /**
