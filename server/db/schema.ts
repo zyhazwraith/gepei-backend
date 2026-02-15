@@ -44,27 +44,11 @@ export const systemConfigs = mysqlTable('system_configs', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
-// 1.3 验证码表 (Verification Codes) [V2.3 新增] - 已废弃，使用阿里云无状态校验
-// export const verificationCodes = mysqlTable('verification_codes', {
-//   id: int('id').primaryKey().autoincrement(),
-//   phone: varchar('phone', { length: 20 }).notNull(),
-//   code: varchar('code', { length: 6 }).notNull(),
-//   usage: varchar('usage', { length: 20 }).notNull(), // 'login', 'reset_password'
-//   expiresAt: timestamp('expires_at').notNull(),
-//   used: boolean('used').default(false),
-//   createdAt: timestamp('created_at').defaultNow(),
-// }, (table) => {
-//   return {
-//     lookupIdx: index('lookup_idx').on(table.phone, table.usage, table.expiresAt, table.used),
-//     cleanupIdx: index('cleanup_idx').on(table.expiresAt),
-//   };
-// });
-
 // --------------------------------------------------------------------------
-// 2. 核心用户与地陪 (Users & Guides)
+// 5. 其他业务表 (Others)
 // --------------------------------------------------------------------------
 
-// 2.1 用户表 (Users) [V2 修改]
+// 5.1 评价表 (Reviews) [V1 保留]
 export const users = mysqlTable('users', {
   id: int('id').primaryKey().autoincrement(),
   phone: varchar('phone', { length: 11 }).notNull().unique(),
