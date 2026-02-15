@@ -45,10 +45,10 @@ export const systemConfigs = mysqlTable('system_configs', {
 });
 
 // --------------------------------------------------------------------------
-// 2. 核心用户与地陪 (Users & Guides)
+// 5. 其他业务表 (Others)
 // --------------------------------------------------------------------------
 
-// 2.1 用户表 (Users) [V2 修改]
+// 5.1 评价表 (Reviews) [V1 保留]
 export const users = mysqlTable('users', {
   id: int('id').primaryKey().autoincrement(),
   phone: varchar('phone', { length: 11 }).notNull().unique(),
