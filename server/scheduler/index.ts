@@ -1,6 +1,5 @@
 import { autoCancelJob } from './auto-cancel.job.js';
 import { settleJob } from './settle.job.js';
-
 export const startScheduler = () => {
   console.log('[Scheduler] Starting all jobs...');
   

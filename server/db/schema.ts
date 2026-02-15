@@ -44,6 +44,22 @@ export const systemConfigs = mysqlTable('system_configs', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
+// 1.3 验证码表 (Verification Codes) [V2.3 新增]
+export const verificationCodes = mysqlTable('verification_codes', {
+  id: int('id').primaryKey().autoincrement(),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  code: varchar('code', { length: 6 }).notNull(),
+  usage: varchar('usage', { length: 20 }).notNull(), // 'login', 'reset_password'
+  expiresAt: timestamp('expires_at').notNull(),
+  used: boolean('used').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => {
+  return {
+    lookupIdx: index('lookup_idx').on(table.phone, table.usage, table.expiresAt, table.used),
+    cleanupIdx: index('cleanup_idx').on(table.expiresAt),
+  };
+});
+
 // --------------------------------------------------------------------------
 // 2. 核心用户与地陪 (Users & Guides)
 // --------------------------------------------------------------------------

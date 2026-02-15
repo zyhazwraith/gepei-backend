@@ -36,11 +36,29 @@ export interface RegisterRequest {
 }
 
 /**
+ * 发送验证码请求
+ */
+export interface SendVerificationCodeRequest {
+  phone: string;
+  usage: 'login' | 'reset_password';
+}
+
+/**
+ * 重置密码请求
+ */
+export interface ResetPasswordRequest {
+  phone: string;
+  code: string;
+  newPassword: string;
+}
+
+/**
  * 登录请求
  */
 export interface LoginRequest {
   phone: string;
-  password: string;
+  password?: string;
+  code?: string;
 }
 
 /**
