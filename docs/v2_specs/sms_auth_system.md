@@ -10,22 +10,11 @@
 
 ## 2. Technical Design
 
-### 2.1 Database Schema
-**Table**: `verification_codes`
-```typescript
-export const verificationCodes = mysqlTable("verification_codes", {
-  id: serial("id").primaryKey(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  code: varchar("code", { length: 6 }).notNull(),
-  usage: varchar("usage", { length: 20 }).notNull(), // 'login' | 'reset_password'
-  expiresAt: timestamp("expires_at").notNull(),
-  used: boolean("used").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  lookupIdx: index("lookup_idx").on(table.phone, table.usage, table.expiresAt, table.used),
-  cleanupIdx: index("cleanup_idx").on(table.expiresAt),
-}));
-```
+### 2.1 Stateless Architecture
+System adopts a stateless design using Aliyun's `SendSmsVerifyCode` and `CheckSmsVerifyCode` APIs.
+*   **No DB Storage**: Verification codes are not stored in our database.
+*   **Rate Limiting**: Managed by Aliyun/Gateway side.
+*   **Security**: Prevents code leakage and reduces DB load.
 
 ### 2.2 API Specifications
 
@@ -67,9 +56,7 @@ export const verificationCodes = mysqlTable("verification_codes", {
     ```
 
 ### 2.3 Cleanup Strategy
-*   **Job**: `CleanVerificationCodesJob`
-*   **Schedule**: `0 2 * * *` (Daily 02:00)
-*   **Logic**: `DELETE FROM verification_codes WHERE expires_at < NOW() - INTERVAL 1 DAY`
+*   **Deprecated**: No cleanup job needed as no data is stored.
 
 ## 3. Implementation Checklist
 *   [ ] **Infra**: Install `@alicloud/dysmsapi20170525`, Create DB Table.
