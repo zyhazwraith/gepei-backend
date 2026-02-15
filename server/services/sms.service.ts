@@ -21,12 +21,6 @@ export class SmsService {
 
   static async sendVerificationCode(phone: string, code: string): Promise<boolean> {
     try {
-      // Mock 模式保持不变
-      if (!process.env.ALIYUN_ACCESS_KEY_ID) {
-        console.log(`[MOCK SMS] To: ${phone}, Code: ${code}`);
-        return true;
-      }
-
       const client = this.createClient();
       
       // 构造 TemplateParam
@@ -76,17 +70,6 @@ export class SmsService {
    */
   static async checkVerificationCode(phone: string, code: string): Promise<boolean> {
     try {
-      // 1. Mock 模式
-      if (!process.env.ALIYUN_ACCESS_KEY_ID) {
-        // 开发环境下，我们可以约定一个特定的 Mock 码用于校验，或者直接信任 (在真实流程中应结合 DB Mock)
-        // 这里为了演示，我们假设如果之前发过 Mock 短信 (在 DB 有记录)，这里就通过。
-        // 但 checkVerificationCode 本身是无状态的，无法知道之前发的 Mock 码是啥。
-        // 策略: 开发环境下，固定码 '123456' 总是通过，或者让调用方传入期望值。
-        // 简单起见，如果 Mock 开启，我们认为只要是 6 位数都通过，或者打印日志。
-        console.log(`[MOCK CHECK] Phone: ${phone}, Code: ${code} -> PASS`);
-        return true; 
-      }
-
       const client = this.createClient();
 
       const checkSmsVerifyCodeRequest = new $Dypnsapi20170525.CheckSmsVerifyCodeRequest({

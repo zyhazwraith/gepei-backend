@@ -3,6 +3,7 @@ import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod'; // Import zod
 import { ErrorCodes } from '../../shared/errorCodes.js';
 import { validatePhone, validatePassword } from '../utils/validation.js';
 import { generateToken } from '../utils/jwt.js';
@@ -11,23 +12,48 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import { RegisterRequest, LoginRequest, SendVerificationCodeRequest, ResetPasswordRequest } from '../../shared/types.js';
 import { VerificationService } from '../services/verification.service.js';
 
+// --- Zod Schemas ---
+
+const sendVerificationCodeSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+  usage: z.enum(['login', 'reset_password'], { errorMap: () => ({ message: '无效的用途' }) }),
+});
+
+const registerSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+  password: z.string().regex(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/, '密码必须为8-20位，包含字母和数字'),
+  nickname: z.string().optional(),
+});
+
+const loginSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+  password: z.string().optional(),
+  code: z.string().optional(),
+}).refine(data => data.password || data.code, {
+  message: "请输入密码或验证码",
+  path: ["password"], // Associate error with password field
+});
+
+const resetPasswordSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+  code: z.string().min(1, '验证码不能为空'),
+  newPassword: z.string().regex(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/, '密码格式不正确'),
+});
+
+// --- Controllers ---
+
 /**
  * 发送验证码
  * POST /api/v1/auth/verification-code
  */
 export async function sendVerificationCode(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, usage }: SendVerificationCodeRequest = req.body;
-
-    if (!phone || !validatePhone(phone)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '手机号格式不正确');
+    const parseResult = sendVerificationCodeSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      errorResponse(res, ErrorCodes.INVALID_PARAMS, parseResult.error.issues[0].message);
       return;
     }
-
-    if (!['login', 'reset_password'].includes(usage)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '无效的用途');
-      return;
-    }
+    const { phone, usage } = parseResult.data;
 
     await VerificationService.sendCode(phone, usage);
     successResponse(res, { message: '验证码已发送' });
@@ -43,19 +69,12 @@ export async function sendVerificationCode(req: Request, res: Response): Promise
  */
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, password, nickname }: RegisterRequest = req.body;
-
-    // 验证手机号格式
-    if (!phone || !validatePhone(phone)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '手机号格式不正确');
+    const parseResult = registerSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      errorResponse(res, ErrorCodes.INVALID_PARAMS, parseResult.error.issues[0].message);
       return;
     }
-
-    // 验证密码格式（8-20位，包含字母和数字）
-    if (!password || !validatePassword(password)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '密码必须为8-20位，包含字母和数字');
-      return;
-    }
+    const { phone, password, nickname } = parseResult.data;
 
     // 检查手机号是否已注册
     const existingUser = await findUserByPhone(phone);
@@ -117,13 +136,12 @@ export async function register(req: Request, res: Response): Promise<void> {
  */
 export async function login(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, password, code }: LoginRequest = req.body;
-
-    // 验证手机号格式
-    if (!phone || !validatePhone(phone)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '手机号格式不正确');
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      errorResponse(res, ErrorCodes.INVALID_PARAMS, parseResult.error.issues[0].message);
       return;
     }
+    const { phone, password, code } = parseResult.data;
 
     // 模式1: 验证码登录
     if (code) {
@@ -133,16 +151,9 @@ export async function login(req: Request, res: Response): Promise<void> {
         return;
       }
     } 
-    // 模式2: 密码登录
+    // 模式2: 密码登录 (Already handled by schema refine, but double check for logic flow)
     else if (password) {
-      // 验证密码格式
-      if (!validatePassword(password)) {
-        errorResponse(res, ErrorCodes.INVALID_PARAMS, '密码格式不正确');
-        return;
-      }
-    } else {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '请输入密码或验证码');
-      return;
+       // schema already validated format if present
     }
 
     // 查找用户
@@ -219,17 +230,12 @@ export async function login(req: Request, res: Response): Promise<void> {
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   try {
-    const { phone, code, newPassword }: ResetPasswordRequest = req.body;
-
-    if (!phone || !validatePhone(phone)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '手机号格式不正确');
+    const parseResult = resetPasswordSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      errorResponse(res, ErrorCodes.INVALID_PARAMS, parseResult.error.issues[0].message);
       return;
     }
-    
-    if (!newPassword || !validatePassword(newPassword)) {
-      errorResponse(res, ErrorCodes.INVALID_PARAMS, '密码格式不正确');
-      return;
-    }
+    const { phone, code, newPassword } = parseResult.data;
 
     const isValid = await VerificationService.verifyCode(phone, code, 'reset_password');
     if (!isValid) {
