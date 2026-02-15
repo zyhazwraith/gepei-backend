@@ -3,8 +3,28 @@ import { ErrorCodes } from '../../shared/errorCodes.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { AdminGuideService } from '../services/admin.guide.service.js';
 import { AppError } from '../utils/errors.js';
-import { createGuideSchema, updateGuideSchema } from '../schemas/guide.schema.js';
-import { ZodError } from 'zod';
+import { z } from 'zod';
+
+const createGuideSchema = z.object({
+  userId: z.number().int().positive(),
+  stageName: z.string().min(1, 'Stage Name is required'),
+  realName: z.string().min(1, 'Real Name is required'),
+  idNumber: z.string().min(15, 'ID Number invalid'), // Simple check
+  city: z.string().min(1, 'City is required'),
+  intro: z.string().optional(),
+  expectedPrice: z.number().nonnegative().optional(),
+  realPrice: z.number().nonnegative().optional(),
+  tags: z.array(z.string()).optional(),
+  photoIds: z.array(z.number()).optional(),
+  address: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  avatarId: z.number().optional(),
+  isGuide: z.boolean().optional(),
+  status: z.enum(['online', 'offline']).optional()
+});
+
+const updateGuideSchema = createGuideSchema.partial();
 
 /**
  * Admin Get Guide List
@@ -80,7 +100,7 @@ export async function createGuide(req: Request, res: Response): Promise<void> {
         const validation = createGuideSchema.safeParse(req.body);
         
         if (!validation.success) {
-            errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.message);
+            errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.issues[0].message);
             return;
         }
 
@@ -92,24 +112,24 @@ export async function createGuide(req: Request, res: Response): Promise<void> {
             realName: data.realName,
             idNumber: data.idNumber,
             city: data.city,
-            intro: data.intro || undefined, // undefined vs null handling in service/model
-            expectedPrice: data.expectedPrice || undefined,
-            realPrice: data.realPrice || undefined,
-            tags: data.tags || undefined,
-            photoIds: data.photoIds || undefined,
-            address: data.address || undefined,
-            latitude: data.latitude || undefined,
-            longitude: data.longitude || undefined,
-            avatarId: data.avatarId || undefined,
+            intro: data.intro,
+            expectedPrice: data.expectedPrice,
+            realPrice: data.realPrice,
+            tags: data.tags,
+            photoIds: data.photoIds,
+            address: data.address,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            avatarId: data.avatarId,
             isGuide: data.isGuide,
-            status: data.status || undefined
+            status: data.status
         });
 
         successResponse(res, result);
     } catch (error) {
         console.error('Admin create guide failed:', error);
         if (error instanceof AppError) {
-            errorResponse(res, error.code, error.message, error.statusCode);
+            errorResponse(res, error.code, error.message);
         } else {
             errorResponse(res, ErrorCodes.INTERNAL_ERROR);
         }
@@ -128,7 +148,7 @@ export async function updateGuide(req: Request, res: Response): Promise<void> {
     const validation = updateGuideSchema.safeParse(req.body);
         
     if (!validation.success) {
-        errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.message);
+        errorResponse(res, ErrorCodes.VALIDATION_ERROR, validation.error.issues[0].message);
         return;
     }
 
@@ -136,22 +156,7 @@ export async function updateGuide(req: Request, res: Response): Promise<void> {
 
     const updated = await AdminGuideService.updateGuideProfile(userId, {
       ...data,
-      // Ensure nulls are handled if Zod returns null
-      intro: data.intro || undefined,
-      tags: data.tags || undefined,
-      photoIds: data.photoIds || undefined,
-      address: data.address || undefined,
-      realName: data.realName || undefined,
-      stageName: data.stageName || undefined,
-      city: data.city || undefined,
-      idNumber: data.idNumber || undefined,
-      // Numbers
-      realPrice: data.realPrice || undefined,
-      expectedPrice: data.expectedPrice || undefined,
-      latitude: data.latitude || undefined,
-      longitude: data.longitude || undefined,
-      avatarId: data.avatarId || undefined,
-      status: data.status || undefined
+      // Explicit undefined handling if needed, though Zod partial handles optional fields
     });
 
     if (!updated) {
@@ -164,7 +169,7 @@ export async function updateGuide(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('Admin update guide failed:', error);
     if (error instanceof AppError) {
-        errorResponse(res, error.code, error.message, error.statusCode);
+        errorResponse(res, error.code, error.message);
     } else {
         errorResponse(res, ErrorCodes.INTERNAL_ERROR);
     }

@@ -6,9 +6,23 @@ import { alias } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { MAX_GUIDE_SELECTION } from '../../shared/constants.js';
-import { createCustomOrderSchema, updateUserRoleSchema } from '../schemas/admin.schema.js';
 import { nanoid } from 'nanoid';
 import { OrderStatus } from '../constants/index.js';
+
+const createCustomOrderSchema = z.object({
+  userPhone: z.string().regex(/^1[3-9]\d{9}$/, '用户手机号格式错误'),
+  guidePhone: z.string().regex(/^1[3-9]\d{9}$/, '地陪手机号格式错误'),
+  pricePerHour: z.number().int().positive('价格必须大于0'),
+  duration: z.number().int().positive('时长必须大于0'),
+  serviceStartTime: z.string().datetime({ message: '开始时间格式错误 (ISO)' }),
+  serviceAddress: z.string().min(1, '服务地址不能为空'),
+  content: z.string().min(1, '订单内容不能为空'),
+  requirements: z.string().optional(),
+});
+
+const updateUserRoleSchema = z.object({
+  role: z.enum(['user', 'cs']),
+});
 
 // ... existing imports ...
 

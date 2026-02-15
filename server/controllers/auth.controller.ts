@@ -16,7 +16,7 @@ import { VerificationService } from '../services/verification.service.js';
 
 const sendVerificationCodeSchema = z.object({
   phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
-  usage: z.enum(['login', 'reset_password'], { errorMap: () => ({ message: '无效的用途' }) }),
+  usage: z.enum(['login', 'reset_password']),
 });
 
 const registerSchema = z.object({
