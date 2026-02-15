@@ -28,7 +28,8 @@ export class SmsService {
       // TemplateParam: "{\"code\":\"##code##\"}"
       // 只要包含 code 且值为 ##code##，阿里云会自动生成验证码
       const templateParam = {
-         code: "##code##"
+         code: "##code##",
+         min: "5"
       };
 
       // 构造 SendSmsVerifyCodeRequest
