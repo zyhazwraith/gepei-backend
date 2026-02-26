@@ -8,16 +8,20 @@ import { getGuides, Guide } from "@/lib/api";
 import Price from "@/components/Price";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import CitySelector from "@/components/common/CitySelector";
 import EmptyState from "@/components/EmptyState";
+import HomeGuideCard from "@/components/home/HomeGuideCard";
 
 export default function Guides() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const query = new URLSearchParams(search);
+  
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
-  const [keyword, setKeyword] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
+  const [keyword, setKeyword] = useState(query.get("keyword") || "");
+  const [selectedCity, setSelectedCity] = useState(query.get("city") || "");
   const [showCitySelector, setShowCitySelector] = useState(false);
   const [userLat, setUserLat] = useState<number>();
   const [userLng, setUserLng] = useState<number>();
@@ -107,68 +111,9 @@ export default function Guides() {
             </Card>
           ))
         ) : guides.length > 0 ? (
-          guides.map((guide) => {
-            return (
-            <Card 
-              key={guide.userId} 
-              className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-card"
-              onClick={() => setLocation(`/guides/${guide.userId}`)}
-            >
-              <CardContent className="p-0 flex">
-                {/* 左侧头像/封面 */}
-                <div className="w-32 h-32 relative bg-secondary/20 shrink-0">
-                  <img
-                    src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0].url : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
-                    alt={guide.stageName || guide.nickName}
-                    className="w-full h-full object-cover"
-                    data-testid={`guide-avatar-${guide.userId}`}
-                  />
-                  {guide.distance !== undefined && (
-                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 pt-4">
-                       <p className="text-[10px] text-white flex items-center gap-1">
-                         <MapPin className="w-3 h-3" />
-                         {guide.distance < 1 ? `${Math.round(guide.distance * 1000)}m` : `${guide.distance}km`}
-                       </p>
-                     </div>
-                  )}
-                </div>
-
-                {/* 右侧信息 */}
-                <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                  <div>
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-bold text-base truncate pr-2 text-foreground" data-testid={`guide-name-${guide.userId}`}>
-                        {guide.stageName || guide.nickName}
-                      </h3>
-                      <div className="flex flex-col items-end">
-                        <span className="text-lg font-bold text-red-500 leading-none">
-                           <Price amount={guide.price || 0} />
-                        </span>
-                        <span className="text-[10px] text-muted-foreground mt-0.5">/小时</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-2">
-                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                         <MapPin className="w-3 h-3" />
-                         {guide.city}
-                       </span>
-                    </div>
-
-                    {/* 标签 */}
-                    <div className="flex flex-wrap gap-1">
-                      {guide.tags?.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            );
-          })
+          guides.map((guide) => (
+            <HomeGuideCard key={guide.userId} guide={guide} />
+          ))
         ) : (
           <EmptyState 
             icon={Search}

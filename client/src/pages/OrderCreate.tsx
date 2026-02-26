@@ -144,39 +144,39 @@ export default function OrderCreate() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-slate-50/50 pb-24">
       {/* Header */}
-      <div className="bg-white px-4 py-4 shadow-sm border-b sticky top-0 z-10">
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="icon" className="-ml-2 hover:bg-gray-100" onClick={() => window.history.back()}>
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
+      <div className="bg-white/80 backdrop-blur-sm px-4 py-4 shadow-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between mb-2">
+          <Button variant="ghost" size="icon" className="-ml-2 hover:bg-slate-100 rounded-full" onClick={() => window.history.back()}>
+            <ArrowLeft className="w-6 h-6 text-slate-700" />
           </Button>
-          <h1 className="text-lg font-bold text-gray-900">确认订单</h1>
+          <h1 className="text-lg font-bold text-slate-900">确认订单</h1>
           <div className="w-10"></div> {/* Spacer for center alignment */}
         </div>
         
         {/* Guide Card - Clean Style */}
         {guide && (
-          <div className="flex items-center gap-4 bg-white border border-gray-100 shadow-lg rounded-2xl p-4 mt-2">
+          <div className="flex items-center gap-4 bg-white border-none shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl p-4 mt-2">
              <img 
                 src={guide.avatarUrl || (guide.photos && guide.photos.length > 0 ? guide.photos[0] : `https://api.dicebear.com/7.x/avataaars/svg?seed=${guide.userId}`)}
-                className="w-16 h-16 rounded-full object-cover border border-gray-100 shadow-sm" 
+                className="w-14 h-14 rounded-full object-cover border border-slate-100" 
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-lg text-gray-900">{guide.stageName || guide.nickName}</h3>
-                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-none px-2 py-0.5 text-xs font-normal">
+                  <h3 className="font-bold text-lg text-slate-900">{guide.stageName || guide.nickName}</h3>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-none px-2 py-0.5 text-[10px] font-medium rounded-full">
                     <ShieldCheck className="w-3 h-3 mr-1" /> 已认证
                   </Badge>
                 </div>
-                <div className="flex items-center text-gray-500 text-sm mt-1">
-                  <MapPin className="w-3 h-3 mr-1 text-gray-400" />
+                <div className="flex items-center text-slate-500 text-xs mt-1 font-medium">
+                  <MapPin className="w-3 h-3 mr-1 text-slate-400" />
                   {guide.city}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-orange-600"><Price amount={unitPrice} /></div>
-                <div className="text-xs text-gray-400">/小时</div>
+                <div className="text-xl font-black text-rose-500"><Price amount={unitPrice} /></div>
+                <div className="text-[10px] text-slate-400">/小时</div>
               </div>
           </div>
         )}
@@ -184,16 +184,16 @@ export default function OrderCreate() {
 
       <div className="p-4 space-y-4">
         {/* Form Container */}
-        <div className="bg-white p-5 rounded-xl shadow-sm space-y-5 border border-gray-100">
+        <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] space-y-5 border-none">
           
           <div className="space-y-2">
-            <Label className="text-gray-600">服务时间</Label>
+            <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider">服务时间</Label>
             <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     type="date"
-                    className="pl-9 bg-gray-50 border-gray-200"
+                    className="pl-9 bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl h-11 transition-all"
                     min={new Date().toISOString().split("T")[0]}
                     value={formData.serviceDate}
                     onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
@@ -201,10 +201,10 @@ export default function OrderCreate() {
                 </div>
                 <div className="w-36">
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                       type="time"
-                      className="pl-9 bg-gray-50 border-gray-200"
+                      className="pl-9 bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl h-11 transition-all"
                       value={formData.serviceTime}
                       onChange={(e) => setFormData({ ...formData, serviceTime: e.target.value })}
                     />
@@ -215,7 +215,7 @@ export default function OrderCreate() {
 
           {/* Location Picker */}
           <div className="space-y-2">
-            <Label className="text-gray-600">集合地点</Label>
+            <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider">集合地点</Label>
             <LocationPicker 
               value={formData.serviceAddress}
               lat={formData.serviceLat || undefined}
@@ -231,12 +231,12 @@ export default function OrderCreate() {
 
           {/* 服务内容 (New Field) */}
           <div className="space-y-2">
-            <Label className="text-gray-600">服务内容</Label>
+            <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider">服务内容</Label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <FileText className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Textarea 
                 placeholder="例如：市内一日游、机场接送、商务翻译..."
-                className="pl-9 min-h-[80px] bg-gray-50 border-gray-200 resize-none"
+                className="pl-9 min-h-[80px] bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl resize-none transition-all"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               />
@@ -245,14 +245,14 @@ export default function OrderCreate() {
 
           {/* 服务时长 */}
           <div className="space-y-2">
-            <Label className="text-gray-600">服务时长 (小时)</Label>
+            <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider">服务时长 (小时)</Label>
             <div className="relative">
-              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 type="number"
                 min={1}
                 max={24}
-                className="pl-9 bg-gray-50 border-gray-200"
+                className="pl-9 bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl h-11 transition-all"
                 value={formData.serviceHours}
                 onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
               />
@@ -260,12 +260,12 @@ export default function OrderCreate() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-gray-600">备注 (可选)</Label>
+            <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider">备注 (可选)</Label>
             <div className="relative">
-              <Info className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Info className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Textarea
                 placeholder="其他特殊要求..."
-                className="pl-9 min-h-[80px] bg-gray-50 border-gray-200 resize-none"
+                className="pl-9 min-h-[80px] bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl resize-none transition-all"
                 value={formData.requirements}
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
               />
@@ -275,19 +275,19 @@ export default function OrderCreate() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center gap-4 z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] flex items-center gap-4 z-20 pb-8">
         <div className="flex-1">
           <div className="flex items-baseline gap-1">
-             <span className="text-xs text-gray-500">总计</span>
-             <Price amount={totalPrice} className="text-2xl font-bold text-orange-600" />
+             <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
+             <Price amount={totalPrice} className="text-2xl font-black text-rose-500" />
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-[10px] text-slate-400 mt-0.5 font-medium">
              <Price amount={unitPrice} /> x {formData.serviceHours}小时
           </div>
         </div>
         <Button 
           size="lg" 
-          className="flex-[2] bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg shadow-orange-200 rounded-full text-lg font-medium"
+          className="flex-[2] h-12 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white shadow-lg shadow-orange-200 text-base font-bold border-none"
           onClick={handleSubmit}
           disabled={submitting}
         >

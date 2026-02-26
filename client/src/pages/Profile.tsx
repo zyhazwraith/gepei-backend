@@ -79,28 +79,28 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* 顶部用户信息区域 */}
-      <div className="bg-primary pt-10 pb-32 px-4">
+      <div className="bg-gradient-to-br from-orange-400 to-rose-500 pt-10 pb-32 px-4 shadow-sm">
         <div className="flex flex-col items-center">
-          <Avatar className="w-20 h-20 border-2 border-primary-foreground/20 mb-3">
+          <Avatar className="w-20 h-20 border-2 border-white/30 mb-3">
             <AvatarImage src={user?.avatarUrl || ""} />
-            <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-2xl">
+            <AvatarFallback className="bg-white/20 text-white text-2xl backdrop-blur-sm">
               {user?.nickName?.[0] || "U"}
             </AvatarFallback>
           </Avatar>
           
-          <h2 className="text-primary-foreground text-xl font-semibold mb-1">
+          <h2 className="text-white text-xl font-bold mb-1">
             {user?.nickName || "用户"}
           </h2>
-          <p className="text-primary-foreground/80 text-sm mb-4">
+          <p className="text-white/80 text-sm mb-4">
             {formatPhone(user?.phone || "")}
           </p>
 
           {/* 认证为地陪按钮 */}
           <button
             onClick={handleBecomeGuide}
-            className="border-2 border-primary-foreground/80 text-primary-foreground px-8 py-2 rounded-full hover:bg-primary-foreground/10 transition-colors font-medium"
+            className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-2 rounded-full hover:bg-white/30 transition-colors font-medium shadow-sm"
           >
             {user?.isGuide ? "管理地陪资料" : "认证为地陪"}
           </button>
@@ -110,7 +110,7 @@ export default function Profile() {
       {/* 菜单列表 */}
       <div className="px-4 -mt-4 relative z-20 space-y-4">
         {/* 主要功能卡片 */}
-        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+        <Card className="border-0 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
           <CardContent className="p-0">
              <div className="divide-y divide-border/50">
                 <button
@@ -172,7 +172,7 @@ export default function Profile() {
         </Card>
 
         {/* 常用功能 */}
-        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+        <Card className="border-0 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
            <CardContent className="p-0">
              <div className="divide-y divide-border/50">
                <button
@@ -205,7 +205,7 @@ export default function Profile() {
         </Card>
 
         {/* 其他服务 */}
-        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+        <Card className="border-0 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
            <CardContent className="p-0">
              <div className="divide-y divide-border/50">
                <button
@@ -238,7 +238,7 @@ export default function Profile() {
         </Card>
 
         {/* 系统功能 */}
-        <Card className="border-0 shadow-lg shadow-black/5 overflow-hidden">
+        <Card className="border-0 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
            <CardContent className="p-0">
              <div className="divide-y divide-border/50">
                {isAdmin && (

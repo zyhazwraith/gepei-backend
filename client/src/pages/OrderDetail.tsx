@@ -181,14 +181,14 @@ export default function OrderDetail() {
   const customReq = order.customRequirements;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-64">
+    <div className="min-h-screen bg-slate-50/50 pb-64">
       {/* 顶部导航 */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-3 border-b flex items-center">
-        <Button variant="ghost" size="icon" className="-ml-2 mr-2" onClick={() => window.history.back()}>
+      <div className="bg-white/80 backdrop-blur-sm sticky top-0 z-10 px-4 py-3 flex items-center bg-gradient-to-b from-rose-50/50 to-white/0">
+        <Button variant="ghost" size="icon" className="-ml-2 mr-2 hover:bg-slate-100 rounded-full" onClick={() => window.history.back()}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-bold flex-1">订单详情</h1>
-        <Button variant="ghost" size="icon" onClick={() => setShowCSDialog(true)}>
+        <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-full" onClick={() => setShowCSDialog(true)}>
           <Headphones className="w-5 h-5" />
         </Button>
       </div>
@@ -207,9 +207,9 @@ export default function OrderDetail() {
         )}
 
         {/* 基本信息 */}
-        <Card>
+        <Card className="border-none shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium flex justify-between items-center">
+            <CardTitle className="text-base font-bold flex justify-between items-center">
               订单信息
               {getStatusBadge(order.status)}
             </CardTitle>
@@ -217,35 +217,35 @@ export default function OrderDetail() {
           <CardContent className="text-sm space-y-4">
             
             <div className="flex items-start gap-3">
-              <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
+              <Calendar className="w-4 h-4 text-slate-400 mt-0.5" />
               <div>
-                <span className="text-gray-500 block text-xs">服务时间</span>
-                <span>{new Date(order.serviceStartTime || order.serviceDate).toLocaleString()}</span>
+                <span className="text-slate-500 block text-xs mb-0.5">服务时间</span>
+                <span className="font-medium">{new Date(order.serviceStartTime || order.serviceDate).toLocaleString()}</span>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
-              <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
+              <Clock className="w-4 h-4 text-slate-400 mt-0.5" />
               <div>
-                <span className="text-gray-500 block text-xs">预约时长</span>
-                <span>{order.duration} 小时</span>
+                <span className="text-slate-500 block text-xs mb-0.5">预约时长</span>
+                <span className="font-medium">{order.duration} 小时</span>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+              <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
               <div>
-                <span className="text-gray-500 block text-xs">约定地点</span>
-                <span>{order.serviceAddress}</span>
+                <span className="text-slate-500 block text-xs mb-0.5">约定地点</span>
+                <span className="font-medium">{order.serviceAddress}</span>
               </div>
             </div>
 
             {/* 服务内容展示 */}
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 text-gray-400 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-slate-400 mt-0.5" />
               <div className="flex-1">
-                <span className="text-gray-500 block text-xs">服务内容</span>
-                <p className="text-gray-900 whitespace-pre-wrap">
+                <span className="text-slate-500 block text-xs mb-0.5">服务内容</span>
+                <p className="text-slate-900 whitespace-pre-wrap font-medium">
                   {order.content || (isCustom ? "私人定制行程服务" : "标准地陪陪游服务")}
                 </p>
               </div>
@@ -254,22 +254,22 @@ export default function OrderDetail() {
             {/* 备注展示 */}
             {order.requirements && (
                 <div className="flex items-start gap-3">
-                <Info className="w-4 h-4 text-gray-400 mt-0.5" />
+                <Info className="w-4 h-4 text-slate-400 mt-0.5" />
                 <div className="flex-1">
-                    <span className="text-gray-500 block text-xs">备注</span>
-                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-2 rounded whitespace-pre-wrap mt-1">
+                    <span className="text-slate-500 block text-xs mb-0.5">备注</span>
+                    <p className="text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl whitespace-pre-wrap mt-1 text-xs">
                     {order.requirements}
                     </p>
                 </div>
                 </div>
             )}
 
-            <div className="pt-3 border-t mt-2">
-                <div className="flex justify-between text-xs text-gray-400">
+            <div className="pt-3 border-t border-slate-100 mt-2">
+                <div className="flex justify-between text-xs text-slate-400">
                     <span>订单编号</span>
                     <span className="font-mono">{order.orderNumber}</span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <div className="flex justify-between text-xs text-slate-400 mt-1">
                     <span>下单时间</span>
                     <span>{new Date(order.createdAt).toLocaleString()}</span>
                 </div>
@@ -279,30 +279,30 @@ export default function OrderDetail() {
 
         {/* 需求详情 */}
         {isCustom && customReq && (
-          <Card>
+          <Card className="border-none shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">定制需求</CardTitle>
+              <CardTitle className="text-base font-bold">定制需求</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-3">
               <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
                 <div>
-                  <span className="text-gray-500 block text-xs">目的地</span>
+                  <span className="text-slate-500 block text-xs">目的地</span>
                   <span>{customReq.destination}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
+                <Calendar className="w-4 h-4 text-slate-400 mt-0.5" />
                 <div>
-                  <span className="text-gray-500 block text-xs">日期</span>
+                  <span className="text-slate-500 block text-xs">日期</span>
                   <span>{customReq.startDate}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-gray-400 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-slate-400 mt-0.5" />
                 <div>
-                  <span className="text-gray-500 block text-xs">需求描述</span>
-                  <p className="mt-1 text-gray-700 leading-relaxed bg-gray-50 p-2 rounded">
+                  <span className="text-slate-500 block text-xs">需求描述</span>
+                  <p className="mt-1 text-slate-700 leading-relaxed bg-slate-50 p-2 rounded-xl">
                     {customReq.specialRequirements}
                   </p>
                 </div>
@@ -312,19 +312,19 @@ export default function OrderDetail() {
         )}
 
         {/* 费用明细 */}
-        <Card>
+        <Card className="border-none shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">费用明细</CardTitle>
+            <CardTitle className="text-base font-bold">费用明细</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-500">订单原价</span>
+              <span className="text-slate-500">订单原价</span>
               <Price amount={order.amount} />
             </div>
             
             {/* 地陪视角显示平台服务费 */}
             {isGuideView && order.guideIncome && (
-              <div className="flex justify-between text-gray-400">
+              <div className="flex justify-between text-slate-400">
                 <span>平台服务费</span>
                 <span>- <Price amount={Number(order.totalAmount || order.amount) - Number(order.guideIncome)} /></span>
               </div>
@@ -332,12 +332,12 @@ export default function OrderDetail() {
 
             {/* Overtime Records List */}
             {order.overtimeRecords && order.overtimeRecords.length > 0 && (
-                <div className="pt-2 border-t space-y-2">
+                <div className="pt-2 border-t border-slate-100 space-y-2">
                     {order.overtimeRecords.map(record => (
                         <div key={record.id} className="flex justify-between items-center text-xs">
                             <div className="flex flex-col">
-                                <span className="font-medium text-gray-700">加时 {record.duration}小时</span>
-                                <span className="text-gray-400 scale-90 origin-left">
+                                <span className="font-medium text-slate-700">加时 {record.duration}小时</span>
+                                <span className="text-slate-400 scale-90 origin-left">
                                     {new Date(record.createdAt).toLocaleString([], {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}
                                 </span>
                             </div>
@@ -349,33 +349,33 @@ export default function OrderDetail() {
             
             {/* Refund Info - Removed redundant red row */}
 
-            <div className="flex justify-between items-center pt-2 border-t">
-              <span className="font-medium">{isGuideView ? '本单收入' : '实付总额'}</span>
+            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+              <span className="font-bold text-slate-900">{isGuideView ? '本单收入' : '实付总额'}</span>
               {isGuideView ? (
-                <Price amount={order.guideIncome} className="text-lg font-bold text-red-600" />
+                <Price amount={order.guideIncome} className="text-lg font-black text-rose-500" />
               ) : (
                 <div className="text-right">
                   <Price 
                     amount={order.totalAmount || order.amount} 
-                    className={`text-lg font-bold ${order.status === OrderStatus.REFUNDED ? 'text-gray-400 line-through' : 'text-gray-900'}`} 
+                    className={`text-lg font-black ${order.status === OrderStatus.REFUNDED ? 'text-slate-400 line-through' : 'text-slate-900'}`} 
                   />
                 </div>
               )}
             </div>
 
             {order.status === OrderStatus.REFUNDED && order.refundAmount && (
-              <div className="pt-4 mt-2 border-t flex flex-col items-center">
-                <span className="text-sm text-gray-500 mb-1">已退款金额</span>
+              <div className="pt-4 mt-2 border-t border-slate-100 flex flex-col items-center">
+                <span className="text-sm text-slate-500 mb-1">已退款金额</span>
                 <Price amount={order.refundAmount} className="text-xl font-bold text-green-600" />
-                <span className="text-xs text-gray-400 mt-1">资金预计1-3个工作日到账</span>
+                <span className="text-xs text-slate-400 mt-1">资金预计1-3个工作日到账</span>
               </div>
             )}
 
             {canRefund && (
-              <div className="pt-4 mt-2 border-t flex justify-center">
+              <div className="pt-4 mt-2 border-t border-slate-100 flex justify-center">
                 <Button 
                   variant="ghost" 
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full"
+                  className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 w-full rounded-full"
                   onClick={() => setShowRefundDialog(true)}
                 >
                   申请退款
@@ -386,7 +386,7 @@ export default function OrderDetail() {
         </Card>
 
       {/* 底部操作栏 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t safe-area-bottom z-50">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 safe-area-bottom z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
         
         {/* 地陪视角操作栏 */}
         {isGuideView ? (

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Smartphone, Lock, MessageSquare } from "lucide-react";
+import { Smartphone, Lock, MessageSquare, X } from "lucide-react";
 import { login, sendVerificationCode } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -103,27 +103,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* 顶部橙色区域 */}
-      <div className="bg-primary text-primary-foreground relative" style={{ height: "280px" }}>
-        <button
-          onClick={() => window.history.back()}
-          className="absolute top-4 left-4 p-2 hover:bg-primary-foreground/10 rounded-lg transition-colors"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        
-        <div className="flex flex-col items-center justify-center h-full">
-          <h1 className="text-5xl font-bold mb-4">陪你</h1>
-          <p className="text-base">高品质地陪伴游服务</p>
-        </div>
+    <div className="min-h-screen bg-background relative">
+      {/* 返回按钮 */}
+      <button
+        onClick={() => setLocation("/")}
+        className="absolute top-4 left-4 z-20 p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors text-white"
+      >
+        <X className="w-6 h-6" />
+      </button>
+
+      {/* 顶部 Logo 区域 */}
+      <div className="bg-gradient-to-br from-orange-400 to-rose-500 pt-16 pb-24 px-4 text-center">
+        <h1 className="text-3xl font-black text-white tracking-tight mb-2">牵寻伴</h1>
+        <p className="text-white/80 text-sm">高品质地陪伴游服务</p>
       </div>
 
-      {/* 表单卡片 */}
-      <div className="container max-w-md mx-auto px-4" style={{ marginTop: "-40px" }}>
-        <div className="bg-background rounded-2xl shadow-lg p-8">
+      <div className="px-4 -mt-16">
+        <div className="bg-white rounded-2xl shadow-[0_4px_20px_-5px_rgba(0,0,0,0.1)] p-8">
           
           <Tabs value={loginMode} onValueChange={(v) => setLoginMode(v as "password" | "code")} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -235,7 +231,7 @@ export default function Login() {
               {/* 登录按钮 */}
               <Button
                 type="submit"
-                className="w-full h-12 text-base mt-2"
+                className="w-full h-12 text-base mt-2 rounded-full font-bold shadow-lg shadow-orange-200"
                 disabled={isLoading}
               >
                 {isLoading ? "登录中..." : "登录"}

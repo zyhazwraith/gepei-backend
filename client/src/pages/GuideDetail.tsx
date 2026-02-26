@@ -139,32 +139,32 @@ export default function GuideDetail() {
   return (
     <div className="min-h-screen bg-white pb-24 relative">
       {/* 顶部导航 */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
         <button 
           onClick={() => window.history.back()}
-          className="bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/30 transition-colors"
+          className="pointer-events-auto bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/30 transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <button className="bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/30 transition-colors">
+        <button className="pointer-events-auto bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/30 transition-colors">
           <Share2 className="w-5 h-5" />
         </button>
       </div>
 
       {/* 照片轮播 */}
-      <div className="relative h-96 bg-gray-100">
+      <div className="relative h-[45vh] bg-gray-100">
         {guide.photos && guide.photos.length > 0 ? (
           <>
             <Carousel setApi={setApi} className="w-full h-full">
               <CarouselContent>
                 {guide.photos.map((photo, index) => (
-                  <CarouselItem key={index} className="h-96">
+                  <CarouselItem key={index} className="h-[45vh]">
                     <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                   </CarouselItem>
                 ))}
               </CarouselContent>
             </Carousel>
-            <div className="absolute bottom-10 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium z-10 pointer-events-none">
+            <div className="absolute bottom-8 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium z-10 pointer-events-none">
               {current} / {count}
             </div>
           </>
@@ -178,91 +178,97 @@ export default function GuideDetail() {
       </div>
 
       {/* 内容区域 */}
-      <div className="-mt-6 relative bg-white rounded-t-3xl p-6 shadow-lg">
+      <div className="-mt-6 relative bg-white rounded-t-3xl p-6 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] min-h-[60vh]">
         {/* 标题信息 */}
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-testid="guide-detail-name">
+            <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2" data-testid="guide-detail-name">
               {guide.stageName || guide.nickName}
-              <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
+              <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200 rounded-full px-2 py-0.5 h-auto">
                 <ShieldCheck className="w-3 h-3 mr-1" /> 已认证
               </Badge>
             </h1>
-            <div className="flex items-center text-gray-500 mt-1 text-sm">
-              <MapPin className="w-4 h-4 mr-1" />
+            <div className="flex items-center text-slate-500 mt-2 text-sm font-medium">
+              <MapPin className="w-4 h-4 mr-1 text-orange-500" />
               <span data-testid="guide-detail-city">{guide.city}</span>
               {displayDistance !== undefined && (
                 <>
-                  <span className="mx-2">•</span>
+                  <span className="mx-2 text-slate-300">|</span>
                   <span className="text-orange-500">距您 {formatDistance(displayDistance)}</span>
                 </>
               )}
-              <span className="mx-2">•</span>
-              <Star className="w-4 h-4 text-gray-300 mr-1" />
-              新入驻
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-orange-500" data-testid="guide-detail-price">
-              {guide.price ? <Price amount={guide.price} /> : "面议"}
-              <span className="text-sm text-gray-400 font-normal">/小时</span>
+              <span className="mx-2 text-slate-300">|</span>
+              <Star className="w-4 h-4 text-yellow-400 mr-1 fill-yellow-400" />
+              <span className="text-slate-900">4.9</span>
             </div>
           </div>
         </div>
 
-        {/* 标签 */}
-        {guide.tags && guide.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {guide.tags.map(tag => (
-              <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* 价格与标签 */}
+        <div className="flex items-center justify-between mb-6">
+            <div className="text-3xl font-black text-rose-500 font-sans tracking-tight" data-testid="guide-detail-price">
+              {guide.price ? <Price amount={guide.price} /> : "面议"}
+              <span className="text-sm text-slate-400 font-normal ml-1">/小时</span>
+            </div>
+            
+            {/* 标签 */}
+            {guide.tags && guide.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-end">
+                {guide.tags.slice(0, 2).map(tag => (
+                  <span key={tag} className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold border border-orange-100">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+        </div>
 
         {/* 简介 */}
         <div className="mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">关于我</h2>
-          <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-            {guide.intro || "这个地陪很懒，还没有写简介~"}
+          <h2 className="text-lg font-bold text-slate-900 mb-3">关于我</h2>
+          <p className="text-slate-600 leading-relaxed whitespace-pre-line text-sm">
+            {guide.intro || "这个地陪很懒，还没有写简介~ 这里的风景我最熟悉，带你玩遍大街小巷！"}
           </p>
         </div>
 
         {/* 服务保障 - 静态展示 */}
         <div className="mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">服务保障</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="p-3 bg-blue-50 border-blue-100 flex items-center gap-3">
-              <ShieldCheck className="w-8 h-8 text-blue-500" />
-              <div>
-                <div className="font-medium text-blue-900 text-sm">平台认证</div>
-                <div className="text-xs text-blue-700">实名身份核验</div>
+          <h2 className="text-lg font-bold text-slate-900 mb-3">服务保障</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                 <ShieldCheck className="w-5 h-5 text-blue-600" />
               </div>
-            </Card>
-            <Card className="p-3 bg-green-50 border-green-100 flex items-center gap-3">
-              <ShieldCheck className="w-8 h-8 text-green-500" />
               <div>
-                <div className="font-medium text-green-900 text-sm">资金托管</div>
-                <div className="text-xs text-green-700">确认服务后打款</div>
+                <div className="font-bold text-slate-900 text-sm">平台认证</div>
+                <div className="text-[10px] text-slate-500">实名身份核验</div>
               </div>
-            </Card>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                 <ShieldCheck className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <div className="font-bold text-slate-900 text-sm">资金托管</div>
+                <div className="text-[10px] text-slate-500">确认服务后打款</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 底部悬浮按钮 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg flex items-center gap-4 z-20">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] flex items-center gap-4 z-20 pb-8">
         <div className="flex-1">
-          <p className="text-xs text-gray-500">参考总价 (8小时)</p>
-          <p className="text-xl font-bold text-orange-500">
+          <p className="text-[10px] text-slate-400 mb-0.5">参考总价 (8小时)</p>
+          <p className="text-xl font-black text-rose-500 leading-none">
             {guide.price ? <Price amount={guide.price * 8} /> : "¥0"}
-            <span className="text-xs text-gray-400 font-normal">/天</span>
+            <span className="text-xs text-slate-400 font-normal ml-1">/天</span>
           </p>
         </div>
         <Button 
           size="lg" 
-          className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg shadow-orange-200"
+          className="flex-[2] h-12 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold shadow-lg shadow-orange-200 border-none text-base"
           onClick={() => setLocation(`/orders/create?guideId=${guide.userId}`)}
         >
           立即预订

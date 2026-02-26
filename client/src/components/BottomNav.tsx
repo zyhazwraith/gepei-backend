@@ -1,4 +1,4 @@
-import { Home, Users, MessageCircle, Sparkles, User } from "lucide-react";
+import { Home, Users, FileText, Star, Smile } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 interface NavItem {
@@ -10,9 +10,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: "首页", path: "/" },
   { icon: Users, label: "地陪", path: "/guides" },
-  { icon: Sparkles, label: "定制", path: "/custom" },
-  { icon: MessageCircle, label: "订单", path: "/orders" }, // 暂时替换消息入口
-  { icon: User, label: "我的", path: "/profile" },
+  { icon: Star, label: "定制", path: "/custom" },
+  { icon: FileText, label: "订单", path: "/orders" },
+  { icon: Smile, label: "我的", path: "/profile" },
 ];
 
 export default function BottomNav() {
@@ -30,12 +30,12 @@ export default function BottomNav() {
               <button
                 className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
                   isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-orange-500"
+                    : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                <Icon className="w-6 h-6 mb-1" />
-                <span className="text-xs">{item.label}</span>
+                <Icon className={`w-6 h-6 mb-1 ${isActive ? "fill-current" : ""}`} />
+                <span className="text-[10px] font-medium">{item.label}</span>
               </button>
             </Link>
           );

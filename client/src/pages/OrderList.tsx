@@ -85,6 +85,13 @@ export default function OrderList() {
   }, [inView, loadingMore, hasMore, loading]);
 
   const fetchOrders = async (pageNum: number, isLoadMore = false) => {
+    // 如果没有用户，直接返回，不发起请求
+    if (!user) {
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+    }
+
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
@@ -149,7 +156,7 @@ export default function OrderList() {
     return (
       <Card 
         key={order.id} 
-        className="mb-4 border-gray-100 shadow-sm active:scale-[0.99] transition-transform"
+        className="mb-4 border-none shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] rounded-2xl active:scale-[0.99] transition-transform"
         onClick={() => setLocation(`/orders/${order.id}`)}
       >
         <CardHeader className="p-4 pb-1">
@@ -157,7 +164,7 @@ export default function OrderList() {
             <div className="flex flex-col gap-1">
                 <span className="text-xs text-gray-400 font-mono">{order.orderNumber}</span>
             </div>
-            <Badge variant="outline" className={`font-normal ${statusInfo.color} flex items-center gap-1`}>
+            <Badge variant="outline" className={`font-normal rounded-full ${statusInfo.color} flex items-center gap-1`}>
               <StatusIcon className="w-3 h-3" />
               {statusInfo.label}
             </Badge>
@@ -207,7 +214,7 @@ export default function OrderList() {
   const isGuide = user.isGuide; // Check if user is guide
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* 顶部标题 & 角色切换 */}
       <div className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/40 flex flex-col items-center justify-center">
         <div className="w-full px-4 py-3 flex items-center justify-center relative">
@@ -241,15 +248,15 @@ export default function OrderList() {
 
       {/* 状态筛选 Tabs - 可横向滚动 */}
       <div className={`sticky ${isGuide ? 'top-[105px]' : 'top-[53px]'} z-10 bg-background px-4 pt-3 pb-2 transition-all`}>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide bg-slate-50/50 p-1 rounded-xl">
           {(viewMode === 'customer' ? CUSTOMER_TABS : GUIDE_TABS).map((tab) => (
              <button
                key={tab.id}
                onClick={() => setActiveTab(tab.id)}
-               className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors border ${
+               className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
                  activeTab === tab.id
-                   ? 'bg-primary text-primary-foreground border-primary'
-                   : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+                   ? 'bg-white text-slate-900 shadow-sm font-bold'
+                   : 'text-slate-500 hover:text-slate-700'
                }`}
              >
                {tab.label}
