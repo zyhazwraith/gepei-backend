@@ -98,7 +98,7 @@ export default function Register() {
       {/* 顶部橙色区域 */}
       <div className="bg-gradient-to-br from-orange-400 to-rose-500 pt-16 pb-24 px-4 text-center">
         <h1 className="text-xl font-bold mb-3 text-white">注册</h1>
-        <h2 className="text-2xl font-bold mb-2 text-white">欢迎加入陪你</h2>
+        <h2 className="text-2xl font-bold mb-2 text-white">欢迎加入牵寻伴</h2>
         <p className="text-sm text-white/90">填写信息完成注册</p>
       </div>
 

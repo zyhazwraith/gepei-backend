@@ -67,8 +67,8 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
     <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800 text-slate-300">
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <span className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center text-sm">G</span>
-          Gepei Admin
+          <span className="bg-orange-500 w-8 h-8 rounded-lg flex items-center justify-center text-sm">牵</span>
+          牵寻伴 管理系统
         </h1>
       </div>
       <nav className="flex-1 p-4 space-y-1">
@@ -124,7 +124,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">Gepei Admin</h1>
+          <h1 className="text-lg font-bold text-white">牵寻伴 管理系统</h1>
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-slate-300">

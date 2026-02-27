@@ -60,7 +60,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-slate-800 bg-slate-950 text-slate-100">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-white">Gepei Admin</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center text-white">牵寻伴 管理系统</CardTitle>
           <CardDescription className="text-center text-slate-400">
             后台管理系统登录
           </CardDescription>

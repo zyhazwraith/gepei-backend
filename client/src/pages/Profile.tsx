@@ -271,8 +271,10 @@ export default function Profile() {
            </CardContent>
         </Card>
         
-        <div className="text-center pt-4">
-          <p className="text-[10px] text-muted-foreground/40">Gepei v2.0.0</p>
+        {/* 底部信息 */}
+        <div className="text-center py-6 text-slate-400 text-xs">
+          <p className="mb-1">牵寻伴 v2.0.0</p>
+          <p>让旅行更温暖</p>
         </div>
       </div>
 
