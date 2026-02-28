@@ -25,7 +25,8 @@
     "test:e2e:booking": "tsx tests/integration/test-booking-flow.ts",
     "test:e2e:payment": "tsx tests/integration/test-payment-flow.ts",
     "test:e2e:lbs": "tsx tests/integration/test-lbs-flow.ts",
-    "test:e2e:ui": "playwright test"
+    "test:e2e:ui": "playwright test",
+    "test:idempotency": "tsx scripts/test-idempotency-cas.ts"
   },
   "keywords": [
     "gepei",
@@ -37,6 +38,9 @@
   "author": "Gepei Team",
   "license": "MIT",
   "dependencies": {
+    "@alicloud/dypnsapi20170525": "^2.0.0",
+    "@alicloud/openapi-client": "^0.4.15",
+    "@alicloud/tea-util": "^1.4.11",
     "@aws-sdk/client-s3": "^3.693.0",
     "@aws-sdk/s3-request-presigner": "^3.693.0",
     "@hookform/resolvers": "^5.2.2",

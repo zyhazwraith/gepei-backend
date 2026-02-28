@@ -3,11 +3,11 @@ import { API_URL, logPass, logFail, registerUser, loginAdmin } from '../utils/he
 
 async function runTests() {
   console.log('🚀 Starting Guide Assignment Integration Tests...\n');
-  
+  console.log('ℹ️ V2 business decision: guide assignment/select-guide flow is removed.');
+  console.log('ℹ️ This script now verifies that deprecated endpoints are unavailable.\n');
+
   let adminToken = '';
   let userToken = '';
-  let guideIds: number[] = [];
-  let customOrderId = 0;
 
   try {
     // 1. Setup
@@ -18,62 +18,30 @@ async function runTests() {
     userToken = userReg.token;
     logPass('User Registered');
 
-    // Get available guides
-    const guidesRes = await axios.get(`${API_URL}/guides`);
-    if (guidesRes.data.data.list.length < 2) {
-      throw new Error('Need at least 2 guides to test multi-assignment');
-    }
-    guideIds = guidesRes.data.data.list.slice(0, 10).map((g: any) => g.guideId);
-    logPass(`Found ${guideIds.length} guides`);
-
-    // 2. Create Custom Order
-    const orderRes = await axios.post(`${API_URL}/orders`, {
-      type: 'custom',
-      serviceDate: '2026-12-01',
-      city: 'Beijing',
-      content: 'Multi-guide assignment test',
-      budget: 2000,
-      requirements: 'Experienced'
-    }, { headers: { Authorization: `Bearer ${userToken}` } });
-    
-    customOrderId = orderRes.data.data.orderId;
-    logPass(`Custom Order Created. ID: ${customOrderId}`);
-
-    // 3. Test: Assign Multiple Guides
-    const assignIds = guideIds.slice(0, 2);
-    const assignRes = await axios.post(`${API_URL}/admin/orders/${customOrderId}/assign`, {
-      guideIds: assignIds
-    }, { headers: { Authorization: `Bearer ${adminToken}` } });
-
-    if (assignRes.data.code === 0) {
-      logPass('Multi-assignment successful');
+    // 2. Verify deprecated admin assign endpoint is unavailable
+    try {
+      await axios.post(`${API_URL}/admin/orders/1/assign`, { guideIds: [1] }, { headers: { Authorization: `Bearer ${adminToken}` } });
+      throw new Error('Expected assign endpoint to be unavailable, but request succeeded');
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404) {
+        logPass('Deprecated admin assign endpoint is unavailable (404)');
+      } else {
+        throw new Error(`Expected 404 for assign endpoint, got ${status ?? 'unknown error'}`);
+      }
     }
 
-    // 4. Verify status updated to waiting_for_user
-    const checkRes = await axios.get(`${API_URL}/orders/${customOrderId}`, {
-        headers: { Authorization: `Bearer ${userToken}` }
-    });
-    if (checkRes.data.data.status === 'waiting_for_user') {
-        logPass('Order status updated to waiting_for_user');
-    } else {
-        throw new Error(`Order status mismatch. Expected waiting_for_user, got ${checkRes.data.data.status}`);
-    }
-
-    // 5. Test: User Select Guide
-    const selectRes = await axios.post(`${API_URL}/orders/${customOrderId}/select-guide`, {
-        guideId: guideIds[0]
-    }, { headers: { Authorization: `Bearer ${userToken}` } });
-
-    if (selectRes.data.code === 0) {
-        logPass('User selection successful');
-    }
-
-    // Verify status updated to in_progress
-    const finalCheck = await axios.get(`${API_URL}/orders/${customOrderId}`, {
-        headers: { Authorization: `Bearer ${userToken}` }
-    });
-    if (finalCheck.data.data.status === 'in_progress') {
-         logPass('Order status updated to in_progress');
+    // 3. Verify deprecated user select-guide endpoint is unavailable
+    try {
+      await axios.post(`${API_URL}/orders/1/select-guide`, { guideId: 1 }, { headers: { Authorization: `Bearer ${userToken}` } });
+      throw new Error('Expected select-guide endpoint to be unavailable, but request succeeded');
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404) {
+        logPass('Deprecated user select-guide endpoint is unavailable (404)');
+      } else {
+        throw new Error(`Expected 404 for select-guide endpoint, got ${status ?? 'unknown error'}`);
+      }
     }
 
   } catch (e: any) {
@@ -81,7 +49,7 @@ async function runTests() {
     process.exit(1);
   }
 
-  console.log('\n✨ Guide Assignment Tests Completed.');
+  console.log('\n✨ Deprecated Guide Assignment Endpoint Checks Completed.');
 }
 
 runTests();

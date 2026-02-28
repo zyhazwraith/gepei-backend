@@ -40,11 +40,6 @@ const payOrderSchema = z.object({
   paymentMethod: z.enum(['wechat']),
 });
 
-// 选择地陪 Schema
-const selectGuideSchema = z.object({
-  guideId: z.number().int().positive(),
-});
-
 // 加时申请 Schema
 const createOvertimeSchema = z.object({
   duration: z.number().int().min(1).max(24),
@@ -70,57 +65,8 @@ export async function createOrder(req: Request, res: Response, next: NextFunctio
     }
 
     if (isCustom) {
-      // === 定制订单逻辑 ===
-      const validated = createCustomOrderSchema.parse(req.body);
-
-      // 事务处理
-      const result = await db.transaction(async (tx) => {
-        const startTime = new Date(validated.serviceStartTime);
-        const endTime = new Date(startTime.getTime() + validated.duration * 60 * 60 * 1000);
-
-        // Create Custom Order
-        // Logic: Amount = Price * Duration
-        const pricePerUnit = validated.price; // Unit: Cents
-        const amount = pricePerUnit * validated.duration; // Total Amount in Cents
-
-        // 创建订单主记录
-        const [order] = await tx.insert(orders).values({
-          orderNumber: `ORD${Date.now()}${nanoid(6)}`.toUpperCase(),
-          userId,
-          type: 'custom', // V2: orderType -> type
-          status: 'pending', // 初始状态为待支付
-          serviceStartTime: startTime, // Use new field
-          serviceEndTime: endTime, // Initialize serviceEndTime
-          serviceAddress: validated.serviceAddress,
-          serviceLat: validated.serviceLat.toString(),
-          serviceLng: validated.serviceLng.toString(),
-          // serviceHours: 0, // Removed
-          duration: validated.duration, // Use validated duration
-          totalDuration: validated.duration, // Initialize totalDuration
-          amount: amount, 
-          totalAmount: amount, // Initial Total = Base Amount
-          pricePerHour: pricePerUnit, // Persist Unit Price for Overtime calculation
-          guideIncome: Math.round(amount * GUIDE_INCOME_RATIO), // Initial Income
-          guideId: req.body.guideId || 0, // V2 Temporary: Must have guideId per schema, but custom flow might not have it yet.
-          content: validated.content, // Directly store content
-          requirements: validated.requirements, // Additional remarks
-          createdAt: new Date(),
-        }).$returningId();
-
-        // Removed customRequirements insert
-
-        return order;
-      });
-
-      res.status(201).json({
-        code: 0,
-        message: '订单创建成功',
-        data: {
-          orderId: result.id,
-          amount: (validated.price * validated.duration) / 100, // Response in Yuan for frontend compat
-        },
-      });
-
+      // V2: Custom orders are created by admin/cs only.
+      throw new ValidationError('定制订单仅支持后台创建');
     } else {
       // === 普通订单逻辑 ===
       const validated = createNormalOrderSchema.parse(req.body);
@@ -208,10 +154,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
     const [order] = await db.select().from(orders).where(
       and(
         eq(orders.id, orderId),
-        or(
-          eq(orders.userId, userId),
-          eq(orders.guideId, userId)
-        )
+        eq(orders.userId, userId)
       )
     );
 
@@ -219,13 +162,25 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       throw new NotFoundError('订单不存在');
     }
 
-    if (order.status !== 'pending') {
-      throw new ValidationError('订单状态不正确，无法支付');
-    }
-
     // 3. 模拟支付成功
     await db.transaction(async (tx) => {
-      // 3.1 创建支付流水
+      // 3.1 CAS: pending -> waiting_service
+      const [updateResult] = await tx.update(orders)
+        .set({ 
+          status: 'waiting_service', // 支付后变为 waiting_service (待服务)
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(orders.id, orderId),
+          eq(orders.status, 'pending')
+        ));
+
+      if (updateResult.affectedRows === 0) {
+        throw new ValidationError('订单已支付或状态已变更');
+      }
+
+      // 3.2 创建支付流水（仅在状态迁移成功后记录）
       await tx.insert(payments).values({
         relatedType: 'order',
         relatedId: orderId,
@@ -235,14 +190,6 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
         status: 'success',
         paidAt: new Date(),
       });
-
-      // 3.2 更新订单状态
-      await tx.update(orders)
-        .set({ 
-          status: 'waiting_service', // 支付后变为 waiting_service (待服务)
-          paidAt: new Date(),
-        })
-        .where(eq(orders.id, orderId));
     });
 
     res.json({
@@ -284,6 +231,18 @@ export async function refundOrder(req: Request, res: Response, next: NextFunctio
       data: result
     });
   } catch (error) {
+    if (error instanceof ValidationError && error.message === '订单已退款') {
+      res.json({
+        code: 0,
+        message: '订单已退款',
+        data: {
+          success: true,
+          alreadyRefunded: true,
+          message: '订单已退款'
+        }
+      });
+      return;
+    }
     next(error);
   }
 }
@@ -399,18 +358,6 @@ export async function getOrderById(req: Request, res: Response, next: NextFuncti
   } catch (error) {
     next(error);
   }
-}
-
-/**
- * 获取候选地陪列表 (Deprecated in V2)
- */
-export async function getCandidates(req: Request, res: Response) {
-  // V2: This API is deprecated as custom orders are directly assigned by admin/CS.
-  res.json({
-    code: 0,
-    message: '获取成功',
-    data: { list: [] }
-  });
 }
 
 import { OrderService } from '../services/order.service.js';
@@ -554,66 +501,3 @@ export async function checkIn(req: Request, res: Response, next: NextFunction) {
     next(error);
   }
 }
-
-/**
- * 用户选择地陪
- * POST /api/v1/orders/:id/select-guide
- */
-export async function selectGuide(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user!.id;
-    const orderId = parseInt(req.params.id);
-    const { guideId } = req.body;
-
-    if (isNaN(orderId)) {
-        return next(new ValidationError('无效的订单ID'));
-    }
-
-    try {
-        // 1. 验证订单所有权
-        const [order] = await db.select().from(orders).where(
-            and(
-                eq(orders.id, orderId),
-                eq(orders.userId, userId)
-            )
-        );
-
-        if (!order) {
-            throw new NotFoundError('订单不存在');
-        }
-
-        if (order.status !== 'waiting_service' && order.status !== 'paid') {
-            // 注意: 这里 status 类型定义可能在 schema 中不包含 'waiting_for_user'，
-            // 或者是 ts 推断问题。我们暂时用更宽松的校验。
-            // 实际上 'waiting_for_user' 应该在 mysqlEnum 定义中。
-            // 检查 schema.ts 发现 status 确实没有 'waiting_for_user'。
-            // 我们应该添加它，或者如果是 V1 遗留，那就不应该用它。
-            // 根据之前的 Read schema.ts:
-            // 'pending','paid','waiting_service','in_service','service_ended','completed','cancelled','refunded'
-            // 确实没有 'waiting_for_user'。这意味着定制单流程里“等待用户选择”这个状态需要映射到现有的某个状态，
-            // 或者修改 Schema 添加该状态。
-            // 鉴于 V2 实际上已经移除了“用户选择候选人”的流程（改为管理员指派或直接下单），
-            // 这个 selectGuide 接口本身可能已经是 Deprecated 的逻辑复活。
-            // 但为了修复编译错误，我们先移除这个检查或改为合法的状态。
-            // 假设我们现在是在修复 V2 编译，那么这个接口可能不需要了，或者应该适配 V2 状态。
-            throw new ValidationError('当前状态无法选择地陪');
-        }
-
-        // 2. 更新订单
-        await db.update(orders)
-            .set({
-                guideId,
-                status: 'waiting_service'
-            })
-            .where(eq(orders.id, orderId));
-
-        res.json({
-            code: 0,
-            message: '选择成功',
-            data: { orderId, guideId, status: 'waiting_service' }
-        });
-
-    } catch (error) {
-        next(error);
-    }
-}
-

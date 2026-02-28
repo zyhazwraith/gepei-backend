@@ -4,7 +4,6 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { 
   listUsers, 
   getOrders, 
-  assignGuide,
   getOrderDetails,
   banUser,
   unbanUser,
@@ -36,9 +35,6 @@ router.get('/orders/:id', authorize(['admin', 'cs']), asyncHandler(getOrderDetai
 
 // POST /api/v1/admin/custom-orders (T-2)
 router.post('/custom-orders', authorize(['admin', 'cs']), asyncHandler(createCustomOrder));
-
-// POST /api/v1/admin/orders/:id/assign
-router.post('/orders/:id/assign', authorize(['admin', 'cs']), asyncHandler(assignGuide));
 
 // Guide Management (Admin & CS can view/audit)
 // GET /api/v1/admin/guides - 获取地陪列表

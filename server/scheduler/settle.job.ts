@@ -42,22 +42,27 @@ export async function executeSettle() {
       for (const order of eligibleOrders) {
         try {
           await db.transaction(async (tx) => {
-            // Double check status inside transaction to avoid race conditions
+            // CAS settle transition to prevent duplicate settlement across concurrent workers
+            const [statusUpdate] = await tx.update(orders)
+              .set({
+                status: OrderStatus.COMPLETED,
+                updatedAt: new Date()
+              })
+              .where(and(
+                eq(orders.id, order.id),
+                eq(orders.status, OrderStatus.SERVICE_ENDED),
+                lt(orders.actualEndTime, twentyFourHoursAgo)
+              ));
+
+            if (statusUpdate.affectedRows === 0) return;
+
             const [freshOrder] = await tx.select().from(orders).where(eq(orders.id, order.id));
-            if (freshOrder.status !== OrderStatus.SERVICE_ENDED) return;
+            if (!freshOrder) return;
 
             // Calculate Income
             // Rule: Use pre-calculated guideIncome from DB (includes overtime)
             // Fallback: Calculate from amount if guideIncome is missing (legacy data support)
             const income = freshOrder.guideIncome ?? Math.floor(freshOrder.amount * GUIDE_INCOME_RATIO);
-
-            // A. Update Order Status
-            await tx.update(orders)
-              .set({ 
-                status: OrderStatus.COMPLETED,
-                updatedAt: new Date()
-              })
-              .where(eq(orders.id, order.id));
 
             // B. Update Guide Balance
             await tx.update(users)

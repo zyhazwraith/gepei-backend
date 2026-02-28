@@ -132,8 +132,8 @@ const refundOrderSchema = z.object({
  * 
  * 2. Order Status Transition (订单状态流转):
  *    - Pending (待支付): 初始状态。
- *    - Paid (已支付): 用户支付完成，等待服务或指派。
- *    - Waiting Service (待服务): 定制单特有状态，指派地陪后进入此状态。
+ *    - Paid (已支付): 用户支付完成。
+ *    - Waiting Service (待服务): 定制单可进入该状态，表示待履约准备完成。
  *    - In Service (服务中): 订单开始执行。
  *    - Service Ended (服务结束): 双方确认结束。
  *    - Completed (已完成): 系统结算完成 (终态)。
@@ -141,12 +141,8 @@ const refundOrderSchema = z.object({
  *    - Refunded (已退款): 发生退款 (终态)。
  * 
  * 3. Custom Order Workflow (定制单流程 - V2):
- *    - User: 提交需求 (Type=custom, Status=pending)。
- *    - Admin: 在后台查看列表 (`getOrders`)。
- *    - Admin: 线下联系用户与地陪，确认意向。
- *    - Admin: 使用 `assignGuide` 接口直接指派一名地陪。
- *      - Action: 设置 `guideId`，状态变更为 `waiting_service` (如果已支付) 或保持 `pending` (如果未支付)。
- *      - Note: 废弃了 V1 的 "Candidates (候选人)" 模式，改为直接指派。
+ *    - Admin/CS: 创建定制单时直接指定 `guideId`。
+ *    - V1 "Candidates/Select-Guide" 模式与 assign API 已废弃并移除。
  * 
  * ==============================================================================
  */
@@ -548,76 +544,4 @@ export async function listUsers(req: Request, res: Response) {
   } catch (error) {
     throw error;
   }
-}
-
-// --------------------------------------------------------------------------
-// 指派地陪 (V2 Core)
-// --------------------------------------------------------------------------
-
-/**
- * 指派地陪 (Admin Assign Guide)
- * 
- * Spec (V2):
- * - 仅适用于 `custom` (定制) 订单。
- * - 必须在 `pending` 或 `paid` 状态下操作。
- * - 管理员手动选择一个 `guideId` 进行指派。
- * - 指派成功后，状态流转为 `waiting_service` (待服务)。
- */
-export const assignGuide = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { guideIds } = req.body; 
-    
-    const orderId = parseInt(id);
-    
-    // 1. 检查订单
-    const [order] = await db.select({
-        id: orders.id,
-        type: orders.type,
-        status: orders.status
-    }).from(orders).where(eq(orders.id, orderId));
-
-    if (!order) {
-        throw new NotFoundError('订单不存在');
-    }
-
-    // 2. 检查地陪有效性
-    if (!guideIds || !Array.isArray(guideIds) || guideIds.length !== 1) {
-        throw new ValidationError('V2 定制订单只能指派一个地陪');
-    }
-    
-    const guideId = guideIds[0];
-    const [guide] = await db.select({ id: guides.userId }).from(guides).where(eq(guides.userId, guideId));
-    if (!guide) {
-        throw new ValidationError('指定的地陪不存在');
-    }
-
-    // 3. 状态校验
-    // 允许从 pending 或 paid 状态指派
-    if (order.status !== 'pending' && order.status !== 'paid') {
-         // In strict V2, maybe only allow if not cancelled/completed
-    }
-
-    // 4. 执行指派
-    if (order.type === 'custom') {
-        await db.update(orders)
-            .set({ 
-                guideId: guideId,
-                status: 'waiting_service', // 明确流转状态
-                updatedAt: new Date(),
-            })
-            .where(eq(orders.id, orderId));
-            
-        res.json({
-            code: 0,
-            message: '指派成功',
-            data: {
-                orderId,
-                guideIds,
-                status: 'waiting_service'
-            }
-        });
-
-    } else {
-        throw new ValidationError('普通订单不可指派候选人');
-    }
 }

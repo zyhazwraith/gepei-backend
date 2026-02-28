@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import { getAdminOrders, updateOrderStatus, assignGuide, getGuides, AdminOrder, Pagination, Guide } from "@/lib/api";
+import { getAdminOrders, AdminOrder, Pagination } from "@/lib/api";
 import CreateCustomOrderDialog from "@/components/admin/CreateCustomOrderDialog";
 import OrderDetailDialog from "@/components/admin/OrderDetailDialog";
 import Price from "@/components/Price";
@@ -8,12 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, UserPlus, Check, Search, Plus, Eye, MapPin, Clock } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, ChevronLeft, ChevronRight, Search, Plus, Eye, MapPin, Clock } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // 状态映射
@@ -41,7 +37,6 @@ export default function AdminOrderList() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("all");
@@ -50,14 +45,6 @@ export default function AdminOrderList() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
-
-  // 指派相关状态
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
-  const [guideList, setGuideList] = useState<Guide[]>([]);
-  const [loadingGuides, setLoadingGuides] = useState(false);
-  const [selectedGuideIds, setSelectedGuideIds] = useState<number[]>([]);
-  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     fetchOrders(page);
@@ -97,37 +84,6 @@ export default function AdminOrderList() {
   const handleViewDetail = (orderId: number) => {
     setDetailOrderId(orderId);
     setDetailDialogOpen(true);
-  };
-
-  const handleAssignConfirm = async () => {
-    // Note: Assign feature might be moved to Detail Dialog in future,
-    // but we keep it here if we want to support list-view assignment.
-    // Currently, the "Assign" button was removed from the list view during cleanup.
-    // If we want to restore it, we need to add the button back to columns.
-    // For now, this function is only used by the Dialog which is rendered at the bottom.
-    if (!selectedOrder || selectedGuideIds.length === 0) return;
-    
-    setAssigning(true);
-    try {
-      const res = await assignGuide(selectedOrder.id, selectedGuideIds);
-      if (res.code === 0) {
-        toast.success("指派成功");
-        setAssignDialogOpen(false);
-        fetchOrders(page);
-      }
-    } catch (error) {
-      toast.error("指派失败");
-    } finally {
-      setAssigning(false);
-    }
-  };
-
-  const toggleGuideSelection = (guideId: number) => {
-    setSelectedGuideIds(prev => 
-      prev.includes(guideId) 
-        ? prev.filter(id => id !== guideId) 
-        : [...prev, guideId]
-    );
   };
 
   return (
@@ -306,76 +262,6 @@ export default function AdminOrderList() {
             </div>
           </div>
         )}
-        
-        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>指派地陪</DialogTitle>
-              <DialogDescription>
-                为订单 {selectedOrder?.orderNumber} 选择地陪。
-                {selectedOrder?.orderType === 'custom' 
-                  ? '定制单：指派候选人后，订单状态变为"待确认"，需等待客户选择。' 
-                  : '普通单：指派后，订单状态将变为"进行中/待服务"。'}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              {loadingGuides ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                </div>
-              ) : (
-                <ScrollArea className="h-[300px] border rounded-md p-2">
-                  <div className="space-y-1">
-                    {guideList.map(guide => (
-                      <div 
-                        key={guide.guideId}
-                        data-testid={`guide-item-${guide.guideId}`}
-                        onClick={() => toggleGuideSelection(guide.guideId)}
-                        className={`flex items-center p-3 rounded-md cursor-pointer transition-colors ${
-                          selectedGuideIds.includes(guide.guideId) ? 'bg-primary/10 border-primary/20 border' : 'hover:bg-gray-50 border border-transparent'
-                        }`}
-                      >
-                        <Avatar className="w-10 h-10 mr-3">
-                          <AvatarFallback>{guide.nickName?.slice(0, 1) || 'G'}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium flex items-center">
-                            {guide.nickName}
-                            {selectedGuideIds.includes(guide.guideId) && <Check className="w-4 h-4 ml-2 text-primary" />}
-                          </div>
-                          <div className="text-xs text-gray-500">{guide.city} · <Price amount={guide.price || 0} />/小时</div>
-                        </div>
-                      </div>
-                    ))}
-                    {guideList.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">暂无地陪数据</div>
-                    )}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>取消</Button>
-              <Button 
-                onClick={handleAssignConfirm} 
-                data-testid="confirm-assign-btn"
-                disabled={selectedGuideIds.length === 0 || assigning}
-              >
-                {assigning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    处理中...
-                  </>
-                ) : (
-                  `确认指派 (${selectedGuideIds.length})`
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         <CreateCustomOrderDialog 
           open={createDialogOpen} 
           onOpenChange={setCreateDialogOpen} 

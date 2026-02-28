@@ -1,16 +1,25 @@
 import { db } from '../db/index.js';
 import { orders, checkInRecords, attachments, overtimeRecords, payments, refundRecords } from '../db/schema.js';
-import { eq, and, lt, sql, desc } from 'drizzle-orm';
+import { eq, and, lt, sql, desc, or } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
 import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
 import { paymentProvider } from './payment/payment.provider.js';
+import { OrderStatus } from '../constants/index.js';
 
 interface CheckInPayload {
   type: 'start' | 'end';
   attachmentId: number;
   lat: number;
   lng: number;
+}
+
+function buildServiceEndTimeExtensionSql(durationHours: number) {
+  return sql`CASE
+    WHEN ${orders.serviceEndTime} IS NOT NULL AND ${orders.serviceEndTime} > NOW()
+      THEN DATE_ADD(${orders.serviceEndTime}, INTERVAL ${durationHours} HOUR)
+    ELSE DATE_ADD(NOW(), INTERVAL ${durationHours} HOUR)
+  END`;
 }
 
 export class OrderService {
@@ -30,7 +39,17 @@ export class OrderService {
       throw new ForbiddenError('无权操作此订单');
     }
 
-    if (!order.status || !['paid', 'waiting_service'].includes(order.status)) {
+    if (order.status === OrderStatus.REFUNDED) {
+      return {
+        success: true,
+        alreadyRefunded: true,
+        refundedAmount: order.refundAmount || 0,
+        penaltyApplied: false,
+        message: '订单已退款'
+      };
+    }
+
+    if (!order.status || (order.status !== OrderStatus.PAID && order.status !== OrderStatus.WAITING_SERVICE)) {
       throw new ValidationError(`当前订单状态为 ${order.status}，无法申请退款`);
     }
 
@@ -52,11 +71,12 @@ export class OrderService {
       // Critical Data Inconsistency
       throw new Error('系统异常：找不到关联的支付流水，请联系客服处理');
     }
+    const originalTransactionId = payment.transactionId;
 
     // 4. Calculate Refund Amount
     const paidAtTime = new Date(order.paidAt).getTime();
-    const now = Date.now();
-    const hoursSincePaid = (now - paidAtTime) / (1000 * 60 * 60);
+    const nowMs = Date.now();
+    const hoursSincePaid = (nowMs - paidAtTime) / (1000 * 60 * 60);
 
     let refundAmount = order.amount; // Base: Full Refund
     let penalty = 0;
@@ -69,32 +89,48 @@ export class OrderService {
       reason = `用户自主申请退款（扣除违约金 ¥150）`;
     }
 
-    // 5. Process Refund via Payment Provider
+    // 5. CAS + Refund (Atomic in mocked stage)
     const outRefundNo = `REF_${order.orderNumber}_${Date.now()}`;
-    const paymentResult = await paymentProvider.refund(
-      order.orderNumber,
-      refundAmount,
-      payment.transactionId,
-      outRefundNo,
-      reason
-    );
+    const now = new Date();
 
-    if (!paymentResult.success) {
-      throw new Error('退款请求失败，请联系客服');
-    }
-
-    // 6. Update Database (Atomic)
     await db.transaction(async (tx) => {
-      // 6.1 Update Order Status
-      await tx.update(orders)
+      // 5.1 CAS: paid|waiting_service -> refunded
+      const [updateResult] = await tx.update(orders)
         .set({
-          status: 'refunded',
+          status: OrderStatus.REFUNDED,
           refundAmount: refundAmount,
-          updatedAt: new Date()
+          updatedAt: now
         })
-        .where(eq(orders.id, order.id));
+        .where(and(
+          eq(orders.id, order.id),
+          or(
+            eq(orders.status, OrderStatus.PAID),
+            eq(orders.status, OrderStatus.WAITING_SERVICE)
+          )
+        ));
 
-      // 6.2 Create Refund Record
+      if (updateResult.affectedRows === 0) {
+        const [latestOrder] = await tx.select().from(orders).where(eq(orders.id, order.id));
+        if (latestOrder?.status === OrderStatus.REFUNDED) {
+          throw new ValidationError('订单已退款');
+        }
+        throw new ValidationError(`当前订单状态为 ${latestOrder?.status}，无法申请退款`);
+      }
+
+      // 5.2 Process external refund (mock provider in current stage)
+      const paymentResult = await paymentProvider.refund(
+        order.orderNumber,
+        refundAmount,
+        originalTransactionId,
+        outRefundNo,
+        reason
+      );
+
+      if (!paymentResult.success) {
+        throw new Error('退款请求失败，请联系客服');
+      }
+
+      // 5.3 Create refund record
       await tx.insert(refundRecords).values({
         orderId: order.id,
         amount: refundAmount,
@@ -103,7 +139,7 @@ export class OrderService {
         refundTransactionId: paymentResult.refundTransactionId,
         status: 'success',
         operatorId: userId, // User himself
-        createdAt: new Date()
+        createdAt: now
       });
     });
 
@@ -158,18 +194,7 @@ export class OrderService {
       throw new NotFoundError('订单不存在');
     }
 
-    // 2. Status Transition Logic
-    if (type === 'start') {
-      if (order.status !== 'waiting_service') {
-        throw new ValidationError(`当前订单状态为 ${order.status}，无法开始服务`);
-      }
-    } else if (type === 'end') {
-      if (order.status !== 'in_service') {
-        throw new ValidationError(`当前订单状态为 ${order.status}，无法结束服务`);
-      }
-    }
-
-    // 3. Verify Attachment (Optional but recommended)
+    // 2. Verify Attachment (Optional but recommended)
     // Check if attachment exists and belongs to usage 'check_in'
     const [attachment] = await db.select().from(attachments).where(eq(attachments.id, attachmentId));
     if (!attachment) {
@@ -181,20 +206,11 @@ export class OrderService {
         throw new ValidationError('照片用途不符');
     }
 
-    // 4. Execute Transaction
+    // 3. Execute Transaction
     const result = await db.transaction(async (tx) => {
-      // 4.1 Insert Check-in Record
-      await tx.insert(checkInRecords).values({
-        orderId,
-        type,
-        attachmentId, // Photo ID
-        time: new Date(),
-        latitude: lat.toString(),
-        longitude: lng.toString(),
-      });
-
-      // 4.2 Update Order Status
+      // 3.1 CAS status transition
       const nextStatus = type === 'start' ? 'in_service' : 'service_ended';
+      const expectedStatus = type === 'start' ? 'waiting_service' : 'in_service';
       
       const updatePayload: any = { 
         status: nextStatus,
@@ -205,14 +221,30 @@ export class OrderService {
         updatePayload.actualEndTime = new Date();
       }
 
-      // Removed auto-update of serviceEndTime logic based on feedback
-
-      await tx.update(orders)
+      const [updateResult] = await tx.update(orders)
         .set(updatePayload)
-        .where(eq(orders.id, orderId));
+        .where(and(
+          eq(orders.id, orderId),
+          eq(orders.status, expectedStatus)
+        ));
+
+      if (updateResult.affectedRows === 0) {
+        const [latestOrder] = await tx.select().from(orders).where(eq(orders.id, orderId));
+        throw new ValidationError(`当前订单状态为 ${latestOrder?.status}，无法${type === 'start' ? '开始' : '结束'}服务`);
+      }
+
+      // 3.2 Insert check-in record only after CAS success
+      await tx.insert(checkInRecords).values({
+        orderId,
+        type,
+        attachmentId, // Photo ID
+        time: new Date(),
+        latitude: lat.toString(),
+        longitude: lng.toString(),
+      });
       
       return { 
-        previousStatus: order.status, 
+        previousStatus: expectedStatus, 
         currentStatus: nextStatus,
         checkInTime: new Date()
       };
@@ -271,26 +303,26 @@ export class OrderService {
         throw new NotFoundError('加时申请不存在');
     }
 
-    if (overtime.status !== 'pending') {
-        throw new ValidationError('该加时申请状态不正确');
-    }
-
     const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
+    if (!order) {
+      throw new NotFoundError('关联订单不存在');
+    }
 
     // 2. Execute Transaction
     await db.transaction(async (tx) => {
-        // 2.1 Mark Overtime as Paid
-        await tx.update(overtimeRecords)
+        // 2.1 CAS: pending -> paid
+        const [updateResult] = await tx.update(overtimeRecords)
             .set({ status: 'paid' })
-            .where(eq(overtimeRecords.id, overtimeId));
+            .where(and(
+              eq(overtimeRecords.id, overtimeId),
+              eq(overtimeRecords.status, 'pending')
+            ));
 
-        // 2.2 Update Order Stats
-        // New End Time = MAX(OldEndTime, NOW()) + Duration
-        const now = new Date();
-        const oldEndTime = order.serviceEndTime ? new Date(order.serviceEndTime) : now;
-        const baseTime = oldEndTime > now ? oldEndTime : now;
-        const newEndTime = new Date(baseTime.getTime() + overtime.duration * 60 * 60 * 1000);
+        if (updateResult.affectedRows === 0) {
+          throw new ValidationError('该加时申请已支付或状态已变更');
+        }
 
+        // 2.2 Update Order Stats (avoid stale serviceEndTime overwrite)
         // Calculate Guide Income Increment
         const guideIncomeInc = Math.round(overtime.fee * GUIDE_INCOME_RATIO);
 
@@ -300,7 +332,7 @@ export class OrderService {
                 totalAmount: sql`${orders.totalAmount} + ${overtime.fee}`,
                 guideIncome: sql`${orders.guideIncome} + ${guideIncomeInc}`,
                 totalDuration: sql`COALESCE(${orders.totalDuration}, ${orders.duration}) + ${overtime.duration}`,
-                serviceEndTime: newEndTime,
+                serviceEndTime: buildServiceEndTimeExtensionSql(overtime.duration),
                 updatedAt: new Date()
             })
             .where(eq(orders.id, order.id));
