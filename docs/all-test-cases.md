@@ -51,3 +51,8 @@
 1.  **废弃守卫保留**: `tests/integration/test-guide-assignment.ts` 目前用于“已移除接口不可恢复”的回归守卫，不建议删除。
 2.  **V2 适配**: `test-core-api.ts` 和 `test-booking-flow.ts` 涉及地陪创建和订单创建，需持续关注 `guideId`(userId 语义) 与价格字段适配。
 3.  **技术栈统一**: 目前存在 `Axios 脚本` 和 `Vitest` 两种集成测试方式，建议长期统一到 `Vitest` 获得更稳定报告与并发能力。
+
+## 5. 归档测试
+
+- `tests/archive/test-c-end-flow.ts`
+  - 原因: 非默认流水线、包含临时排查式注释与直连 DB workaround，不作为稳定回归用例。

@@ -17,7 +17,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "test": "jest",
-    "test:api": "tsx scripts/test-api-flow.ts",
+    "test:api": "tsx tests/integration/test-core-api.ts",
     "test:e2e": "concurrently \"npm run test:e2e:core\" \"npm run test:e2e:admin\" \"npm run test:e2e:guide\" \"npm run test:e2e:booking\" \"npm run test:e2e:payment\" \"npm run test:e2e:lbs\"",
     "test:e2e:core": "tsx tests/integration/test-core-api.ts",
     "test:e2e:admin": "tsx tests/integration/test-admin-flow.ts",
