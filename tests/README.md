@@ -12,8 +12,12 @@
 - `tests/integration/test-admin-search.ts`
 
 运行方式：
+- `npm test`（Vitest，当前包含 `tests/*.test.ts`）
 - `npm run test:e2e`
 - `npm run test:api`（仅核心 API）
+
+注意：
+- `npm test` 中的 `tests/custom_order.test.ts` 依赖本地 MySQL 与 `.env` 数据库配置。
 
 ## 归档/历史
 - `tests/archive/*`
