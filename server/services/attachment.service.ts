@@ -62,6 +62,16 @@ interface UploadContext {
 export class AttachmentService {
   private static UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
+  private static resolveSafePath(key: string): string {
+    const root = path.resolve(this.UPLOAD_ROOT);
+    const normalizedKey = key.replace(/\\/g, '/');
+    const resolved = path.resolve(root, normalizedKey);
+    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+      throw new ValidationError('非法文件路径');
+    }
+    return resolved;
+  }
+
   /**
    * Process and save attachment
    */
@@ -80,7 +90,7 @@ export class AttachmentService {
 
     // 2. Generate Key (Relative Path)
     const key = strategy.path({ contextId: ctx.contextId, slot });
-    const fullPath = path.join(this.UPLOAD_ROOT, key);
+    const fullPath = this.resolveSafePath(key);
 
     // 3. Ensure Directory Exists
     await fs.mkdir(path.dirname(fullPath), { recursive: true });

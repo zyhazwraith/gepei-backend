@@ -2,7 +2,15 @@
 
 Updated: 2026-02-28  
 Scope: exploitable auth/authz/data exposure risks (`P0/P1` focus).  
-Note: scan-only report, no new fixes applied in this step.
+Note: updated with implementation status after discussion decisions.
+
+## Implementation Status
+
+- Finding 1: `Implemented` (removed JWT fallback secret, require env).
+- Finding 2: `Implemented` (usage/context/slot validation + safe path resolve guard).
+- Finding 3: `Implemented` (`check_in` now enforces guide-order ownership unless admin).
+- Finding 4: `Deferred by decision` (current stage accepts public check-in image exposure risk).
+- Finding 5: `Deferred by decision` (to be planned with low-cost throttling/logging phase).
 
 ## Finding 1
 
@@ -91,9 +99,7 @@ Note: scan-only report, no new fixes applied in this step.
 
 ## Phase 3 Gate (Current)
 
-- Ship gate: `NO-SHIP` until `P0` findings (1, 2) are addressed.
-- Recommended fix order:
-  1. Finding 1 (JWT secret fallback removal).
-  2. Finding 2 + 3 together (attachment input validation + permission hard deny).
-  3. Finding 4 (private asset access model).
-  4. Finding 5 (rate limiting hardening).
+- Ship gate: `GO` for current scope after Findings 1/2/3 implementation.
+- Deferred risk acceptance:
+  1. Finding 4 kept as accepted risk for current stage.
+  2. Finding 5 planned as next security hardening step.

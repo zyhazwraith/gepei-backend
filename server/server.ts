@@ -10,6 +10,11 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // 启动服务器
 async function startServer() {
   try {
+    if (!process.env.JWT_SECRET) {
+      console.error('✗ Missing required env: JWT_SECRET');
+      process.exit(1);
+    }
+
     // 测试数据库连接 (Using Drizzle)
     try {
       await db.execute(sql`SELECT 1`);

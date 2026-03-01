@@ -43,6 +43,13 @@ DATABASE_URL=mysql://root:your_secure_password@localhost:3306/gepei_db
 
 # 腾讯地图 Key (必须保留 VITE_ 前缀)
 VITE_TENCENT_MAP_KEY=您的腾讯地图Key
+
+# JWT 签名密钥（必填）
+# 生产环境必须使用高强度随机字符串（建议 32+ 字符）
+JWT_SECRET=请替换为高强度随机密钥
+
+# JWT 过期时间（可选，默认 7d）
+JWT_EXPIRES_IN=7d
 ```
 
 > **注意**: 环境变量优先级为 `系统环境变量` > `.env 文件`。如果在 PM2 配置或系统环境中设置了同名变量，将覆盖 `.env` 中的值。

@@ -4,18 +4,26 @@ import path from 'path';
 import fs from 'fs';
 import FormData from 'form-data';
 import { fileURLToPath } from 'url';
+import { db } from '../server/db/index.js';
+import { guides, users } from '../server/db/schema.js';
+import { eq } from 'drizzle-orm';
 
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Mock Data
-const TEST_IMAGE_PATH = path.resolve(__dirname, '../tests/fixtures/test-image.jpg');
+const TEST_IMAGE_PATH = path.resolve(__dirname, '../tests/fixtures/test-image.png');
 
-async function uploadCheckInPhoto(token: string, contextId: string) {
+if (!fs.existsSync(TEST_IMAGE_PATH)) {
+  throw new Error(`Missing test fixture: ${TEST_IMAGE_PATH}`);
+}
+
+async function uploadCheckInPhoto(token: string, contextId: string, slot: 'start' | 'end') {
   const form = new FormData();
   form.append('file', fs.createReadStream(TEST_IMAGE_PATH));
   form.append('contextId', contextId); 
+  form.append('slot', slot);
   
   // Use check_in usage
   const res = await axios.post(`${API_URL}/attachments/check_in`, form, {
@@ -43,22 +51,25 @@ async function runTests() {
     guideToken = guideReg.token;
     userId = guideReg.userId; // Temporary variable
 
-    // Apply to be guide
-    await axios.post(`${API_URL}/guides/profile`, {
+    // Apply to be guide (V2 route is PUT)
+    await axios.put(`${API_URL}/guides/profile`, {
         idNumber: `11010119900101${Math.floor(1000+Math.random()*9000)}`,
         stageName: 'TestGuide',
         city: 'Shanghai',
         intro: 'Intro',
-        realPrice: 10000 // 100 Yuan
+        expectedPrice: 10000 // 100 Yuan
     }, { headers: { Authorization: `Bearer ${guideToken}` } });
-    
-    // Admin verify guide
-    // Simplified: We assume guide is auto-verified or we just update DB directly? 
-    // Actually, createOrder checks if guide exists in guides table.
-    // Let's assume apply profile creates the record.
     
     // Fetch Guide ID (which is userId)
     guideId = userId;
+
+    // Ensure realPrice is set for booking path
+    await db.update(guides)
+      .set({ realPrice: 10000 })
+      .where(eq(guides.userId, guideId));
+    await db.update(users)
+      .set({ isGuide: true })
+      .where(eq(users.id, guideId));
 
     // Register Customer
     const userReg = await registerUser();
@@ -68,7 +79,7 @@ async function runTests() {
 
     // 2. Create Order (Standard)
     const orderRes = await axios.post(`${API_URL}/orders`, {
-      type: 'standard',
+      type: 'normal',
       guideId: guideId,
       serviceStartTime: new Date().toISOString(),
       duration: 4,
@@ -98,7 +109,7 @@ async function runTests() {
 
     // 4. Guide Check-in (Start)
     // 4.1 Upload Photo
-    attachmentId = await uploadCheckInPhoto(guideToken, String(orderId));
+    attachmentId = await uploadCheckInPhoto(guideToken, String(orderId), 'start');
     logPass(`Photo Uploaded: ${attachmentId}`);
 
     // 4.2 Call Check-in API
@@ -117,7 +128,7 @@ async function runTests() {
 
     // 5. Guide Check-in (End)
     // 5.1 Upload another photo
-    const endAttachmentId = await uploadCheckInPhoto(guideToken, String(orderId));
+    const endAttachmentId = await uploadCheckInPhoto(guideToken, String(orderId), 'end');
     
     // 5.2 Call Check-in API
     const endRes = await axios.post(`${API_URL}/orders/${orderId}/check-in`, {
@@ -154,6 +165,9 @@ async function runTests() {
     console.error(e.response?.data || e.message);
     process.exit(1);
   }
+
+  console.log('\n🎉 S-1 Verification Completed!');
+  process.exit(0);
 }
 
 runTests();

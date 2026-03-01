@@ -1,9 +1,15 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { AuthenticationError, ERROR_CODES } from './errors.js';
 
-// 测试环境JWT配置（硬编码）
-const JWT_SECRET = process.env.JWT_SECRET || 'gepei_test_jwt_secret_2026_UNcwX9XFV65zjBuc30LxJ';
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return secret;
+}
 
 // Token payload 接口
 export interface TokenPayload {
@@ -14,7 +20,7 @@ export interface TokenPayload {
 
 // 生成 JWT Token
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: JWT_EXPIRES_IN as any,
   });
 }
@@ -22,7 +28,7 @@ export function generateToken(payload: TokenPayload): string {
 // 验证 JWT Token
 export function verifyToken(token: string): TokenPayload {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as TokenPayload;
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

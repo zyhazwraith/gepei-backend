@@ -11,17 +11,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const API_URL = 'http://localhost:3000/api/v1';
-const TEST_IMAGE_PATH = path.join(__dirname, 'test-image.jpg');
+const TEST_IMAGE_PATH = path.resolve(__dirname, '../tests/fixtures/test-image.png');
 
-// Ensure test image exists (create a dummy one if not)
 if (!fs.existsSync(TEST_IMAGE_PATH)) {
-  fs.writeFileSync(TEST_IMAGE_PATH, 'dummy content', 'utf-8'); 
-  // Note: Sharp might fail with dummy content. 
-  // We should try to copy a real image or use a buffer if possible, 
-  // but for simplicity let's assume we have a real image or skip sharp if invalid.
-  // Actually, let's create a minimal valid 1x1 PNG buffer
-  const minimalPNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-  fs.writeFileSync(TEST_IMAGE_PATH, minimalPNG);
+  throw new Error(`Missing test fixture: ${TEST_IMAGE_PATH}`);
 }
 
 // Helper to get admin token
@@ -49,11 +42,15 @@ async function verifyAttachmentSystem() {
 
   // Test 1: Upload Avatar (Overwrite Strategy)
   console.log('\nTesting Avatar Upload (Overwrite)...');
-  const formData1 = new FormData();
-  formData1.append('file', fs.createReadStream(TEST_IMAGE_PATH));
-  formData1.append('contextId', '1001'); // Mock user ID
+  const createAvatarForm = () => {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(TEST_IMAGE_PATH));
+    form.append('contextId', '1001'); // Mock user ID
+    return form;
+  };
 
   try {
+    const formData1 = createAvatarForm();
     const res1 = await axios.post(`${API_URL}/attachments/avatar`, formData1, {
       headers: { ...headers, ...formData1.getHeaders() }
     });
@@ -67,8 +64,9 @@ async function verifyAttachmentSystem() {
     // Test 1.1: Upload Again (Should Update, not Insert)
     console.log('Testing Avatar Overwrite...');
     await new Promise(r => setTimeout(r, 1000)); // Wait for timestamp diff
-    const res2 = await axios.post(`${API_URL}/attachments/avatar`, formData1, {
-        headers: { ...headers, ...formData1.getHeaders() }
+    const formData1Again = createAvatarForm();
+    await axios.post(`${API_URL}/attachments/avatar`, formData1Again, {
+        headers: { ...headers, ...formData1Again.getHeaders() }
     });
     const [row2] = await db.select().from(attachments).where(eq(attachments.key, 'avatars/u_1001.webp'));
     if (row1.id !== row2.id) throw new Error('Overwrite failed: ID changed');
