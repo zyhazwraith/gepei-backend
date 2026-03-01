@@ -187,13 +187,13 @@ Evidence:
 
 Confidence: Medium (business intent may accept this, but drift exists).
 
-### 7.5 Route comments vs actual mount prefix
+### 7.5 Route prefix drift (resolved)
 
-- Some route file comments still show `/api/auth/*`, while mounted path is `/api/v1/auth/*`.
+- Route comments were updated to `/api/v1/*`; no active drift remains for auth route prefix.
 
 Evidence:
 - `server/routes/auth.routes.ts:8`
-- `server/app.ts:58`
+- `server/app.ts:57`
 
 Confidence: High.
 
