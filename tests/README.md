@@ -1,6 +1,6 @@
-# Tests Directory Guide
+# 测试目录说明
 
-## Active Integration Regression
+## 活跃集成回归
 - `tests/integration/test-core-api.ts`
 - `tests/integration/test-booking-flow.ts`
 - `tests/integration/test-payment-flow.ts`
@@ -8,15 +8,15 @@
 - `tests/integration/test-admin-flow.ts`
 - `tests/integration/test-guide-assignment.ts`
 
-Run:
+运行方式：
 - `npm run test:e2e`
-- `npm run test:api` (core API only)
+- `npm run test:api`（仅核心 API）
 
-## Archived / Historical
+## 归档/历史
 - `tests/archive/*`
 
-These files are kept for reference only and are not part of default regression.
+这些文件仅作历史参考，不属于默认回归流水线。
 
-## UI E2E
+## 前端 E2E
 - `tests/e2e/*.spec.ts`
-- Run with `npm run test:e2e:ui`
+- 运行命令：`npm run test:e2e:ui`

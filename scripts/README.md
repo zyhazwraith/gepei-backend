@@ -1,11 +1,11 @@
-# Scripts Guide
+# 脚本目录说明
 
-This directory is mixed-purpose. Use the categories below for handover.
+该目录用途混合，请按以下分类用于交接。
 
-## Core (keep in handover test path)
+## 核心脚本（建议纳入交接测试路径）
 - `test-idempotency-cas.ts`
 
-## Manual Test Scripts (optional appendix)
+## 手动测试脚本（可选附录）
 - `test-admin-guide-audit.ts`
 - `test-admin-stats.ts`
 - `test-attachment-system.ts`
@@ -24,7 +24,7 @@ This directory is mixed-purpose. Use the categories below for handover.
 - `test-wallet-flow.ts`
 - `test-withdraw-audit.ts`
 
-## Seed / Tool / Debug (do not treat as acceptance tests)
+## Seed / 工具 / 调试（不要作为验收测试）
 - `seed-*.ts`
 - `tool-*.ts`
 - `check-db-status.ts`
@@ -37,9 +37,9 @@ This directory is mixed-purpose. Use the categories below for handover.
 - `verify-guide-v2.ts`
 - `shared/*`
 
-## Handover Recommendation
-- Core handover should prioritize:
-  - `tests/integration/*` active regression
-  - `tests/e2e/*` UI E2E
+## 交接建议
+- 核心交接优先包含：
+  - `tests/integration/*`（活跃回归）
+  - `tests/e2e/*`（前端 E2E）
   - `scripts/test-idempotency-cas.ts`
-- Include remaining `scripts/*` only as optional operational utilities.
+- 其余 `scripts/*` 建议作为可选运维/调试附录。
