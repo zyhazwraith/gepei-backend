@@ -31,14 +31,14 @@ async function runAdminTests() {
       // 注意: 这里无法直接修改角色为 admin，因为 registerUser 默认创建 user。
       // 除非我们有一个后门接口或者 direct db manipulation。
       // 如果后端有漏洞或者 dev 环境有特权接口？
-      // 或者我们可以复用 server/scripts/seed-data.ts 里的逻辑？
+      // 或者复用已有初始化逻辑自动创建管理员？
       
       // 为了测试通过，我们可能需要暂时假设 18215596084 是 admin (如果数据库里有的话)
       // 或者跳过权限检查？
       // 不，我们应该解决这个问题。
       
       // 方案: 使用一个特定的测试管理员账号，假设它在 seed 中存在。
-      // 检查 seed-data.ts 发现没有创建 admin。
+      // 当前没有统一的管理员 seed 入口。
       // 检查 admin.controller.ts，没有 check role (除了 middleware)。
       // 检查 middleware/auth.middleware.ts: requireAdmin check req.user.role === 'admin'
       
