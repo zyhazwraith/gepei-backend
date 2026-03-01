@@ -14,11 +14,9 @@
 3. `server/server.ts`
 4. `server/app.ts`
 
-## 3）评审基线与结论
-1. `docs/review_baseline.md`
-2. `docs/review_phase1_discussion_2026-02-27.md`
-3. `docs/review_phase2_scan_2026-02-28.md`
-4. `docs/review_phase3_scan_2026-02-28.md`
+## 3）评审与风险记录
+1. 以代码与运行配置为准（`server/`、`shared/`、`drizzle/`、`DEPLOY.md`）。
+2. 历史评审文档不再维护，不作为交接入口。
 
 ## 4）后端运行时（`server/`）
 - 保留当前全部运行时代码（controllers、routes、services、models、middleware、scheduler、db、utils）。
@@ -43,7 +41,6 @@
 1. 活跃运维/评审文档：
    - `docs/DEPLOYMENT_CHECKLIST.md`
    - `docs/all-test-cases.md`
-   - `docs/review_*`
 2. 历史文档：
    - `docs/archive/**`（仅作追溯参考，默认不加载）
 

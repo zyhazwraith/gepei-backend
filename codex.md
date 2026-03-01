@@ -17,8 +17,6 @@ Your task is to perform a **production-readiness review** of this project before
 - Start with an **autonomous full-repo scan**.
 - Do not ask for file-by-file handoff if files already exist locally.
 - Ask questions only when business intent is missing or conflicting and cannot be resolved from repo evidence.
-- Before Phase 1+, always load `docs/review_baseline.md` as mandatory Phase 0 context.
-- If architecture, data model, or core business flows changed, update `docs/review_baseline.md` first, then continue review.
 
 Required scan scope:
 - `docs/`
@@ -31,7 +29,7 @@ Required scan scope:
 - deploy and runtime/config files (for example `DEPLOY.md`, `README.md`, env assumptions, startup entrypoints)
 
 Default doc focus:
-- Prioritize active docs under `docs/` root and `docs/review_*`.
+- Prioritize active docs under `docs/` root.
 - Treat `docs/archive/**` (including archived handover reports) as historical context; do not load by default unless needed for drift tracing.
 
 ## Evidence Priority (Trust Model)
@@ -152,12 +150,7 @@ Output:
 
 ## Current Review State
 
-- Current cycle status: Phase 0-5 completed (single-instance MVP ship gate: conditional GO).
-- Detailed records:
-  - `docs/review_baseline.md`
-  - `docs/review_phase1_discussion_2026-02-27.md`
-  - `docs/review_phase2_scan_2026-02-28.md`
-  - `docs/review_phase3_scan_2026-02-28.md`
+- Keep review evidence in issue/PR context or dedicated release notes as needed.
 - Deferred backlog:
   - Auth throttling + API abuse logging
   - Upload private-access redesign
