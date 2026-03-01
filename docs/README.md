@@ -1,53 +1,30 @@
-# 地陪应用技术文档
+# Docs Index
 
-本目录包含地陪应用后端的所有技术设计文档。
+This folder contains active project docs and historical archives.
 
-## 📚 文档列表
+## Active Docs (Read First)
+1. `../HANDOVER_INDEX.md`
+2. `review_baseline.md`
+3. `review_phase1_discussion_2026-02-27.md`
+4. `review_phase2_scan_2026-02-28.md`
+5. `review_phase3_scan_2026-02-28.md`
+6. `DEPLOYMENT_CHECKLIST.md`
+7. `PRE_LAUNCH_CHECKLIST.md`
+8. `all-test-cases.md`
 
-### 1. 技术架构设计
-**文件**: `01_技术架构设计_V1.1.md`  
-**版本**: V1.1  
-**内容**: 系统整体架构、技术栈选型、部署方案
+## Product and Architecture Specs
+- `08_Product_Requirements_Spec_V2.0.md`
+- `01_技术架构设计_V2.0.md`
+- `02_数据库设计_V2.0.md`
+- `v2_specs/`
+- `v2.1_specs/`
+- `specs/`
+- `test_cases/`
 
-### 2. 数据库设计
-**文件**: `02_数据库设计_V1.1.md`  
-**版本**: V1.1  
-**内容**: 数据库表结构、字段说明、索引设计、ER图
+## Historical Docs
+- `archive/`
+  - Legacy versions, old handover reports, and superseded design notes.
+  - Keep for traceability only; do not use as default source of truth.
 
-### 3. API设计
-**文件**: `03_API设计_V1.3.md`  
-**版本**: V1.3  
-**更新**: 添加文件上传接口、修正地陪认证接口  
-**内容**: RESTful API接口规范、请求响应示例、错误码定义
-
-### 4. 功能点开发任务
-**文件**: `04_功能点开发任务_V1.1.md`  
-**版本**: V1.1  
-**内容**: 功能点拆分（FP-001 ~ FP-008）、开发任务、验收标准
-
-## 🛠️ 开发环境 (Development)
-
-### HTTPS 启用
-前端服务 (`client`) 默认启用 HTTPS (`https://localhost:5173`)，主要为了支持 Geolocation (LBS) 等需要安全上下文的 API。
-
-- **证书说明**: 使用 Vite 自动生成的自签名证书。
-- **浏览器警告**: 首次访问时，浏览器会提示"您的连接不是私密连接"，这是正常现象。请点击"高级" -> "继续前往 localhost (不安全)"。
-- **配置**: 由 `@vitejs/plugin-basic-ssl` 插件支持。
-
-### 数据库迁移
-```bash
-npx drizzle-kit push
-```
-
-## 📝 版本历史
-
-| 版本 | 日期 | 说明 |
-|------|------|------|
-| V1.1 | 2026-01-19 | 修正API设计，添加文件上传方案 |
-| V1.0 | 2026-01-18 | 初始版本 |
-
-## 🔗 相关资源
-
-- **UI设计图**: 参见 `../ui-designs/` 目录
-- **数据库初始化脚本**: `../database/init.sql`
-- **开发任务清单**: `../todo.md`
+## Rule for Review
+- If docs and runtime code disagree, follow runtime code + schema + deployment config.
