@@ -76,7 +76,7 @@
     *   `GET /api/v1/system-configs` (Public)
     *   `PUT /api/v1/admin/system-configs` (Admin)
 *   [ ] **Backend: Verification**
-    *   Script: `scripts/verify-F3.ts` (Simulate Upload -> Update -> Get flow).
+    *   Tests: `tests/integration/*`（覆盖 Upload -> Update -> Get 流程）。
 
 ---
 
@@ -98,4 +98,3 @@
 1.  **API**: Add `getPublicConfigs` & `updateSystemConfigs` to `api.ts`.
 2.  **Page**: Create `SettingsPage.tsx` using `react-hook-form`.
 3.  **Route**: Register `/admin/settings`.
-

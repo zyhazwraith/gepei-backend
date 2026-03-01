@@ -37,8 +37,7 @@
 ## 7）脚本（`scripts/`）
 1. `scripts/README.md`（分类说明）
 2. Core: `scripts/test-idempotency-cas.ts`
-3. 手动测试附录：`scripts/test-*.ts`（除上面的 Core）
-4. 运维/调试附录：`scripts/seed-*.ts`、`scripts/tool-*.ts`、`scripts/debug-*`、`scripts/manual-*`、`scripts/shared/*`
+3. 运维工具：`scripts/tool-setup-admin.ts`、`scripts/tool-reset-db.ts`
 
 ## 8）文档（`docs/`）
 1. 活跃运维/评审文档：

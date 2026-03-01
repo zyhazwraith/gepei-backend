@@ -43,4 +43,4 @@
 *   [ ] Implement `OrderService.cancelExpiredOrders()`.
 *   [ ] Create `server/jobs/scheduler.ts` (Registry).
 *   [ ] Register scheduler in `server/server.ts`.
-*   [ ] Verify with `scripts/test-auto-cancel.ts`.
+*   [ ] Verify with `tests/integration/*` scheduler scenarios.

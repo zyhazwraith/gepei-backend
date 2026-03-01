@@ -13,12 +13,12 @@
     - *Spec*: [Link](docs/v2_specs/F-0_attachment_system.md)
     - *User Story*: 系统提供统一的文件上传、压缩和存储服务。
     - *Backend*: [x] Service with Sharp, [x] Controller with Strategy, [x] Routes with RBAC.
-    - *Verification*: [x] scripts/verify-F0.ts (Avatar Overwrite & System Config).
+    - *Verification*: [x] tests/integration 场景覆盖 (Avatar Overwrite & System Config).
 - [x] **[F-1] 实现角色鉴权 (RBAC)** `[PRD 3.4]` `Status: Completed`
     - *Spec*: [Link](docs/v2_specs/F-1_rbac.md)
     - *User Story*: 系统根据 User `role` 字段 (admin/cs) 拦截越权请求。
     - *Tech*: Middleware update, Types update.
-    - *Verification*: [x] scripts/verify-rbac.ts (Admin/CS/User Matrix).
+    - *Verification*: [x] tests/integration 场景覆盖 (Admin/CS/User Matrix).
 - [x] **[F-2] 地陪资料升级 (Guide Profile)** `[PRD 3.3]` `Status: Completed`
     - *User Story*: 地陪可录入 LBS (lat/lng) 和相册；Admin 可查看并审核。
     - *Tech*: API update (`updateProfile`).
@@ -26,7 +26,7 @@
     - *Spec*: [Link](docs/v2_specs/F-3_system_config.md)
     - *User Story*: Admin 可上传/更新客服二维码 URL。
     - *Backend*: [x] Service (Whitelist), [x] Controller, [x] Routes (Public/Admin).
-    - *Verification*: [x] scripts/verify-F3.ts.
+    - *Verification*: [x] tests/integration 场景覆盖.
 
 
 
@@ -43,7 +43,7 @@
     - *User Story*: 客服在后台录入信息，生成“待支付”定制单。
     - *Backend*: [x] New API (`POST /admin/custom-orders`), [x] Detail API (`GET /admin/orders/:id`).
     - *Frontend*: [x] **[FE-T2]** 适配“定制单创建”弹窗 (Input: Phone, Price in Yuan -> Cents).
-    - *Verification*: [x] API Test (scripts/verify-T2.ts), [x] E2E Test (tests/e2e/admin-custom-order.spec.ts).
+    - *Verification*: [x] API Test (tests/integration), [x] E2E Test (tests/e2e/admin-custom-order.spec.ts).
 - [x] **[T-3] 订单指派接口 (Assign Guide)** `[Cancelled]`
     - *Note*: Merged into T-2. Custom orders are assigned upon creation.
 - [x] **[T-4] 前端: 客服联系流程 (CS Contact Flow)** `[PRD 1.1]` `Status: Completed`
@@ -81,7 +81,7 @@
 - [x] **[O-2] 调度器: 自动结算 (Auto Settle)** `[PRD 3.2, 5.2]` `Status: Completed`
     - *User Story*: 订单结束 > 24h 自动完结，计算抽成入账。
     - *Tech*: Node-cron job (1 hour).
-    - *Verification*: [x] scripts/test-auto-settle.ts (Order+Overtime -> Balance).
+    - *Verification*: [x] tests/integration 场景覆盖 (Order+Overtime -> Balance).
 - [x] **[O-3] 退款接口 (Refund)** `[PRD 1.1, 3.4.3]` `Status: Completed`
     - *User Story*: Admin 发起退款，系统校验冷静期逻辑并执行微信退款。
     - *Tech*: New API with logic check.
@@ -90,7 +90,7 @@
     - *Spec*: [Link](docs/v2_specs/O-5_user_ban.md)
     - *User Story*: Admin 封禁/解禁账号 (Double Guard: Login + Middleware)。
     - *Tech*: New API (`PUT /ban`, `/unban`), Middleware Check.
-    - *Verification*: [x] scripts/test-ban-flow.ts.
+    - *Verification*: [x] tests/integration 场景覆盖.
 - [x] **[O-6] 统计报表接口 (Stats)** `[PRD 3.4.2]` `Status: Completed`
     - *User Story*: Admin 查看业绩报表。
     - *Tech*: New API (Aggregation queries).
@@ -109,10 +109,10 @@
     - *Note*: 仅涉及“收入”与“提现”，不包含退款逻辑（C端退款由平台处理，未结算资金不进入地陪钱包）。
     - *Tech*: Schema Update (`user_note`), `WalletService` (Income/Withdraw logic).
     - *Frontend*: `Wallet` Page, `WithdrawDialog`.
-    - *Verification*: [x] scripts/verify-wallet-flow.ts.
+    - *Verification*: [x] tests/integration 场景覆盖.
 - [x] **[O-4] 提现审核 (Withdraw Audit)** `[PRD 5.2]` `Status: Completed`
     - *Spec*: [Link](docs/v2_specs/O-4_withdraw_audit.md)
     - *User Story*: Admin 审核提现单，查看用户备注，线下打款后核销。
     - *Tech*: Admin API (`PUT /audit`).
     - *Frontend*: `AdminWithdrawList` Page.
-    - *Verification*: [x] scripts/verify-admin-withdraw.ts.
+    - *Verification*: [x] tests/integration 场景覆盖.

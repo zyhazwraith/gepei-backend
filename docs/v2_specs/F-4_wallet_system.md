@@ -119,7 +119,7 @@ export const withdrawals = mysqlTable('withdrawals', {
 *   进入钱包页时，**并行调用** `GET /summary` 和 `GET /logs`，实现最佳加载体验。
 
 ## 5. 验证验证计划 (Phase 1)
-*   **Script**: `scripts/verify-wallet-flow.ts`
+*   **Tests**: `tests/integration/*` 资金场景回归
 *   **Goal**: 验证钱包核心逻辑的原子性和一致性。
 
 ### 5.1 初始状态与收入 (Initial & Income)

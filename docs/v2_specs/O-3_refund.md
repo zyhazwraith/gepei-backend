@@ -108,5 +108,5 @@
     *   金额: `退款: ¥100.00` (从 `refund_amount` 读取)
 
 ## 6. 验证 (Verification)
-*   `scripts/verify-O3.ts`: 覆盖后端逻辑（权限、状态、金额、单次限制）。
+*   `tests/integration/*`: 覆盖后端逻辑（权限、状态、金额、单次限制）。
 *   人工测试: 验证前端 Admin 退款弹窗的默认值计算与交互流程。

@@ -105,7 +105,7 @@
 *   **确认**: 提交后刷新列表。
 
 ## 5. 验证计划
-*   **Script**: `scripts/verify-admin-withdraw.ts`
+*   **Tests**: `tests/integration/*` 提现审核场景
     1.  Create a pending withdrawal.
     2.  Admin approves it -> Verify status and logs.
     3.  Create another pending withdrawal.
