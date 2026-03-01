@@ -30,6 +30,10 @@ Required scan scope:
 - `tests/`
 - deploy and runtime/config files (for example `DEPLOY.md`, `README.md`, env assumptions, startup entrypoints)
 
+Default doc focus:
+- Prioritize active docs under `docs/` root and `docs/review_*`.
+- Treat `docs/archive/**` (including archived handover reports) as historical context; do not load by default unless needed for drift tracing.
+
 ## Evidence Priority (Trust Model)
 
 - **Level 1 (authoritative)**: runtime code + DB schema/migrations + deployment/runtime config

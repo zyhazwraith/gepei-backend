@@ -53,11 +53,10 @@ export function createApp(): Application {
   }
   app.use(express.static(clientDistPath));
 
-  // API 路由（添加/v1版本号）
+  // API 路由（v1）
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/guides', guideRoutes);
-  // app.use('/api/v1/upload', uploadRoutes); // Deprecated in favor of attachments
-  app.use('/api/v1/attachments', attachmentRoutes); // New V2 Attachment API
+  app.use('/api/v1/attachments', attachmentRoutes);
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/overtime', overtimeRoutes);
