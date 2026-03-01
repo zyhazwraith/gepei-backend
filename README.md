@@ -1,12 +1,12 @@
-# Gepei Backend
+# Gepei 后端项目
 
-TypeScript + Express + MySQL backend (with bundled frontend build output support).
+基于 TypeScript + Express + MySQL 的后端服务（支持托管前端构建产物）。
 
-## Runtime Requirements
+## 运行环境要求
 - Node.js >= 20
 - MySQL 8.0+
 
-## Quick Start
+## 快速开始
 ```bash
 npm install
 cp .env.example .env
@@ -14,51 +14,52 @@ npm run db:push
 npm run dev
 ```
 
-Server defaults:
-- API base: `/api/v1/*`
-- Health: `GET /health`
+服务默认信息：
+- API 前缀：`/api/v1/*`
+- 健康检查：`GET /health`
 
-## Build and Start
+## 构建与启动
 ```bash
 npm run build
 npm start
 ```
 
-## Required Environment
+## 环境变量
+必填：
 - `DATABASE_URL`
-- `JWT_SECRET` (required at server startup)
+- `JWT_SECRET`（服务启动时强校验）
 
-Optional:
-- `JWT_EXPIRES_IN` (default `7d`)
-- `PORT` (default `3000`)
-- `NODE_ENV` (default `development`)
+可选：
+- `JWT_EXPIRES_IN`（默认 `7d`）
+- `PORT`（默认 `3000`）
+- `NODE_ENV`（默认 `development`）
 
-For deployment details, see:
+部署细节请参考：
 - `DEPLOY.md`
 - `docs/DEPLOYMENT_CHECKLIST.md`
 
-## Project Structure (Current)
+## 当前项目结构
 ```text
-server/        # backend runtime (app, routes, controllers, services, db, scheduler)
-client/        # frontend source
-shared/        # shared constants/types
-drizzle/       # migrations/meta
-scripts/       # manual test/seed/tool scripts (see scripts/README.md)
-tests/         # active/archived tests (see tests/README.md)
-docs/          # active docs + archive (see docs/README.md)
+server/        # 后端运行时代码（app、routes、controllers、services、db、scheduler）
+client/        # 前端源码
+shared/        # 共享常量与类型
+drizzle/       # 数据库迁移与元数据
+scripts/       # 手动测试/初始化/工具脚本（见 scripts/README.md）
+tests/         # 活跃与归档测试（见 tests/README.md）
+docs/          # 现行文档与历史归档（见 docs/README.md）
 ```
 
-## Test Entry Points
-Core:
-- `npm run test:e2e` (integration script bundle)
-- `npm run test:e2e:ui` (Playwright)
-- `npm run test:api` (core API integration script)
+## 测试入口
+核心命令：
+- `npm run test:e2e`（集成脚本组合）
+- `npm run test:e2e:ui`（Playwright）
+- `npm run test:api`（核心 API 集成脚本）
 - `npm run test:idempotency`
 
-Test organization:
-- `tests/integration/*` = active backend regression
-- `tests/e2e/*` = UI E2E
-- `tests/archive/*` = historical (not default pipeline)
+测试目录约定：
+- `tests/integration/*`：活跃后端回归
+- `tests/e2e/*`：前端 E2E
+- `tests/archive/*`：历史用例（默认不进流水线）
 
-## Handover Entry
+## 交接入口
 - `HANDOVER_INDEX.md`
