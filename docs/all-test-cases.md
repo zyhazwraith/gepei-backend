@@ -34,7 +34,7 @@
 | **LBS Flow** | 1. 更新地陪坐标 (Update Coordinates)<br>2. 距离计算准确性 (Distance Calc)<br>3. 无坐标时的列表行为 (List w/o Coords) | `test-lbs-flow.ts` | Active |
 | **Admin Flow** | 1. 获取用户列表 (Fetch User List)<br>2. 获取订单列表 (Fetch Order List) | `test-admin-flow.ts` | Active |
 | **Admin Search** | 1. 按订单号搜索 (Search by Order Number)<br>2. 按手机号搜索 (Search by Phone) | `test-admin-search.ts` | Active |
-| **Guide Assignment** | *[Deprecated]* 管理员指派地陪 (Assign Multiple Guides) | `test-guide-assignment.ts` | **Deprecated** (逻辑已移除) |
+| **Guide Assignment (Deprecation Guard)** | 验证已废弃接口保持不可用（`/admin/orders/:id/assign`, `/orders/:id/select-guide`） | `test-guide-assignment.ts` | Active (Guard) |
 
 ## 3. 单元/混合测试 (Unit/Hybrid Tests)
 *路径: `tests/*.test.ts`*
@@ -48,6 +48,6 @@
 | | should pay for the order successfully | `custom_order.test.ts` | 支付成功验证 |
 
 ## 4. 维护建议
-1.  **废弃清理**: 建议删除 `tests/integration/test-guide-assignment.ts`，因为 `assignGuide` 接口已从 Admin Controller 中移除。
-2.  **V2 适配**: `test-core-api.ts` 和 `test-booking-flow.ts` 涉及地陪创建和订单创建，需重点关注其对 `guideId` (-> `userId`) 和 `hourlyPrice` (-> `expectedPrice`) 的适配情况。
-3.  **技术栈统一**: 目前存在 `Axios 脚本` 和 `Vitest` 两种集成测试方式，建议长期看统一迁移到 `Vitest` 以获得更好的报告和并发支持。
+1.  **废弃守卫保留**: `tests/integration/test-guide-assignment.ts` 目前用于“已移除接口不可恢复”的回归守卫，不建议删除。
+2.  **V2 适配**: `test-core-api.ts` 和 `test-booking-flow.ts` 涉及地陪创建和订单创建，需持续关注 `guideId`(userId 语义) 与价格字段适配。
+3.  **技术栈统一**: 目前存在 `Axios 脚本` 和 `Vitest` 两种集成测试方式，建议长期统一到 `Vitest` 获得更稳定报告与并发能力。

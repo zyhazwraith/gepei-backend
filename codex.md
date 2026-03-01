@@ -145,3 +145,17 @@ Output:
 - Docs reliability baseline: ~70-80%.
 - Tests reliability baseline: lower than docs (weak evidence).
 - If product intent is unresolved after repo scan, ask targeted clarification questions only for those specific gaps.
+
+## Current Review State
+
+- Current cycle status: Phase 0-5 completed (single-instance MVP ship gate: conditional GO).
+- Detailed records:
+  - `docs/review_baseline.md`
+  - `docs/review_phase1_discussion_2026-02-27.md`
+  - `docs/review_phase2_scan_2026-02-28.md`
+  - `docs/review_phase3_scan_2026-02-28.md`
+- Deferred backlog:
+  - Auth throttling + API abuse logging
+  - Upload private-access redesign
+  - Multi-instance scheduler hardening (leader/lock)
+  - Real payment callback idempotency migration

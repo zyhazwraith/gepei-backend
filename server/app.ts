@@ -10,7 +10,6 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { contextMiddleware } from './middleware/context.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
-import uploadRoutes from './routes/upload.routes.js';
 import attachmentRoutes from './routes/attachment.routes.js';
 import systemConfigRoutes from './routes/system-config.routes.js';
 import userRoutes from './routes/user.routes.js';

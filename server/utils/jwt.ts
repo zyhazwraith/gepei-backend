@@ -1,4 +1,4 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { AuthenticationError, ERROR_CODES } from './errors.js';
 
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
