@@ -28,9 +28,6 @@
 - `seed-*.ts`
 - `tool-*.ts`
 - `check-db-status.ts`
-- `debug-guide-photos.ts`
-- `fix-test-data.ts`
-- `inspect-attachment-keys.ts`
 - `manual-sms-send.ts`
 - `verify-admin-api.ts`
 - `verify-admin-user-v2.1.ts`
