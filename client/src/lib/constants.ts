@@ -1,1 +1,0 @@
-export const PLATFORM_COMMISSION_RATE = 0.25;

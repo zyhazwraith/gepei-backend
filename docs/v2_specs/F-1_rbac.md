@@ -34,6 +34,6 @@
 *   更新 `server/middleware/auth.middleware.ts`: 确保鉴权逻辑支持 `cs`。
 
 ### 4.2 验证 (Verification)
-编写 `scripts/verify-rbac.ts`:
+使用 `tests/integration/*`:
 *   验证 CS 账号能否成功访问 `custom-orders` 和 `users` 接口。
 *   验证 User 账号访问被拒绝 (403)。

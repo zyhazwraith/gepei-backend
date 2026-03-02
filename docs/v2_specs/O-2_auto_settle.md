@@ -42,7 +42,7 @@
 *   **Overtime**: If overtime exists, `orders.amount` is already updated by S-3 logic. The job simply trusts `orders.amount`.
 
 ## 4. Verification Plan
-*   **Script**: `scripts/test-auto-settle.ts`
+*   **Tests**: `tests/integration/*` + scheduler 场景回归
 *   **Steps**:
     1.  Create Order (Amount: 10000).
     2.  Mock Check-in End (Set `actual_end_time` to yesterday).

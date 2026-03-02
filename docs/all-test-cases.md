@@ -33,7 +33,7 @@
 | **Payment Flow** | 1. 创建订单<br>2. 验证初始状态 (Pending)<br>3. 支付订单 (Mock Wechat)<br>4. 验证支付后状态 (Paid) | `test-payment-flow.ts` | Active |
 | **LBS Flow** | 1. 更新地陪坐标 (Update Coordinates)<br>2. 距离计算准确性 (Distance Calc)<br>3. 无坐标时的列表行为 (List w/o Coords) | `test-lbs-flow.ts` | Active |
 | **Admin Flow** | 1. 获取用户列表 (Fetch User List)<br>2. 获取订单列表 (Fetch Order List) | `test-admin-flow.ts` | Active |
-| **Admin Search** | 1. 按订单号搜索 (Search by Order Number)<br>2. 按手机号搜索 (Search by Phone) | `test-admin-search.ts` | Active |
+| **Admin Search** | 1. 按订单号搜索 (Search by Order Number)<br>2. 按手机号搜索 (Search by Phone) | `test-admin-search.ts` | Manual |
 | **Guide Assignment (Deprecation Guard)** | 验证已废弃接口保持不可用（`/admin/orders/:id/assign`, `/orders/:id/select-guide`） | `test-guide-assignment.ts` | Active (Guard) |
 
 ## 3. 单元/混合测试 (Unit/Hybrid Tests)
@@ -51,6 +51,7 @@
 1.  **废弃守卫保留**: `tests/integration/test-guide-assignment.ts` 目前用于“已移除接口不可恢复”的回归守卫，不建议删除。
 2.  **V2 适配**: `test-core-api.ts` 和 `test-booking-flow.ts` 涉及地陪创建和订单创建，需持续关注 `guideId`(userId 语义) 与价格字段适配。
 3.  **技术栈统一**: 目前存在 `Axios 脚本` 和 `Vitest` 两种集成测试方式，建议长期统一到 `Vitest` 获得更稳定报告与并发能力。
+4.  **手动脚本标记**: `test-admin-search.ts` 当前未接入 `npm run test:e2e`，执行方式为手动触发。
 
 ## 5. 归档测试
 

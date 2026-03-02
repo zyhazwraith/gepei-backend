@@ -55,7 +55,7 @@
 - [ ] **Auth**: Modify `login` in `server/controllers/auth.controller.ts` to check ban status.
 - [ ] **Controller**: Add `banUser`, `unbanUser` to `server/controllers/admin.controller.ts`.
 - [ ] **Route**: Register routes in `server/routes/admin.routes.ts` (or equivalent).
-- [ ] **Test**: Create `scripts/test-ban-flow.ts` to verify:
+- [ ] **Test**: Use `tests/integration/*` to verify:
     -   Ban user -> Login fails.
     -   Ban user -> Existing token fails (Middleware).
     -   Unban user -> Login succeeds.

@@ -165,7 +165,7 @@
 
 ## 5. Verification Plan
 
-*   **Script**: `scripts/verify-T2.ts`
+*   **Tests**: `tests/integration/*` + `tests/e2e/admin-custom-order.spec.ts`
 *   **Cases**:
     1.  **Success**: Valid Inputs (Cents, GuidePhone) -> DB Check.
     2.  **Detail Check**: Call `GET /api/v1/admin/orders/:id` with Admin Token -> Expect 200 & Full Data.

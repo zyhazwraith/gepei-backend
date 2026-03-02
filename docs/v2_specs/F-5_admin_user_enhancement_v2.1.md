@@ -88,7 +88,7 @@ Enhance the "More" (...) dropdown menu:
     - If role is `cs`: Show "取消客服" (Revoke CS).
 
 ## 5. Verification Plan
-Create a test script `scripts/verify-admin-user-v2.1.ts` to verify:
+Use integration tests under `tests/integration/` (and `npm run test:e2e:admin`) to verify:
 1.  User login updates `last_login_at`.
 2.  `GET /admin/users` returns `lastLoginAt`.
 3.  `PUT /admin/users/:id/role` correctly updates the role.

@@ -16,7 +16,7 @@
     "start": "node dist/server/server.js",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test": "jest",
+    "test": "vitest run",
     "test:api": "tsx tests/integration/test-core-api.ts",
     "test:e2e": "concurrently \"npm run test:e2e:core\" \"npm run test:e2e:admin\" \"npm run test:e2e:guide\" \"npm run test:e2e:booking\" \"npm run test:e2e:payment\" \"npm run test:e2e:lbs\"",
     "test:e2e:core": "tsx tests/integration/test-core-api.ts",
