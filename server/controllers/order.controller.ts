@@ -50,7 +50,6 @@ const createOvertimeSchema = z.object({
  */
 export async function createOrder(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
-  console.log('createOrder body:', req.body);
   
   try {
     // 1. 判断订单类型 (显式检查 type 字段)

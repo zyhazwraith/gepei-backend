@@ -7,12 +7,13 @@
 - `tests/integration/test-lbs-flow.ts`
 - `tests/integration/test-admin-flow.ts`
 - `tests/integration/test-guide-assignment.ts`
+- `tests/integration/test-throttle-logging.test.ts`（Vitest 自动执行）
 
 ## 手动集成测试（默认不执行）
 - `tests/integration/test-admin-search.ts`
 
 运行方式：
-- `npm test`（Vitest，当前包含 `tests/*.test.ts`）
+- `npm test`（Vitest，当前包含 `tests/**/*.test.ts`）
 - `npm run test:e2e`
 - `npm run test:api`（仅核心 API）
 
