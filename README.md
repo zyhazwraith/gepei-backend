@@ -63,3 +63,16 @@ docs/          # 现行文档与历史归档（见 docs/README.md）
 
 ## 交接入口
 - `HANDOVER_INDEX.md`
+
+## 运行时策略配置（非敏感）
+文件：`server/config/runtime.config.ts`
+
+- 配置源：统一来自 `.env`（`runtime.config.ts` 负责读取/默认值/校验）
+- 日志：统一前缀输出（`[API]` / `[SECURITY]` / `[SYSTEM]` / `[ERROR]`）
+- 限流：Auth 关键接口内存限流（单实例）
+
+默认值（未配置环境变量时）：
+- `LOG_TIMEZONE=Asia/Shanghai`
+- `THROTTLE_WINDOW_MS=60000`
+- `THROTTLE_AUTH_MAX=20`
+- `THROTTLE_VERIFICATION_CODE_MAX=5`（`/api/v1/auth/verification-code`）

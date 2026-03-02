@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { AppError, ValidationError } from '../utils/errors.js';
 import { errorResponse } from '../utils/response.js';
 import { ErrorCodes, ErrorCodeToMessage } from '../../shared/errorCodes.js';
+import { logger } from '../lib/logger.js';
 
 // 错误码映射表
 const ERROR_CODE_MAP: Record<string, number> = {
@@ -51,7 +52,7 @@ export function errorHandler(
   }
 
   // 3. 未知错误
-  console.error('Unexpected error:', err);
+  logger.error('Unexpected error', err instanceof Error ? err.stack || err.message : String(err));
   errorResponse(res, ErrorCodes.INTERNAL_ERROR);
 }
 

@@ -47,9 +47,6 @@ VITE_TENCENT_MAP_KEY=您的腾讯地图Key
 # JWT 签名密钥（必填）
 # 生产环境必须使用高强度随机字符串（建议 32+ 字符）
 JWT_SECRET=请替换为高强度随机密钥
-
-# JWT 过期时间（可选，默认 7d）
-JWT_EXPIRES_IN=7d
 ```
 
 > **注意**: 环境变量优先级为 `系统环境变量` > `.env 文件`。如果在 PM2 配置或系统环境中设置了同名变量，将覆盖 `.env` 中的值。
@@ -87,6 +84,19 @@ npm run build && pm2 start dist/server/server.js --name "gepei-app"
 # 2. 配置开机自启 (防止服务器重启后服务挂掉)
 pm2 save && pm2 startup
 ```
+
+## 5.1 PM2 日志轮转（建议）
+
+项目日志默认输出到 `stdout/stderr`，由 PM2 托管。建议安装 `pm2-logrotate`：
+
+```bash
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 20M
+pm2 set pm2-logrotate:retain 7
+pm2 set pm2-logrotate:compress true
+```
+
+如调整了 PM2 环境变量，可执行 `pm2 restart gepei-app --update-env` 让配置生效。
 
 ## 6. Nginx 代理配置 (HTTPS)
 

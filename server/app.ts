@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { contextMiddleware } from './middleware/context.middleware.js';
+import { apiLogMiddleware } from './middleware/api-log.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import attachmentRoutes from './routes/attachment.routes.js';
@@ -54,6 +55,7 @@ export function createApp(): Application {
   app.use(express.static(clientDistPath));
 
   // API 路由（v1）
+  app.use('/api/v1', apiLogMiddleware);
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/guides', guideRoutes);
   app.use('/api/v1/attachments', attachmentRoutes);

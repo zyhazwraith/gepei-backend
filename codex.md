@@ -152,7 +152,6 @@ Output:
 
 - Keep review evidence in issue/PR context or dedicated release notes as needed.
 - Deferred backlog:
-  - Auth throttling + API abuse logging
   - Upload private-access redesign
   - Multi-instance scheduler hardening (leader/lock)
   - Real payment callback idempotency migration
