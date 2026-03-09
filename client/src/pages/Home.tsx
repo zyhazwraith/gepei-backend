@@ -92,6 +92,32 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="px-4 pb-2">
+        <div className="pt-2 text-center text-[12px] text-slate-500 leading-5">
+          <p>
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-700 transition-colors"
+            >
+              蜀ICP备2026008959号
+            </a>{" "}
+            | 成都牵寻伴文化发展有限公司
+          </p>
+          <p>
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              https://beian.miit.gov.cn/
+            </a>
+          </p>
+        </div>
+      </div>
+
       <BottomNav />
     </div>
   );
