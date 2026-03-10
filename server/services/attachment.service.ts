@@ -1,10 +1,10 @@
 import sharp from 'sharp';
-import path from 'path';
 import fs from 'fs/promises';
 import { db } from '../db/index.js';
 import { attachments } from '../db/schema.js';
 import { sql } from 'drizzle-orm';
 import { ValidationError } from '../utils/errors.js';
+import { getStorageProvider } from './storage/index.js';
 
 // Strategy Configuration
 interface Strategy {
@@ -60,18 +60,6 @@ interface UploadContext {
 }
 
 export class AttachmentService {
-  private static UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
-
-  private static resolveSafePath(key: string): string {
-    const root = path.resolve(this.UPLOAD_ROOT);
-    const normalizedKey = key.replace(/\\/g, '/');
-    const resolved = path.resolve(root, normalizedKey);
-    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-      throw new ValidationError('非法文件路径');
-    }
-    return resolved;
-  }
-
   /**
    * Process and save attachment
    */
@@ -90,12 +78,9 @@ export class AttachmentService {
 
     // 2. Generate Key (Relative Path)
     const key = strategy.path({ contextId: ctx.contextId, slot });
-    const fullPath = this.resolveSafePath(key);
+    const storageProvider = getStorageProvider();
 
-    // 3. Ensure Directory Exists
-    await fs.mkdir(path.dirname(fullPath), { recursive: true });
-
-    // 4. Process Image with Sharp
+    // 3. Process Image with Sharp
     const pipeline = sharp(ctx.file.path);
     
     // Resize if configured
@@ -117,10 +102,15 @@ export class AttachmentService {
       pipeline.png({ quality: strategy.quality });
     }
 
-    // Save to disk (Overwrite)
-    await pipeline.toFile(fullPath);
+    const content = await pipeline.toBuffer();
+    const contentType = `image/${strategy.format}`;
+    const storedObject = await storageProvider.putObject({
+      key,
+      content,
+      contentType,
+    });
 
-    // 5. Clean up temp file (Multer temp)
+    // 4. Clean up temp file (Multer temp)
     // Note: Multer might not clean up automatically if we don't handle it
     try {
         await fs.unlink(ctx.file.path);
@@ -128,9 +118,7 @@ export class AttachmentService {
         // Ignore if file doesn't exist
     }
 
-    // 6. Upsert Database Record
-    // URL with timestamp for cache busting
-    const url = `/uploads/${key}?t=${Date.now()}`;
+    // 5. Upsert Database Record
     
     // We use MySQL, so we can't easily get the ID from ON DUPLICATE KEY UPDATE in one query consistently
     // across drivers. Drizzle insert return type depends on driver.
@@ -139,17 +127,17 @@ export class AttachmentService {
     await db.insert(attachments).values({
       uploaderId: ctx.uploaderId,
       key: key,
-      url: url, // Note: URL in DB will update on each upload to have new timestamp
-      storageType: 'local',
-      fileType: `image/${strategy.format}`,
+      url: storedObject.url,
+      storageType: storedObject.storageType,
+      fileType: contentType,
       usageType: ctx.usage,
       updatedAt: new Date()
     }).onDuplicateKeyUpdate({
       set: {
         uploaderId: ctx.uploaderId,
-        url: url,
+        url: storedObject.url,
         updatedAt: new Date(),
-        fileType: `image/${strategy.format}`
+        fileType: contentType
       }
     });
 
@@ -167,7 +155,7 @@ export class AttachmentService {
     return {
       id: record.id,
       key,
-      url,
+      url: storedObject.url,
       usage: ctx.usage,
       slot
     };

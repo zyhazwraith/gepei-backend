@@ -19,6 +19,10 @@ export const ErrorCodes = {
   INSUFFICIENT_BALANCE: 1009,   // 余额不足
   INVALID_PARAMS: 1010,         // 参数错误
   USER_BANNED: 1011,            // 用户已被封禁
+  WECHAT_REAUTH_REQUIRED: 1101, // 微信授权码无效/过期，需要重新授权
+  WECHAT_CONFIG_ERROR: 1102,    // 微信配置错误（appid/secret 等）
+  WECHAT_TEMP_UNAVAILABLE: 1103,// 微信临时不可用（超时/网络/上游5xx）
+  WECHAT_UPSTREAM_ERROR: 1104,  // 微信上游业务错误（兜底）
   VALIDATION_ERROR: 2002,       // 字段验证错误
   
   // 服务器错误 (2001+)
@@ -43,6 +47,10 @@ export const ErrorCodeToHttpStatus: Record<number, number> = {
   [ErrorCodes.INSUFFICIENT_BALANCE]: 400,
   [ErrorCodes.INVALID_PARAMS]: 400,
   [ErrorCodes.USER_BANNED]: 403,
+  [ErrorCodes.WECHAT_REAUTH_REQUIRED]: 400,
+  [ErrorCodes.WECHAT_CONFIG_ERROR]: 500,
+  [ErrorCodes.WECHAT_TEMP_UNAVAILABLE]: 503,
+  [ErrorCodes.WECHAT_UPSTREAM_ERROR]: 502,
   [ErrorCodes.VALIDATION_ERROR]: 400,
   [ErrorCodes.INTERNAL_ERROR]: 500,
 };
@@ -63,6 +71,10 @@ export const ErrorCodeToMessage: Record<number, string> = {
   [ErrorCodes.INSUFFICIENT_BALANCE]: '余额不足',
   [ErrorCodes.INVALID_PARAMS]: '参数错误',
   [ErrorCodes.USER_BANNED]: '用户已被封禁',
+  [ErrorCodes.WECHAT_REAUTH_REQUIRED]: '授权已失效，请重新进入支付页面',
+  [ErrorCodes.WECHAT_CONFIG_ERROR]: '微信授权配置异常，请稍后重试',
+  [ErrorCodes.WECHAT_TEMP_UNAVAILABLE]: '微信服务暂时不可用，请稍后重试',
+  [ErrorCodes.WECHAT_UPSTREAM_ERROR]: '微信授权失败，请稍后重试',
   [ErrorCodes.VALIDATION_ERROR]: '字段验证错误',
   [ErrorCodes.INTERNAL_ERROR]: '服务器内部错误',
 };

@@ -2,23 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { AppError, ValidationError } from '../utils/errors.js';
 import { errorResponse } from '../utils/response.js';
-import { ErrorCodes, ErrorCodeToMessage } from '../../shared/errorCodes.js';
+import { ErrorCodes } from '../../shared/errorCodes.js';
 import { logger } from '../lib/logger.js';
-
-// 错误码映射表
-const ERROR_CODE_MAP: Record<string, number> = {
-  'UNAUTHORIZED': ErrorCodes.TOKEN_INVALID,
-  'INVALID_TOKEN': ErrorCodes.TOKEN_INVALID,
-  'TOKEN_EXPIRED': ErrorCodes.TOKEN_INVALID,
-  'USER_NOT_FOUND': ErrorCodes.USER_NOT_FOUND,
-  'PHONE_EXISTS': ErrorCodes.PHONE_EXISTS,
-  'INVALID_PHONE': ErrorCodes.INVALID_PARAMS,
-  'INVALID_PASSWORD': ErrorCodes.INVALID_CREDENTIALS,
-  'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR,
-  'FORBIDDEN': ErrorCodes.PERMISSION_DENIED,
-  'NOT_FOUND': ErrorCodes.USER_NOT_FOUND,
-  'USER_BANNED': ErrorCodes.USER_BANNED,
-};
 
 // 全局错误处理中间件
 export function errorHandler(
@@ -36,8 +21,7 @@ export function errorHandler(
 
   // 2. AppError (业务逻辑错误)
   if (err instanceof AppError) {
-    // 优先使用映射表，如果是 400 但未映射则默认为参数错误
-    let numericCode = ERROR_CODE_MAP[err.code];
+    let numericCode = Number.isFinite(err.code) ? err.code : undefined;
     if (!numericCode && err.statusCode === 400) {
       numericCode = ErrorCodes.INVALID_PARAMS;
     }
