@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db/index.js';
-import { orders, payments, users, guides, overtimeRecords } from '../db/schema.js';
+import { orders, users, guides, overtimeRecords } from '../db/schema.js';
 import { eq, and, ne, or, count, desc, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
-import { ErrorCodes } from '../../shared/errorCodes.js';
-import { PLATFORM_COMMISSION_RATE, GUIDE_INCOME_RATIO } from '../shared/constants.js';
+import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
+import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
+import { PaymentService } from '../services/payment/payment.service.js';
+import { PAYMENT_METHOD_WECHAT } from '../constants/payment.js';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
@@ -35,9 +36,10 @@ const createNormalOrderSchema = z.object({
   content: z.string().optional(), // Add content field
 });
 
-// 模拟支付 Schema
-const payOrderSchema = z.object({
-  paymentMethod: z.enum(['wechat']),
+// 支付请求 Schema（Phase1: authCode 在 mock 下允许缺省）
+const payRequestSchema = z.object({
+  paymentMethod: z.enum([PAYMENT_METHOD_WECHAT]),
+  authCode: z.string().trim().min(1, 'authCode不能为空').optional(),
 });
 
 // 加时申请 Schema
@@ -147,56 +149,24 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
   
   try {
     // 1. 验证输入
-    const validated = payOrderSchema.parse(req.body);
+    const validated = payRequestSchema.parse(req.body);
+    const intent = await OrderService.prepareOrderPaymentIntent(orderId, userId);
 
-    // 2. 查找订单
-    const [order] = await db.select().from(orders).where(
-      and(
-        eq(orders.id, orderId),
-        eq(orders.userId, userId)
-      )
-    );
-
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-
-    // 3. 模拟支付成功
-    await db.transaction(async (tx) => {
-      // 3.1 CAS: pending -> waiting_service
-      const [updateResult] = await tx.update(orders)
-        .set({ 
-          status: 'waiting_service', // 支付后变为 waiting_service (待服务)
-          paidAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(orders.id, orderId),
-          eq(orders.status, 'pending')
-        ));
-
-      if (updateResult.affectedRows === 0) {
-        throw new ValidationError('订单已支付或状态已变更');
-      }
-
-      // 3.2 创建支付流水（仅在状态迁移成功后记录）
-      await tx.insert(payments).values({
-        relatedType: 'order',
-        relatedId: orderId,
-        paymentMethod: 'wechat',
-        transactionId: `MOCK_${nanoid()}`,
-        amount: order.amount,
-        status: 'success',
-        paidAt: new Date(),
-      });
+    const prepay = await PaymentService.createPrepay({
+      intent,
+      paymentMethod: validated.paymentMethod,
+      authCode: validated.authCode,
+      clientIp: req.ip,
     });
 
     res.json({
       code: 0,
-      message: '支付成功',
+      message: '预支付创建成功',
       data: {
         orderId,
-        status: 'paid',
+        outTradeNo: prepay.outTradeNo,
+        paymentStatus: prepay.paymentStatus,
+        payParams: prepay.payParams,
       },
     });
   } catch (error: any) {
@@ -407,7 +377,6 @@ export async function createOvertime(req: Request, res: Response, next: NextFunc
 export async function payOvertime(req: Request, res: Response, next: NextFunction) {
   const userId = req.user!.id;
   const overtimeId = parseInt(req.params.id);
-  const { paymentMethod } = req.body;
 
   if (isNaN(overtimeId)) {
     return next(new ValidationError('无效的加时申请ID'));
@@ -415,34 +384,25 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
 
   try {
     // Validate Input
-    payOrderSchema.parse({ paymentMethod });
+    const validated = payRequestSchema.parse(req.body);
+    const intent = await OrderService.prepareOvertimePaymentIntent(overtimeId, userId);
 
-    // 1. Fetch Overtime Record
-    const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
-
-    if (!overtime) {
-        throw new NotFoundError('加时申请不存在');
-    }
-
-    // 2. Fetch Associated Order
-    const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
-
-    if (!order) {
-        throw new NotFoundError('关联订单不存在');
-    }
-    
-    // 3. Permission Check
-    if (order.userId !== userId) {
-        throw new ForbiddenError('无权支付此订单');
-    }
-
-    // 4. Call Service
-    const payResult = await OrderService.payOvertime(overtimeId, paymentMethod);
+    const prepay = await PaymentService.createPrepay({
+      intent,
+      paymentMethod: validated.paymentMethod,
+      authCode: validated.authCode,
+      clientIp: req.ip,
+    });
     
     res.json({
       code: 0,
-      message: '支付成功',
-      data: payResult
+      message: '预支付创建成功',
+      data: {
+        overtimeId,
+        outTradeNo: prepay.outTradeNo,
+        paymentStatus: prepay.paymentStatus,
+        payParams: prepay.payParams,
+      }
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
