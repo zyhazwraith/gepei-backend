@@ -6,6 +6,12 @@ import { nanoid } from 'nanoid';
 import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
 import { paymentProvider } from './payment/payment.provider.js';
 import { OrderStatus } from '../constants/index.js';
+import type { PaymentIntent } from './payment/payment.types.js';
+import {
+  PAYMENT_RELATED_TYPE_ORDER,
+  PAYMENT_RELATED_TYPE_OVERTIME,
+  PAYMENT_STATUS_PENDING,
+} from '../constants/payment.js';
 
 interface CheckInPayload {
   type: 'start' | 'end';
@@ -23,6 +29,116 @@ function buildServiceEndTimeExtensionSql(durationHours: number) {
 }
 
 export class OrderService {
+  static async prepareOrderPaymentIntent(orderId: number, userId: number): Promise<PaymentIntent> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+
+    if (!order) {
+      throw new NotFoundError('订单不存在');
+    }
+    if (order.userId !== userId) {
+      throw new ForbiddenError('无权支付此订单');
+    }
+    if (order.status !== PAYMENT_STATUS_PENDING) {
+      throw new ValidationError('订单已支付或状态已变更');
+    }
+
+    return {
+      relatedType: PAYMENT_RELATED_TYPE_ORDER,
+      relatedId: order.id,
+      amountFen: order.amount,
+      description: `order#${order.id}`,
+    };
+  }
+
+  static async prepareOvertimePaymentIntent(overtimeId: number, userId: number): Promise<PaymentIntent> {
+    const [overtime] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
+    if (!overtime) {
+      throw new NotFoundError('加时申请不存在');
+    }
+    if (overtime.status !== PAYMENT_STATUS_PENDING) {
+      throw new ValidationError('该加时申请已支付或状态已变更');
+    }
+
+    const [order] = await db.select().from(orders).where(eq(orders.id, overtime.orderId));
+    if (!order) {
+      throw new NotFoundError('关联订单不存在');
+    }
+    if (order.userId !== userId) {
+      throw new ForbiddenError('无权支付此订单');
+    }
+
+    return {
+      relatedType: PAYMENT_RELATED_TYPE_OVERTIME,
+      relatedId: overtime.id,
+      amountFen: overtime.fee,
+      description: `overtime#${overtime.id}`,
+    };
+  }
+
+  static async applyOrderPaid(orderId: number, amountFen: number, paidAt: Date): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [order] = await tx.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) {
+        throw new NotFoundError('订单不存在');
+      }
+      if (order.amount !== amountFen) {
+        throw new ValidationError('订单支付金额不一致');
+      }
+
+      const [result] = await tx
+        .update(orders)
+        .set({
+          status: 'paid',
+          paidAt,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(orders.id, orderId), eq(orders.status, PAYMENT_STATUS_PENDING)));
+
+      if (result.affectedRows === 0) {
+        return;
+      }
+    });
+  }
+
+  static async applyOvertimePaid(overtimeId: number, amountFen: number, paidAt: Date): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [overtime] = await tx.select().from(overtimeRecords).where(eq(overtimeRecords.id, overtimeId));
+      if (!overtime) {
+        throw new NotFoundError('加时申请不存在');
+      }
+      if (overtime.fee !== amountFen) {
+        throw new ValidationError('加时支付金额不一致');
+      }
+
+      const [updateResult] = await tx
+        .update(overtimeRecords)
+        .set({ status: 'paid' })
+        .where(and(eq(overtimeRecords.id, overtimeId), eq(overtimeRecords.status, PAYMENT_STATUS_PENDING)));
+
+      if (updateResult.affectedRows === 0) {
+        return;
+      }
+
+      const [order] = await tx.select().from(orders).where(eq(orders.id, overtime.orderId));
+      if (!order) {
+        throw new NotFoundError('关联订单不存在');
+      }
+
+      const guideIncomeInc = Math.round(overtime.fee * GUIDE_INCOME_RATIO);
+
+      await tx
+        .update(orders)
+        .set({
+          totalAmount: sql`${orders.totalAmount} + ${overtime.fee}`,
+          guideIncome: sql`${orders.guideIncome} + ${guideIncomeInc}`,
+          totalDuration: sql`COALESCE(${orders.totalDuration}, ${orders.duration}) + ${overtime.duration}`,
+          serviceEndTime: buildServiceEndTimeExtensionSql(overtime.duration),
+          updatedAt: paidAt,
+        })
+        .where(eq(orders.id, order.id));
+    });
+  }
+
   /**
    * User Initiated Refund
    */

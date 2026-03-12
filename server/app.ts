@@ -16,6 +16,7 @@ import systemConfigRoutes from './routes/system-config.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import overtimeRoutes from './routes/overtime.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import walletRoutes from './routes/wallet.routes.js';
 
@@ -62,6 +63,7 @@ export function createApp(): Application {
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/overtime', overtimeRoutes);
+  app.use('/api/v1/payments', paymentRoutes);
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/wallet', walletRoutes);
 
