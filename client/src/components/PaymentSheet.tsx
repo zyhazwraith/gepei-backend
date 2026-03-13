@@ -6,8 +6,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { payOrder } from "@/lib/api";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Price from "@/components/Price";
+import { invokeWechatJsapiPay, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
 
 interface PaymentSheetProps {
   orderId: number | null;
@@ -23,18 +24,43 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
 
   const handlePay = async () => {
     if (!orderId) return;
+    if (paymentMethod !== "wechat") return;
 
     setLoading(true);
     try {
-      const res = await payOrder(orderId, "wechat");
-      
-      if (res.code === 0) {
+      const authCode = resolveAuthCodeFromUrl();
+      if (!authCode) {
+        toast.error("缺少微信授权，请重新进入支付页");
+        return;
+      }
+
+      const res = await payOrder(orderId, "wechat", authCode);
+      if (res.code !== 0 || !res.data) {
+        toast.error(res.message || "支付失败");
+        return;
+      }
+
+      const prepay = res.data;
+      const invokeResult = await invokeWechatJsapiPay(prepay.payParams);
+      if (invokeResult === "cancel") {
+        toast.error("已取消支付");
+        return;
+      }
+
+      const syncResult = await waitPaymentSuccess(prepay.transactionId);
+      if (syncResult === "success") {
         toast.success("支付成功");
         onSuccess();
         onClose();
-      } else {
-        toast.error(res.message || "支付失败");
+        return;
       }
+
+      if (syncResult === "failed") {
+        toast.error("支付失败，请重试");
+        return;
+      }
+
+      toast("支付处理中，请稍后刷新订单状态");
     } catch (error) {
       toast.error("网络错误，请重试");
     } finally {

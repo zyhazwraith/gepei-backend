@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ValidationError } from '../utils/errors.js';
 import { PaymentService } from '../services/payment/payment.service.js';
 import { PAYMENT_STATUS_PENDING } from '../constants/payment.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * 获取支付状态（统一按 transactionId）
@@ -43,23 +44,28 @@ export async function getPaymentStatus(req: Request, res: Response, next: NextFu
 }
 
 /**
- * 微信支付回调（Phase1 骨架）
- * POST /api/v1/payments/wechat/notify
+ * 微信支付回调（Phase3 协议）
+ * POST /wechat/pay/notify
  */
-export async function wechatNotify(req: Request, res: Response, next: NextFunction) {
+export async function wechatNotify(req: Request, res: Response, _next: NextFunction) {
   try {
-    const result = await PaymentService.handleNotify({
+    const rawBody = req.body as Buffer;
+
+    await PaymentService.handleNotify({
       headers: req.headers as Record<string, string | string[] | undefined>,
-      rawBody: req.body,
-      parsedBody: req.body,
+      rawBody,
     });
 
-    res.json({
-      code: 0,
-      message: '通知已接收',
-      data: result,
+    res.status(200).json({
+      code: 'SUCCESS',
+      message: '成功',
     });
   } catch (error) {
-    next(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('wechat_notify_failed', errorMessage);
+    res.status(200).json({
+      code: 'FAIL',
+      message: errorMessage,
+    });
   }
 }

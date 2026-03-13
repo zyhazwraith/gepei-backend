@@ -251,7 +251,11 @@ export class PaymentService {
         return null;
       }
 
-      if (typeof upstream.amountFen === 'number' && upstream.amountFen !== row.amount) {
+      if (typeof upstream.amountFen !== 'number') {
+        throw new ValidationError('支付金额缺失');
+      }
+
+      if (upstream.amountFen !== row.amount) {
         throw new ValidationError('支付金额校验失败');
       }
 
