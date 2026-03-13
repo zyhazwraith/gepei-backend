@@ -36,10 +36,10 @@ const createNormalOrderSchema = z.object({
   content: z.string().optional(), // Add content field
 });
 
-// 支付请求 Schema（Phase1: authCode 在 mock 下允许缺省）
+// 支付请求 Schema（authCode 强制必填）
 const payRequestSchema = z.object({
   paymentMethod: z.enum([PAYMENT_METHOD_WECHAT]),
-  authCode: z.string().trim().min(1, 'authCode不能为空').optional(),
+  authCode: z.string().trim().min(1, 'authCode不能为空'),
 });
 
 // 加时申请 Schema

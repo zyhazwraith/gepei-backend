@@ -3,6 +3,7 @@ import { and, eq, lt } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { orders, overtimeRecords, payments } from '../db/schema.js';
 import { PaymentService } from '../services/payment/payment.service.js';
+import { logger } from '../lib/logger.js';
 import {
   PAYMENT_RELATED_TYPE_ORDER,
   PAYMENT_RELATED_TYPE_OVERTIME,
@@ -13,6 +14,13 @@ import {
 const BATCH_SIZE = 100;
 const PENDING_AGE_MINUTES = 2;
 const PAYMENT_SYNC_CRON = '*/5 * * * *';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  return String(error);
+}
 
 async function syncPendingPayments(threshold: Date): Promise<number> {
   const rows = await db
@@ -29,7 +37,7 @@ async function syncPendingPayments(threshold: Date): Promise<number> {
     try {
       await PaymentService.queryAndSyncByTransactionId(row.transactionId);
     } catch (error) {
-      console.error(`[Scheduler] Pending sync failed for transactionId=${row.transactionId}:`, error);
+      logger.error(`payment_sync_pending_failed transactionId=${row.transactionId}`, errorMessage(error));
     }
   }
 
@@ -51,7 +59,7 @@ async function repairSuccessOrderPayments(): Promise<number> {
     try {
       await PaymentService.reconcileBusinessByTransactionId(row.transactionId);
     } catch (error) {
-      console.error(`[Scheduler] Success repair(order) failed for transactionId=${row.transactionId}:`, error);
+      logger.error(`payment_sync_repair_order_failed transactionId=${row.transactionId}`, errorMessage(error));
     }
   }
 
@@ -73,7 +81,7 @@ async function repairSuccessOvertimePayments(): Promise<number> {
     try {
       await PaymentService.reconcileBusinessByTransactionId(row.transactionId);
     } catch (error) {
-      console.error(`[Scheduler] Success repair(overtime) failed for transactionId=${row.transactionId}:`, error);
+      logger.error(`payment_sync_repair_overtime_failed transactionId=${row.transactionId}`, errorMessage(error));
     }
   }
 
@@ -85,7 +93,7 @@ async function repairSuccessOvertimePayments(): Promise<number> {
  * Frequency: every 5 minutes
  */
 export const paymentSyncJob = cron.schedule(PAYMENT_SYNC_CRON, async () => {
-  console.log('[Scheduler] Running Payment Sync Job...');
+  logger.system('payment_sync_job_started');
 
   try {
     const threshold = new Date(Date.now() - PENDING_AGE_MINUTES * 60 * 1000);
@@ -94,11 +102,11 @@ export const paymentSyncJob = cron.schedule(PAYMENT_SYNC_CRON, async () => {
     const orderRepairCount = await repairSuccessOrderPayments();
     const overtimeRepairCount = await repairSuccessOvertimePayments();
 
-    console.log(
-      `[Scheduler] Payment Sync Job Completed. pending=${pendingCount}, orderRepair=${orderRepairCount}, overtimeRepair=${overtimeRepairCount}`,
+    logger.system(
+      `payment_sync_job_completed ${logger.kv({ pending: pendingCount, orderRepair: orderRepairCount, overtimeRepair: overtimeRepairCount })}`,
     );
   } catch (error) {
-    console.error('[Scheduler] Payment Sync Job Failed:', error);
+    logger.error('payment_sync_job_failed', errorMessage(error));
   }
 }, {
   scheduled: false,

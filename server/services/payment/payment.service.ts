@@ -5,8 +5,6 @@ import { orders, overtimeRecords, payments } from '../../db/schema.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../utils/errors.js';
 import { openIdProvider } from './openid.service.js';
 import {
-  AUTH_CODE_MOCK_FALLBACK,
-  OPENID_PROVIDER_MOCK,
   PAYMENT_NOTIFY_PATH,
   PAYMENT_RELATED_TYPE_ORDER,
   PAYMENT_RELATED_TYPE_OVERTIME,
@@ -29,7 +27,6 @@ import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import { OrderService } from '../order.service.js';
 
 const paymentProvider = createPaymentChannelProvider();
-const isMockOpenIdProvider = (process.env.OPENID_PROVIDER || OPENID_PROVIDER_MOCK).trim().toLowerCase() === OPENID_PROVIDER_MOCK;
 
 function buildTransactionId(relatedType: PaymentRelatedType, relatedId: number): string {
   const prefix = relatedType === PAYMENT_RELATED_TYPE_ORDER ? PAYMENT_TRADE_PREFIX_ORDER : PAYMENT_TRADE_PREFIX_OVERTIME;
@@ -40,10 +37,6 @@ function resolveAuthCodeOrThrow(authCode?: string): string {
   const normalized = authCode?.trim();
   if (normalized) {
     return normalized;
-  }
-
-  if (isMockOpenIdProvider) {
-    return AUTH_CODE_MOCK_FALLBACK;
   }
 
   throw new ValidationError('authCode不能为空');
@@ -135,48 +128,42 @@ function resolveNotifyUrl(): string {
 
 export class PaymentService {
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
-    let payment = await findLatestPaymentByRelated(input.intent.relatedType, input.intent.relatedId);
+    const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
+    let payment: typeof payments.$inferSelect | undefined;
 
-    if (payment && payment.status === PAYMENT_STATUS_SUCCESS) {
-      throw new ValidationError('该支付已完成，请勿重复发起');
-    }
-
-    if (payment && payment.status === PAYMENT_STATUS_FAILED) {
-      throw new ValidationError('该支付状态异常，请联系客服处理');
-    }
-
-    if (!payment) {
-      const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
-
-      try {
-        await db.insert(payments).values({
-          relatedType: input.intent.relatedType,
-          relatedId: input.intent.relatedId,
-          paymentMethod: input.paymentMethod,
-          transactionId,
-          amount: input.intent.amountFen,
-          status: PAYMENT_STATUS_PENDING,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      } catch (error) {
-        if (!isDuplicateEntryError(error)) {
-          throw error;
-        }
+    try {
+      await db.insert(payments).values({
+        relatedType: input.intent.relatedType,
+        relatedId: input.intent.relatedId,
+        paymentMethod: input.paymentMethod,
+        transactionId,
+        amount: input.intent.amountFen,
+        status: PAYMENT_STATUS_PENDING,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      payment = await findPaymentByTransactionId(transactionId);
+    } catch (error) {
+      if (!isDuplicateEntryError(error)) {
+        throw error;
       }
 
       payment = await findLatestPaymentByRelated(input.intent.relatedType, input.intent.relatedId);
       if (!payment) {
         throw new ValidationError('支付单创建失败，请稍后重试');
       }
+    }
 
-      if (payment.status === PAYMENT_STATUS_SUCCESS) {
-        throw new ValidationError('该支付已完成，请勿重复发起');
-      }
+    if (!payment) {
+      throw new ValidationError('支付单创建失败，请稍后重试');
+    }
 
-      if (payment.status === PAYMENT_STATUS_FAILED) {
-        throw new ValidationError('该支付状态异常，请联系客服处理');
-      }
+    if (payment.status === PAYMENT_STATUS_SUCCESS) {
+      throw new ValidationError('该支付已完成，请勿重复发起');
+    }
+
+    if (payment.status === PAYMENT_STATUS_FAILED) {
+      throw new ValidationError('该支付状态异常，请联系客服处理');
     }
 
     if (!payment.transactionId) {
