@@ -22,7 +22,7 @@ describe('payment channel provider skeleton', () => {
     const provider = createPaymentChannelProvider();
 
     const prepay = await provider.createPrepay({
-      outTradeNo: 'WX_ORD_1_123_xxx',
+      transactionId: 'WX_ORD_1_123_xxx',
       amountFen: 100,
       openid: 'openid_xxx',
       appId: 'app_xxx',
@@ -46,7 +46,7 @@ describe('payment channel provider skeleton', () => {
       },
     });
 
-    expect(result.outTradeNo).toBe('WX_ORD_2_123_xxx');
+    expect(result.transactionId).toBe('WX_ORD_2_123_xxx');
     expect(result.status).toBe('success');
   });
 
@@ -55,16 +55,16 @@ describe('payment channel provider skeleton', () => {
     const provider = createPaymentChannelProvider();
 
     setMockPaymentOrderResult({
-      outTradeNo: 'WX_ORD_3_123_xxx',
+      transactionId: 'WX_ORD_3_123_xxx',
       status: 'success',
       amountFen: 888,
-      transactionId: 'MOCK_TX_3',
+      upstreamTransactionId: 'MOCK_TX_3',
     });
 
     const result = await provider.queryOrder('WX_ORD_3_123_xxx');
     expect(result.status).toBe('success');
     expect(result.amountFen).toBe(888);
-    expect(result.transactionId).toBe('MOCK_TX_3');
+    expect(result.upstreamTransactionId).toBe('MOCK_TX_3');
   });
 
   it('parseNotify should update internal mock state for subsequent query', async () => {
@@ -84,7 +84,7 @@ describe('payment channel provider skeleton', () => {
     const queried = await provider.queryOrder('WX_ORD_4_123_xxx');
     expect(queried.status).toBe('success');
     expect(queried.amountFen).toBe(321);
-    expect(queried.transactionId).toBe('MOCK_TX_4');
+    expect(queried.upstreamTransactionId).toBe('MOCK_TX_4');
   });
 
   it('throws on invalid provider', () => {

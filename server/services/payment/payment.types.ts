@@ -41,20 +41,20 @@ export interface CreatePrepayInput {
 export interface CreatePrepayResult {
   relatedType: PaymentRelatedType;
   relatedId: number;
-  outTradeNo: string;
+  transactionId: string;
   paymentStatus: typeof PAYMENT_STATUS_PENDING;
   payParams: PrepayPayParams;
 }
 
 export interface PaymentStatusResult {
-  outTradeNo: string;
+  transactionId: string;
   relatedType: PaymentRelatedType;
   relatedId: number;
   paymentStatus: PaymentStatus;
 }
 
 export interface ProviderCreatePrepayInput {
-  outTradeNo: string;
+  transactionId: string;
   amountFen: number;
   openid: string;
   appId: string;
@@ -69,10 +69,10 @@ export interface ProviderCreatePrepayResult {
 }
 
 export interface ProviderOrderResult {
-  outTradeNo: string;
+  transactionId: string;
   status: PaymentStatus;
   amountFen?: number;
-  transactionId?: string;
+  upstreamTransactionId?: string;
   paidAt?: Date;
   raw?: unknown;
 }
@@ -85,6 +85,6 @@ export interface ProviderNotifyInput {
 
 export interface IPaymentChannelProvider {
   createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult>;
-  queryOrder(outTradeNo: string): Promise<ProviderOrderResult>;
+  queryOrder(transactionId: string): Promise<ProviderOrderResult>;
   parseNotify(input: ProviderNotifyInput): Promise<ProviderOrderResult>;
 }

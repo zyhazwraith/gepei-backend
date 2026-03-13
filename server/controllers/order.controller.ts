@@ -164,7 +164,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       message: '预支付创建成功',
       data: {
         orderId,
-        outTradeNo: prepay.outTradeNo,
+        transactionId: prepay.transactionId,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       },
@@ -399,7 +399,7 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
       message: '预支付创建成功',
       data: {
         overtimeId,
-        outTradeNo: prepay.outTradeNo,
+        transactionId: prepay.transactionId,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       }

@@ -10,6 +10,7 @@ import {
   PAYMENT_NOTIFY_PATH,
   PAYMENT_RELATED_TYPE_ORDER,
   PAYMENT_RELATED_TYPE_OVERTIME,
+  PAYMENT_STATUS_FAILED,
   PAYMENT_STATUS_PENDING,
   PAYMENT_STATUS_SUCCESS,
   PAYMENT_TRADE_PREFIX_ORDER,
@@ -28,8 +29,9 @@ import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import { OrderService } from '../order.service.js';
 
 const paymentProvider = createPaymentChannelProvider();
+const isMockOpenIdProvider = (process.env.OPENID_PROVIDER || OPENID_PROVIDER_MOCK).trim().toLowerCase() === OPENID_PROVIDER_MOCK;
 
-function buildOutTradeNo(relatedType: PaymentRelatedType, relatedId: number): string {
+function buildTransactionId(relatedType: PaymentRelatedType, relatedId: number): string {
   const prefix = relatedType === PAYMENT_RELATED_TYPE_ORDER ? PAYMENT_TRADE_PREFIX_ORDER : PAYMENT_TRADE_PREFIX_OVERTIME;
   return `${prefix}_${relatedId}_${Date.now()}_${nanoid(6)}`;
 }
@@ -40,34 +42,62 @@ function resolveAuthCodeOrThrow(authCode?: string): string {
     return normalized;
   }
 
-  const openidProvider = (process.env.OPENID_PROVIDER || OPENID_PROVIDER_MOCK).trim().toLowerCase();
-  if (openidProvider === OPENID_PROVIDER_MOCK) {
+  if (isMockOpenIdProvider) {
     return AUTH_CODE_MOCK_FALLBACK;
   }
 
   throw new ValidationError('authCode不能为空');
 }
 
-function mapPaymentStatus(outTradeNo: string, payment: typeof payments.$inferSelect): PaymentStatusResult {
+function mapPaymentStatus(transactionId: string, payment: typeof payments.$inferSelect): PaymentStatusResult {
   return {
-    outTradeNo,
+    transactionId,
     relatedType: payment.relatedType,
     relatedId: payment.relatedId,
     paymentStatus: (payment.status ?? PAYMENT_STATUS_PENDING) as PaymentStatus,
   };
 }
 
-async function findLatestPaymentByTradeNo(outTradeNo: string) {
+function isDuplicateEntryError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const anyError = error as {
+    code?: string;
+    errno?: number;
+    message?: string;
+  };
+
+  if (anyError.code === 'ER_DUP_ENTRY' || anyError.errno === 1062) {
+    return true;
+  }
+
+  return typeof anyError.message === 'string' && anyError.message.includes('Duplicate entry');
+}
+
+async function findPaymentByTransactionId(transactionId: string) {
   const [payment] = await db
     .select()
     .from(payments)
-    .where(eq(payments.transactionId, outTradeNo))
+    .where(eq(payments.transactionId, transactionId))
     .orderBy(desc(payments.createdAt))
     .limit(1);
 
   if (!payment) {
     throw new NotFoundError('支付单不存在');
   }
+
+  return payment;
+}
+
+async function findLatestPaymentByRelated(relatedType: PaymentRelatedType, relatedId: number) {
+  const [payment] = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.relatedType, relatedType), eq(payments.relatedId, relatedId)))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
 
   return payment;
 }
@@ -105,24 +135,60 @@ function resolveNotifyUrl(): string {
 
 export class PaymentService {
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
+    let payment = await findLatestPaymentByRelated(input.intent.relatedType, input.intent.relatedId);
+
+    if (payment && payment.status === PAYMENT_STATUS_SUCCESS) {
+      throw new ValidationError('该支付已完成，请勿重复发起');
+    }
+
+    if (payment && payment.status === PAYMENT_STATUS_FAILED) {
+      throw new ValidationError('该支付状态异常，请联系客服处理');
+    }
+
+    if (!payment) {
+      const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
+
+      try {
+        await db.insert(payments).values({
+          relatedType: input.intent.relatedType,
+          relatedId: input.intent.relatedId,
+          paymentMethod: input.paymentMethod,
+          transactionId,
+          amount: input.intent.amountFen,
+          status: PAYMENT_STATUS_PENDING,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } catch (error) {
+        if (!isDuplicateEntryError(error)) {
+          throw error;
+        }
+      }
+
+      payment = await findLatestPaymentByRelated(input.intent.relatedType, input.intent.relatedId);
+      if (!payment) {
+        throw new ValidationError('支付单创建失败，请稍后重试');
+      }
+
+      if (payment.status === PAYMENT_STATUS_SUCCESS) {
+        throw new ValidationError('该支付已完成，请勿重复发起');
+      }
+
+      if (payment.status === PAYMENT_STATUS_FAILED) {
+        throw new ValidationError('该支付状态异常，请联系客服处理');
+      }
+    }
+
+    if (!payment.transactionId) {
+      throw new ValidationError('支付流水号缺失，请稍后重试');
+    }
+
     const code = resolveAuthCodeOrThrow(input.authCode);
     const openid = await openIdProvider.resolveOpenIdByCode(code);
-    const outTradeNo = buildOutTradeNo(input.intent.relatedType, input.intent.relatedId);
-
-    await db.insert(payments).values({
-      relatedType: input.intent.relatedType,
-      relatedId: input.intent.relatedId,
-      paymentMethod: input.paymentMethod,
-      transactionId: outTradeNo,
-      amount: input.intent.amountFen,
-      status: PAYMENT_STATUS_PENDING,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
 
     const upstream = await paymentProvider.createPrepay({
-      outTradeNo,
-      amountFen: input.intent.amountFen,
+      transactionId: payment.transactionId,
+      amountFen: payment.amount,
       openid: openid.openid,
       appId: openid.appId,
       description: input.intent.description,
@@ -131,50 +197,60 @@ export class PaymentService {
     });
 
     return {
-      relatedType: input.intent.relatedType,
-      relatedId: input.intent.relatedId,
-      outTradeNo,
+      relatedType: payment.relatedType,
+      relatedId: payment.relatedId,
+      transactionId: payment.transactionId,
       paymentStatus: PAYMENT_STATUS_PENDING,
       payParams: upstream.payParams,
     };
   }
 
-  static async getPaymentStatusByTradeNo(outTradeNo: string, userId: number): Promise<PaymentStatusResult> {
-    const payment = await findLatestPaymentByTradeNo(outTradeNo);
+  static async getPaymentStatusByTransactionId(transactionId: string, userId: number): Promise<PaymentStatusResult> {
+    const payment = await findPaymentByTransactionId(transactionId);
     await assertPaymentOwnership(payment.relatedType, payment.relatedId, userId);
-    return mapPaymentStatus(outTradeNo, payment);
+    return mapPaymentStatus(transactionId, payment);
   }
 
-  static async queryAndSyncByTradeNo(outTradeNo: string, userId?: number): Promise<PaymentStatusResult> {
-    const payment = await findLatestPaymentByTradeNo(outTradeNo);
+  static async queryAndSyncByTransactionId(transactionId: string, userId?: number): Promise<PaymentStatusResult> {
+    const payment = await findPaymentByTransactionId(transactionId);
 
     if (typeof userId === 'number') {
       await assertPaymentOwnership(payment.relatedType, payment.relatedId, userId);
     }
 
     if (payment.status !== PAYMENT_STATUS_PENDING) {
-      return mapPaymentStatus(outTradeNo, payment);
+      return mapPaymentStatus(transactionId, payment);
     }
 
-    const upstream = await paymentProvider.queryOrder(outTradeNo);
+    const upstream = await paymentProvider.queryOrder(transactionId);
     if (upstream.status === PAYMENT_STATUS_SUCCESS) {
       await this.confirmPaid(payment.id, upstream);
     }
 
-    const refreshed = await findLatestPaymentByTradeNo(outTradeNo);
-    return mapPaymentStatus(outTradeNo, refreshed);
+    const refreshed = await findPaymentByTransactionId(transactionId);
+    return mapPaymentStatus(transactionId, refreshed);
   }
 
   static async handleNotify(input: ProviderNotifyInput): Promise<PaymentStatusResult> {
     const upstream = await paymentProvider.parseNotify(input);
 
     if (upstream.status === PAYMENT_STATUS_SUCCESS) {
-      const payment = await findLatestPaymentByTradeNo(upstream.outTradeNo);
+      const payment = await findPaymentByTransactionId(upstream.transactionId);
       await this.confirmPaid(payment.id, upstream);
     }
 
-    const refreshed = await findLatestPaymentByTradeNo(upstream.outTradeNo);
-    return mapPaymentStatus(upstream.outTradeNo, refreshed);
+    const refreshed = await findPaymentByTransactionId(upstream.transactionId);
+    return mapPaymentStatus(upstream.transactionId, refreshed);
+  }
+
+  static async reconcileBusinessByTransactionId(transactionId: string): Promise<void> {
+    const payment = await findPaymentByTransactionId(transactionId);
+    if (payment.status !== PAYMENT_STATUS_SUCCESS) {
+      return;
+    }
+
+    const paidAt = payment.paidAt || payment.updatedAt || new Date();
+    await this.dispatchApplyPaid(payment.relatedType, payment.relatedId, payment.amount, paidAt);
   }
 
   private static async confirmPaid(paymentId: number, upstream: ProviderOrderResult): Promise<void> {
