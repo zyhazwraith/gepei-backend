@@ -19,7 +19,7 @@ type MockOrderState = ProviderOrderResult;
 
 const mockOrderState = new Map<string, MockOrderState>();
 
-function extractTradeNo(rawBody: unknown): string {
+function extractTransactionId(rawBody: unknown): string {
   if (!rawBody || typeof rawBody !== 'object') {
     throw new ValidationError('微信回调参数无效');
   }
@@ -27,7 +27,7 @@ function extractTradeNo(rawBody: unknown): string {
   const body = rawBody as Record<string, unknown>;
   const candidate = body.outTradeNo ?? body.out_trade_no;
   if (typeof candidate !== 'string' || !candidate.trim()) {
-    throw new ValidationError('缺少outTradeNo');
+    throw new ValidationError('缺少transactionId');
   }
 
   return candidate.trim();
@@ -47,19 +47,19 @@ function normalizeMockStatus(status: unknown) {
 class MockPaymentChannelProvider implements IPaymentChannelProvider {
   async createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult> {
     const defaultState: MockOrderState = {
-      outTradeNo: input.outTradeNo,
+      transactionId: input.transactionId,
       status: PAYMENT_STATUS_PENDING,
       amountFen: input.amountFen,
       raw: { createdBy: 'mock.createPrepay' },
     };
-    mockOrderState.set(input.outTradeNo, defaultState);
+    mockOrderState.set(input.transactionId, defaultState);
 
     return {
       payParams: {
         appId: input.appId,
         timeStamp: `${Math.floor(Date.now() / 1000)}`,
         nonceStr: nanoid(16),
-        package: `prepay_id=mock_${input.outTradeNo}`,
+        package: `prepay_id=mock_${input.transactionId}`,
         signType: 'RSA',
         paySign: nanoid(32),
       },
@@ -67,37 +67,37 @@ class MockPaymentChannelProvider implements IPaymentChannelProvider {
     };
   }
 
-  async queryOrder(outTradeNo: string): Promise<ProviderOrderResult> {
-    const state = mockOrderState.get(outTradeNo);
+  async queryOrder(transactionId: string): Promise<ProviderOrderResult> {
+    const state = mockOrderState.get(transactionId);
     if (state) {
       return state;
     }
 
     return {
-      outTradeNo,
+      transactionId,
       status: PAYMENT_STATUS_PENDING,
     };
   }
 
   async parseNotify(input: ProviderNotifyInput): Promise<ProviderOrderResult> {
-    const outTradeNo = extractTradeNo(input.rawBody);
+    const transactionId = extractTransactionId(input.rawBody);
 
     const body = input.rawBody as Record<string, unknown>;
     const status = normalizeMockStatus(body.status ?? 'SUCCESS');
     const amountFen = typeof body.amountFen === 'number' ? body.amountFen : undefined;
-    const transactionId = typeof body.transactionId === 'string' ? body.transactionId : undefined;
+    const upstreamTransactionId = typeof body.transactionId === 'string' ? body.transactionId : undefined;
     const paidAt = typeof body.paidAt === 'string' ? new Date(body.paidAt) : new Date();
 
     const nextState: MockOrderState = {
-      outTradeNo,
+      transactionId,
       status,
       amountFen,
-      transactionId,
+      upstreamTransactionId,
       paidAt,
       raw: input.rawBody,
     };
 
-    mockOrderState.set(outTradeNo, nextState);
+    mockOrderState.set(transactionId, nextState);
     return nextState;
   }
 }
@@ -107,7 +107,7 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
     throw new Error('[payment] Wechat provider not implemented in phase1');
   }
 
-  async queryOrder(_outTradeNo: string): Promise<ProviderOrderResult> {
+  async queryOrder(_transactionId: string): Promise<ProviderOrderResult> {
     throw new Error('[payment] Wechat provider not implemented in phase1');
   }
 
@@ -131,21 +131,21 @@ export function createPaymentChannelProvider(): IPaymentChannelProvider {
 }
 
 export function setMockPaymentOrderResult(input: {
-  outTradeNo: string;
+  transactionId: string;
   status: 'pending' | 'success' | 'failed';
   amountFen?: number;
-  transactionId?: string;
+  upstreamTransactionId?: string;
   paidAt?: Date;
 }): void {
   const state: MockOrderState = {
-    outTradeNo: input.outTradeNo,
+    transactionId: input.transactionId,
     status: input.status,
     amountFen: input.amountFen,
-    transactionId: input.transactionId,
+    upstreamTransactionId: input.upstreamTransactionId,
     paidAt: input.paidAt,
-    raw: { setBy: 'mock.api' },
+    raw: { setBy: 'mock.helper' },
   };
-  mockOrderState.set(input.outTradeNo, state);
+  mockOrderState.set(input.transactionId, state);
 }
 
 export function resetMockPaymentOrderResults(): void {

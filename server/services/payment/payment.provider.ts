@@ -1,3 +1,5 @@
+import { logger } from '../../lib/logger.js';
+
 export interface RefundResult {
   success: boolean;
   refundTransactionId: string; // Changed from transactionId to be explicit
@@ -18,9 +20,7 @@ export interface IPaymentProvider {
 
 export class MockWechatProvider implements IPaymentProvider {
   async refund(orderId: string, amount: number, originalTransactionId: string, outRefundNo: string, reason: string): Promise<RefundResult> {
-    console.log(`[MockWechat] Processing refund for Order ${orderId}`);
-    console.log(`[MockWechat] Amount: ${amount}, Reason: ${reason}`);
-    console.log(`[MockWechat] Original Tx: ${originalTransactionId}, Out Refund No: ${outRefundNo}`);
+    logger.system(`mock_refund_start ${logger.kv({ orderId, amount, reason, originalTransactionId, outRefundNo })}`);
     
     // Simulate API latency
     // await new Promise(resolve => setTimeout(resolve, 500));

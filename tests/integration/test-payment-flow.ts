@@ -59,7 +59,8 @@ async function runTests() {
     // 4. Pay Order
     console.log('Testing Payment API...');
     const payRes = await axios.post(`${API_URL}/orders/${orderId}/payment`, {
-      paymentMethod: 'wechat'
+      paymentMethod: 'wechat',
+      authCode: 'mock_code',
     }, { headers: { Authorization: `Bearer ${userToken}` } });
 
     if (payRes.data.code === 0 && payRes.data.data.status === 'paid') {

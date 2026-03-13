@@ -122,7 +122,8 @@ describe('Custom Order Feature E2E', () => {
       .post(`/api/v1/orders/${orderId}/payment`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        payment_method: 'wechat'
+        payment_method: 'wechat',
+        authCode: 'mock_code',
       });
 
     expect(payRes.status).toBe(200);

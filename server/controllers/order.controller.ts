@@ -36,10 +36,10 @@ const createNormalOrderSchema = z.object({
   content: z.string().optional(), // Add content field
 });
 
-// 支付请求 Schema（Phase1: authCode 在 mock 下允许缺省）
+// 支付请求 Schema（authCode 强制必填）
 const payRequestSchema = z.object({
   paymentMethod: z.enum([PAYMENT_METHOD_WECHAT]),
-  authCode: z.string().trim().min(1, 'authCode不能为空').optional(),
+  authCode: z.string().trim().min(1, 'authCode不能为空'),
 });
 
 // 加时申请 Schema
@@ -164,7 +164,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       message: '预支付创建成功',
       data: {
         orderId,
-        outTradeNo: prepay.outTradeNo,
+        transactionId: prepay.transactionId,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       },
@@ -399,7 +399,7 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
       message: '预支付创建成功',
       data: {
         overtimeId,
-        outTradeNo: prepay.outTradeNo,
+        transactionId: prepay.transactionId,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       }

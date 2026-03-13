@@ -914,7 +914,7 @@
           "name": "transaction_id",
           "type": "varchar(64)",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "payment_method": {
@@ -973,20 +973,20 @@
         }
       },
       "indexes": {
-        "idx_transaction_id": {
-          "name": "idx_transaction_id",
+        "uk_payments_transaction_id": {
+          "name": "uk_payments_transaction_id",
           "columns": [
             "transaction_id"
           ],
-          "isUnique": false
+          "isUnique": true
         },
-        "idx_related": {
-          "name": "idx_related",
+        "uk_payments_related": {
+          "name": "uk_payments_related",
           "columns": [
             "related_type",
             "related_id"
           ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {},

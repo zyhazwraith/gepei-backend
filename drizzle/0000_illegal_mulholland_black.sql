@@ -107,7 +107,7 @@ CREATE TABLE `overtime_records` (
 CREATE TABLE `payments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`amount` int NOT NULL,
-	`transaction_id` varchar(64),
+	`transaction_id` varchar(64) NOT NULL,
 	`payment_method` enum('wechat') DEFAULT 'wechat',
 	`status` enum('pending','success','failed') DEFAULT 'pending',
 	`related_type` enum('order','overtime') NOT NULL,
@@ -224,8 +224,8 @@ CREATE INDEX `idx_status` ON `orders` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_type` ON `orders` (`type`);--> statement-breakpoint
 CREATE INDEX `idx_deleted_at` ON `orders` (`deleted_at`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `overtime_records` (`order_id`);--> statement-breakpoint
-CREATE INDEX `idx_transaction_id` ON `payments` (`transaction_id`);--> statement-breakpoint
-CREATE INDEX `idx_related` ON `payments` (`related_type`,`related_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uk_payments_transaction_id` ON `payments` (`transaction_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uk_payments_related` ON `payments` (`related_type`,`related_id`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `refund_records` (`order_id`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `reviews` (`order_id`);--> statement-breakpoint
 CREATE INDEX `idx_guide_id` ON `reviews` (`guide_id`);--> statement-breakpoint
