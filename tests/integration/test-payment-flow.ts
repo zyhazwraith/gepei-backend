@@ -63,8 +63,24 @@ async function runTests() {
       authCode: 'mock_code',
     }, { headers: { Authorization: `Bearer ${userToken}` } });
 
-    if (payRes.data.code === 0 && payRes.data.data.status === 'paid') {
-      logPass('Payment API Successful');
+    if (payRes.data.code === 0 && payRes.data.data.paymentStatus === 'pending') {
+      logPass('Prepay API Successful');
+    }
+
+    const transactionId = payRes.data?.data?.transactionId;
+    if (!transactionId) {
+      throw new Error('Missing transactionId in prepay response');
+    }
+
+    // 4.1 Simulate WeChat notify success (mock provider)
+    const notifyRes = await axios.post(`${API_URL.replace('/api/v1', '')}/wechat/pay/notify`, {
+      out_trade_no: transactionId,
+      status: 'SUCCESS',
+    });
+    if (notifyRes.data.code === 'SUCCESS') {
+      logPass('Mock WeChat Notify Successful');
+    } else {
+      throw new Error(`Expected notify SUCCESS, got ${notifyRes.data.code}`);
     }
 
     // 5. Verify Final Status (Paid)

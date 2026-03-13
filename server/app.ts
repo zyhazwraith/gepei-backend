@@ -17,6 +17,7 @@ import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import overtimeRoutes from './routes/overtime.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import wechatPayRoutes from './routes/wechat-pay.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import walletRoutes from './routes/wallet.routes.js';
 
@@ -26,6 +27,8 @@ export function createApp(): Application {
 
   // 中间件配置
   app.use(cors({ origin: '*', credentials: true }));
+  // 微信回调独立入口，避免与常规 API 中间件耦合
+  app.use('/wechat/pay', wechatPayRoutes);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   

@@ -34,5 +34,40 @@ export function assertStartupEnvOrThrow(): void {
       throw new Error('[startup] WECHAT_NOTIFY_URL is required when PAYMENT_PROVIDER=wechat');
     }
     assertHttpsAbsoluteUrl('WECHAT_NOTIFY_URL', notifyUrl);
+
+    const requiredWechatPayEnv = [
+      'WECHAT_PAY_APP_ID',
+      'WECHAT_PAY_MCH_ID',
+      'WECHAT_PAY_MCH_SERIAL_NO',
+      'WECHAT_PAY_PRIVATE_KEY_PATH',
+      'WECHAT_PAY_PLATFORM_SERIAL_NO',
+      'WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH',
+      'WECHAT_PAY_API_V3_KEY',
+    ] as const;
+
+    for (const name of requiredWechatPayEnv) {
+      const raw = process.env[name]?.trim();
+      if (!raw) {
+        throw new Error(`[startup] ${name} is required when PAYMENT_PROVIDER=wechat`);
+      }
+    }
+
+    const apiV3Key = process.env.WECHAT_PAY_API_V3_KEY!.trim();
+    if (Buffer.byteLength(apiV3Key, 'utf8') !== 32) {
+      throw new Error('[startup] WECHAT_PAY_API_V3_KEY must be 32 bytes');
+    }
+  }
+
+  const openIdProvider = parseProviderEnv('OPENID_PROVIDER', PAYMENT_PROVIDER_MOCK);
+  if (openIdProvider !== PAYMENT_PROVIDER_MOCK && openIdProvider !== PAYMENT_PROVIDER_WECHAT) {
+    throw new Error(`[startup] Invalid OPENID_PROVIDER: "${openIdProvider}"`);
+  }
+
+  if (openIdProvider === PAYMENT_PROVIDER_WECHAT) {
+    const appId = process.env.WECHAT_OAUTH_APP_ID?.trim();
+    const appSecret = process.env.WECHAT_OAUTH_APP_SECRET?.trim();
+    if (!appId || !appSecret) {
+      throw new Error('[startup] WECHAT_OAUTH_APP_ID / WECHAT_OAUTH_APP_SECRET are required when OPENID_PROVIDER=wechat');
+    }
   }
 }

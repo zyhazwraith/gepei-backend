@@ -226,8 +226,28 @@ export interface CreateOrderResponse {
 }
 
 export interface PayOrderResponse {
-  orderId: number;
-  status: string;
+  orderId?: number;
+  overtimeId?: number;
+  transactionId: string;
+  paymentStatus: 'pending' | 'success' | 'failed';
+  payParams: PrepayPayParams;
+}
+
+export interface PrepayPayParams {
+  appId: string;
+  timeStamp: string;
+  nonceStr: string;
+  package: string;
+  signType: 'RSA';
+  paySign: string;
+}
+
+export interface PaymentStatusResponse {
+  transactionId: string;
+  relatedType: 'order' | 'overtime';
+  relatedId: number;
+  paymentStatus: 'pending' | 'success' | 'failed';
+  queryTriggered: boolean;
 }
 
 export interface CustomRequirements {
@@ -300,8 +320,12 @@ export async function createOvertime(orderId: number, duration: number): Promise
 /**
  * 支付加时单 (S-3)
  */
-export async function payOvertime(overtimeId: number, paymentMethod: 'wechat' | 'alipay'): Promise<ApiResponse<any>> {
-  return apiClient.post(`/overtime/${overtimeId}/pay`, { paymentMethod });
+export async function payOvertime(
+  overtimeId: number,
+  paymentMethod: 'wechat',
+  authCode: string,
+): Promise<ApiResponse<PayOrderResponse>> {
+  return apiClient.post(`/overtime/${overtimeId}/pay`, { paymentMethod, authCode });
 }
 
 // ==================== API方法 ====================
@@ -340,8 +364,19 @@ export async function getOrderById(id: number): Promise<ApiResponse<OrderDetailR
 /**
  * 支付订单
  */
-export async function payOrder(orderId: number, paymentMethod: 'wechat' | 'alipay'): Promise<ApiResponse<PayOrderResponse>> {
-  return apiClient.post(`/orders/${orderId}/payment`, { paymentMethod });
+export async function payOrder(
+  orderId: number,
+  paymentMethod: 'wechat',
+  authCode: string,
+): Promise<ApiResponse<PayOrderResponse>> {
+  return apiClient.post(`/orders/${orderId}/payment`, { paymentMethod, authCode });
+}
+
+/**
+ * 查询支付状态（pending时后端会主动触发一次查单）
+ */
+export async function getPaymentStatus(transactionId: string): Promise<ApiResponse<PaymentStatusResponse>> {
+  return apiClient.get(`/payments/${transactionId}/status`);
 }
 
 /**
