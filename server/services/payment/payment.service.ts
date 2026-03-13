@@ -5,7 +5,6 @@ import { orders, overtimeRecords, payments } from '../../db/schema.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../utils/errors.js';
 import { openIdProvider } from './openid.service.js';
 import {
-  PAYMENT_NOTIFY_PATH,
   PAYMENT_RELATED_TYPE_ORDER,
   PAYMENT_RELATED_TYPE_OVERTIME,
   PAYMENT_STATUS_FAILED,
@@ -21,7 +20,7 @@ import type {
   PaymentStatus,
   PaymentStatusResult,
   ProviderNotifyInput,
-  ProviderOrderResult,
+  ProviderPaymentResult,
 } from './payment.types.js';
 import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import { OrderService } from '../order.service.js';
@@ -122,10 +121,6 @@ async function assertPaymentOwnership(relatedType: PaymentRelatedType, relatedId
   }
 }
 
-function resolveNotifyUrl(): string {
-  return process.env.WECHAT_NOTIFY_URL?.trim() || PAYMENT_NOTIFY_PATH;
-}
-
 export class PaymentService {
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
     const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
@@ -180,7 +175,6 @@ export class PaymentService {
       appId: openid.appId,
       description: input.intent.description,
       clientIp: input.clientIp,
-      notifyUrl: resolveNotifyUrl(),
     });
 
     return {
@@ -240,7 +234,7 @@ export class PaymentService {
     await this.dispatchApplyPaid(payment.relatedType, payment.relatedId, payment.amount, paidAt);
   }
 
-  private static async confirmPaid(paymentId: number, upstream: ProviderOrderResult): Promise<void> {
+  private static async confirmPaid(paymentId: number, upstream: ProviderPaymentResult): Promise<void> {
     const changedRow = await db.transaction(async (tx): Promise<{
       relatedType: PaymentRelatedType;
       relatedId: number;

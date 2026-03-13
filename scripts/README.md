@@ -8,6 +8,7 @@
 ## 运维工具脚本
 - `tool-setup-admin.ts`
 - `tool-reset-db.ts`
+- `release-pack.sh`（按指定 Git ref 打包发布产物，自动注入版本与提交信息）
 
 ## 交接建议
 - 核心交接优先包含：
@@ -15,3 +16,21 @@
   - `tests/e2e/*`（前端 E2E）
   - `scripts/test-idempotency-cas.ts`
 - 运维初始化可按需执行 `tool-setup-admin.ts` 与 `tool-reset-db.ts`。
+
+## `release-pack.sh` 快速说明
+
+```bash
+# 默认打 binary 包，输出到 /tmp/gepei-releases
+./scripts/release-pack.sh origin/release
+
+# 打 source 包（不构建）
+./scripts/release-pack.sh origin/release --type source
+
+# 同时打 source + binary
+./scripts/release-pack.sh origin/release --type both --out-dir /tmp/gepei-releases
+```
+
+说明：
+- 版本号来源：仓库根目录 `VERSION`
+- 元信息注入：`release-manifest.json`（包含 version / commit / build time / ref）
+- 校验文件：每个产物会生成对应 `.sha256`

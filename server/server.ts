@@ -5,6 +5,7 @@ import { db } from './db/index.js';
 import { sql } from 'drizzle-orm';
 import { startScheduler, stopScheduler } from './scheduler/index.js';
 import { logger } from './lib/logger.js';
+import { assertStartupEnvOrThrow } from './config/startup-env.js';
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -13,8 +14,10 @@ const SHUTDOWN_TIMEOUT_MS = 10000;
 // 启动服务器
 async function startServer() {
   try {
-    if (!process.env.JWT_SECRET) {
-      logger.error('missing_required_env', 'JWT_SECRET');
+    try {
+      assertStartupEnvOrThrow();
+    } catch (error) {
+      logger.error('startup_env_invalid', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
 

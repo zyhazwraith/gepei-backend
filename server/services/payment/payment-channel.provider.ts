@@ -11,11 +11,11 @@ import type {
   ProviderCreatePrepayInput,
   ProviderCreatePrepayResult,
   ProviderNotifyInput,
-  ProviderOrderResult,
+  ProviderPaymentResult,
 } from './payment.types.js';
 import { ValidationError } from '../../utils/errors.js';
 
-type MockOrderState = ProviderOrderResult;
+type MockOrderState = ProviderPaymentResult;
 
 const mockOrderState = new Map<string, MockOrderState>();
 
@@ -67,7 +67,7 @@ class MockPaymentChannelProvider implements IPaymentChannelProvider {
     };
   }
 
-  async queryOrder(transactionId: string): Promise<ProviderOrderResult> {
+  async queryOrder(transactionId: string): Promise<ProviderPaymentResult> {
     const state = mockOrderState.get(transactionId);
     if (state) {
       return state;
@@ -79,7 +79,7 @@ class MockPaymentChannelProvider implements IPaymentChannelProvider {
     };
   }
 
-  async parseNotify(input: ProviderNotifyInput): Promise<ProviderOrderResult> {
+  async parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
     const transactionId = extractTransactionId(input.rawBody);
 
     const body = input.rawBody as Record<string, unknown>;
@@ -107,11 +107,11 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
     throw new Error('[payment] Wechat provider not implemented in phase1');
   }
 
-  async queryOrder(_transactionId: string): Promise<ProviderOrderResult> {
+  async queryOrder(_transactionId: string): Promise<ProviderPaymentResult> {
     throw new Error('[payment] Wechat provider not implemented in phase1');
   }
 
-  async parseNotify(_input: ProviderNotifyInput): Promise<ProviderOrderResult> {
+  async parseNotify(_input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
     throw new Error('[payment] Wechat provider not implemented in phase1');
   }
 }

@@ -14,6 +14,7 @@ afterEach(() => {
   } else {
     process.env.PAYMENT_PROVIDER = OLD_PROVIDER;
   }
+
 });
 
 describe('payment channel provider skeleton', () => {
@@ -27,7 +28,6 @@ describe('payment channel provider skeleton', () => {
       openid: 'openid_xxx',
       appId: 'app_xxx',
       description: 'order#1',
-      notifyUrl: '/api/v1/payments/wechat/notify',
     });
 
     expect(prepay.payParams.signType).toBe('RSA');
@@ -90,5 +90,20 @@ describe('payment channel provider skeleton', () => {
   it('throws on invalid provider', () => {
     process.env.PAYMENT_PROVIDER = 'invalid';
     expect(() => createPaymentChannelProvider()).toThrow('Invalid PAYMENT_PROVIDER');
+  });
+
+  it('wechat provider createPrepay should remain not implemented in phase1', async () => {
+    process.env.PAYMENT_PROVIDER = 'wechat';
+    const provider = createPaymentChannelProvider();
+
+    await expect(
+      provider.createPrepay({
+        transactionId: 'WX_ORD_5_123_xxx',
+        amountFen: 100,
+        openid: 'openid_xxx',
+        appId: 'app_xxx',
+        description: 'order#5',
+      }),
+    ).rejects.toThrow('Wechat provider not implemented in phase1');
   });
 });

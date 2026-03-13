@@ -59,7 +59,6 @@ export interface ProviderCreatePrepayInput {
   openid: string;
   appId: string;
   description: string;
-  notifyUrl: string;
   clientIp?: string;
 }
 
@@ -68,7 +67,7 @@ export interface ProviderCreatePrepayResult {
   raw?: unknown;
 }
 
-export interface ProviderOrderResult {
+export interface ProviderPaymentResult {
   transactionId: string;
   status: PaymentStatus;
   amountFen?: number;
@@ -85,6 +84,6 @@ export interface ProviderNotifyInput {
 
 export interface IPaymentChannelProvider {
   createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult>;
-  queryOrder(transactionId: string): Promise<ProviderOrderResult>;
-  parseNotify(input: ProviderNotifyInput): Promise<ProviderOrderResult>;
+  queryOrder(transactionId: string): Promise<ProviderPaymentResult>;
+  parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult>;
 }
