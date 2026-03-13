@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "e27034e2-de5b-4a56-bbc6-5a8e0202d34d",
+  "id": "2139b3cf-a4f9-4667-8ba2-e643ecfd39cd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "attachments": {
@@ -972,23 +972,7 @@
           "default": "(now())"
         }
       },
-      "indexes": {
-        "uk_payments_transaction_id": {
-          "name": "uk_payments_transaction_id",
-          "columns": [
-            "transaction_id"
-          ],
-          "isUnique": true
-        },
-        "uk_payments_related": {
-          "name": "uk_payments_related",
-          "columns": [
-            "related_type",
-            "related_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "payments_id": {
@@ -998,7 +982,21 @@
           ]
         }
       },
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "uk_payments_transaction_id": {
+          "name": "uk_payments_transaction_id",
+          "columns": [
+            "transaction_id"
+          ]
+        },
+        "uk_payments_related": {
+          "name": "uk_payments_related",
+          "columns": [
+            "related_type",
+            "related_id"
+          ]
+        }
+      },
       "checkConstraint": {}
     },
     "refund_records": {

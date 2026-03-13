@@ -115,7 +115,9 @@ CREATE TABLE `payments` (
 	`paid_at` timestamp,
 	`created_at` timestamp DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-	CONSTRAINT `payments_id` PRIMARY KEY(`id`)
+	CONSTRAINT `payments_id` PRIMARY KEY(`id`),
+	CONSTRAINT `uk_payments_transaction_id` UNIQUE(`transaction_id`),
+	CONSTRAINT `uk_payments_related` UNIQUE(`related_type`,`related_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `refund_records` (
@@ -224,8 +226,6 @@ CREATE INDEX `idx_status` ON `orders` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_type` ON `orders` (`type`);--> statement-breakpoint
 CREATE INDEX `idx_deleted_at` ON `orders` (`deleted_at`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `overtime_records` (`order_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `uk_payments_transaction_id` ON `payments` (`transaction_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `uk_payments_related` ON `payments` (`related_type`,`related_id`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `refund_records` (`order_id`);--> statement-breakpoint
 CREATE INDEX `idx_order_id` ON `reviews` (`order_id`);--> statement-breakpoint
 CREATE INDEX `idx_guide_id` ON `reviews` (`guide_id`);--> statement-breakpoint
