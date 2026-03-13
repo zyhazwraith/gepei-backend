@@ -78,7 +78,7 @@ export interface ProviderPaymentResult {
 
 export interface ProviderNotifyInput {
   headers: Record<string, string | string[] | undefined>;
-  rawBody: unknown;
+  rawBody: Buffer | string | unknown;
   parsedBody?: unknown;
 }
 

@@ -1,3 +1,5 @@
+import axios, { AxiosError } from 'axios';
+import { createDecipheriv, randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
 import {
   PAYMENT_PROVIDER_MOCK,
@@ -6,6 +8,7 @@ import {
   PAYMENT_STATUS_PENDING,
   PAYMENT_STATUS_SUCCESS,
 } from '../../constants/payment.js';
+import { ErrorCodes } from '../../../shared/errorCodes.js';
 import type {
   IPaymentChannelProvider,
   ProviderCreatePrepayInput,
@@ -13,18 +16,55 @@ import type {
   ProviderNotifyInput,
   ProviderPaymentResult,
 } from './payment.types.js';
-import { ValidationError } from '../../utils/errors.js';
+import { AppError, ValidationError } from '../../utils/errors.js';
+import { logger } from '../../lib/logger.js';
+import {
+  getHeaderValue,
+  mapWechatTradeState,
+  parseWechatConfigOrThrow,
+  signMessage,
+  toRawBodyText,
+  type WechatCreatePrepayResponse,
+  type WechatNotifyEnvelope,
+  type WechatNotifyPaymentPayload,
+  type WechatPayConfig,
+  type WechatQueryOrderResponse,
+  verifyMessage,
+} from './wechat-pay.helper.js';
 
 type MockOrderState = ProviderPaymentResult;
 
 const mockOrderState = new Map<string, MockOrderState>();
 
-function extractTransactionId(rawBody: unknown): string {
-  if (!rawBody || typeof rawBody !== 'object') {
+function parseRawBodyObject(rawBody: unknown): Record<string, unknown> {
+  if (rawBody && typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
+    return rawBody as Record<string, unknown>;
+  }
+
+  let text = '';
+  try {
+    text = toRawBodyText(rawBody).trim();
+  } catch {
     throw new ValidationError('微信回调参数无效');
   }
 
-  const body = rawBody as Record<string, unknown>;
+  if (!text) {
+    throw new ValidationError('微信回调参数无效');
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new ValidationError('微信回调参数无效');
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new ValidationError('微信回调参数无效');
+  }
+}
+
+function extractTransactionId(rawBody: unknown): string {
+  const body = parseRawBodyObject(rawBody);
   const candidate = body.outTradeNo ?? body.out_trade_no;
   if (typeof candidate !== 'string' || !candidate.trim()) {
     throw new ValidationError('缺少transactionId');
@@ -81,10 +121,10 @@ class MockPaymentChannelProvider implements IPaymentChannelProvider {
 
   async parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
     const transactionId = extractTransactionId(input.rawBody);
-
-    const body = input.rawBody as Record<string, unknown>;
+    const body = parseRawBodyObject(input.rawBody);
     const status = normalizeMockStatus(body.status ?? 'SUCCESS');
-    const amountFen = typeof body.amountFen === 'number' ? body.amountFen : undefined;
+    const prevState = mockOrderState.get(transactionId);
+    const amountFen = typeof body.amountFen === 'number' ? body.amountFen : prevState?.amountFen;
     const upstreamTransactionId = typeof body.transactionId === 'string' ? body.transactionId : undefined;
     const paidAt = typeof body.paidAt === 'string' ? new Date(body.paidAt) : new Date();
 
@@ -103,16 +143,197 @@ class MockPaymentChannelProvider implements IPaymentChannelProvider {
 }
 
 class WechatPaymentChannelProvider implements IPaymentChannelProvider {
-  async createPrepay(_input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult> {
-    throw new Error('[payment] Wechat provider not implemented in phase1');
+  constructor(private readonly config: WechatPayConfig) {}
+
+  private buildAuthorization(method: string, canonicalUrl: string, bodyText: string): string {
+    const timestamp = `${Math.floor(Date.now() / 1000)}`;
+    const nonceStr = randomUUID().replace(/-/g, '');
+    const message = `${method}\n${canonicalUrl}\n${timestamp}\n${nonceStr}\n${bodyText}\n`;
+    const signature = signMessage(this.config.privateKeyPem, message);
+
+    return `WECHATPAY2-SHA256-RSA2048 mchid="${this.config.mchId}",nonce_str="${nonceStr}",timestamp="${timestamp}",serial_no="${this.config.mchSerialNo}",signature="${signature}"`;
   }
 
-  async queryOrder(_transactionId: string): Promise<ProviderPaymentResult> {
-    throw new Error('[payment] Wechat provider not implemented in phase1');
+  private async requestWechat<T extends Record<string, unknown>>(
+    method: 'GET' | 'POST',
+    canonicalUrl: string,
+    payload?: Record<string, unknown>,
+  ): Promise<T> {
+    const bodyText = payload ? JSON.stringify(payload) : '';
+
+    try {
+      const response = await axios.request<T>({
+        method,
+        baseURL: this.config.baseUrl,
+        url: canonicalUrl,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: this.buildAuthorization(method, canonicalUrl, bodyText),
+          'User-Agent': 'gepei-backend-wechatpay/phase3',
+        },
+        data: payload,
+        timeout: 5000,
+      });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ code?: string; message?: string }>;
+      const detail = axiosError.response?.data
+        ? JSON.stringify(axiosError.response.data)
+        : axiosError.message;
+      logger.error(`wechat_payment_http_error method=${method} url=${canonicalUrl}`, detail);
+      throw new AppError('微信支付服务暂时不可用，请稍后重试', ErrorCodes.WECHAT_TEMP_UNAVAILABLE, 503);
+    }
   }
 
-  async parseNotify(_input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
-    throw new Error('[payment] Wechat provider not implemented in phase1');
+  async createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult> {
+    if (input.appId !== this.config.appId) {
+      throw new AppError('微信支付配置异常，请稍后重试', ErrorCodes.WECHAT_CONFIG_ERROR, 500);
+    }
+
+    const canonicalUrl = '/v3/pay/transactions/jsapi';
+    const payload = {
+      appid: this.config.appId,
+      mchid: this.config.mchId,
+      description: input.description,
+      out_trade_no: input.transactionId,
+      notify_url: this.config.notifyUrl,
+      amount: {
+        total: input.amountFen,
+        currency: 'CNY',
+      },
+      payer: {
+        openid: input.openid,
+      },
+    };
+
+    const data = await this.requestWechat<WechatCreatePrepayResponse>('POST', canonicalUrl, payload);
+    if (!data.prepay_id || typeof data.prepay_id !== 'string') {
+      throw new AppError('微信预支付创建失败，请稍后重试', ErrorCodes.WECHAT_UPSTREAM_ERROR, 502);
+    }
+
+    const nonceStr = randomUUID().replace(/-/g, '');
+    const timeStamp = `${Math.floor(Date.now() / 1000)}`;
+    const pkg = `prepay_id=${data.prepay_id}`;
+    const signText = `${this.config.appId}\n${timeStamp}\n${nonceStr}\n${pkg}\n`;
+    const paySign = signMessage(this.config.privateKeyPem, signText);
+
+    return {
+      payParams: {
+        appId: this.config.appId,
+        timeStamp,
+        nonceStr,
+        package: pkg,
+        signType: 'RSA',
+        paySign,
+      },
+      raw: data,
+    };
+  }
+
+  async queryOrder(transactionId: string): Promise<ProviderPaymentResult> {
+    const canonicalUrl = `/v3/pay/transactions/out-trade-no/${encodeURIComponent(transactionId)}?mchid=${this.config.mchId}`;
+    const data = await this.requestWechat<WechatQueryOrderResponse>('GET', canonicalUrl);
+
+    const amountFen = typeof data.amount?.total === 'number' ? data.amount.total : undefined;
+    const paidAt = typeof data.success_time === 'string' ? new Date(data.success_time) : undefined;
+
+    return {
+      transactionId,
+      status: mapWechatTradeState(data.trade_state),
+      amountFen,
+      upstreamTransactionId: typeof data.transaction_id === 'string' ? data.transaction_id : undefined,
+      paidAt,
+      raw: data,
+    };
+  }
+
+  async parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
+    let rawBodyText = '';
+    try {
+      rawBodyText = toRawBodyText(input.rawBody);
+    } catch {
+      throw new ValidationError('微信回调参数无效');
+    }
+    const timestamp = getHeaderValue(input.headers, 'wechatpay-timestamp');
+    const nonce = getHeaderValue(input.headers, 'wechatpay-nonce');
+    const signature = getHeaderValue(input.headers, 'wechatpay-signature');
+    const serial = getHeaderValue(input.headers, 'wechatpay-serial');
+
+    if (!timestamp || !nonce || !signature || !serial) {
+      throw new ValidationError('微信回调签名头缺失');
+    }
+
+    if (serial !== this.config.platformSerialNo) {
+      throw new ValidationError('微信平台证书序列号不匹配');
+    }
+
+    const verifyText = `${timestamp}\n${nonce}\n${rawBodyText}\n`;
+    const verified = verifyMessage(this.config.platformPublicKeyPem, verifyText, signature);
+    if (!verified) {
+      throw new ValidationError('微信回调验签失败');
+    }
+
+    let envelope: WechatNotifyEnvelope;
+    try {
+      envelope = JSON.parse(rawBodyText) as WechatNotifyEnvelope;
+    } catch {
+      throw new ValidationError('微信回调参数无效');
+    }
+
+    const resource = envelope.resource;
+    if (!resource?.ciphertext || !resource.nonce || resource.algorithm !== 'AEAD_AES_256_GCM') {
+      throw new ValidationError('微信回调密文结构无效');
+    }
+
+    const encrypted = Buffer.from(resource.ciphertext, 'base64');
+    if (encrypted.length <= 16) {
+      throw new ValidationError('微信回调密文结构无效');
+    }
+
+    const associatedData = resource.associated_data || '';
+    const ciphertext = encrypted.subarray(0, encrypted.length - 16);
+    const authTag = encrypted.subarray(encrypted.length - 16);
+
+    let decrypted: string;
+    try {
+      const decipher = createDecipheriv(
+        'aes-256-gcm',
+        Buffer.from(this.config.apiV3Key, 'utf8'),
+        Buffer.from(resource.nonce, 'utf8'),
+      );
+      decipher.setAAD(Buffer.from(associatedData, 'utf8'));
+      decipher.setAuthTag(authTag);
+      decrypted = Buffer.concat([
+        decipher.update(ciphertext),
+        decipher.final(),
+      ]).toString('utf8');
+    } catch {
+      throw new ValidationError('微信回调解密失败');
+    }
+
+    let notifyPayload: WechatNotifyPaymentPayload;
+    try {
+      notifyPayload = JSON.parse(decrypted) as WechatNotifyPaymentPayload;
+    } catch {
+      throw new ValidationError('微信回调解密内容无效');
+    }
+
+    if (!notifyPayload.out_trade_no || typeof notifyPayload.out_trade_no !== 'string') {
+      throw new ValidationError('微信回调缺少transactionId');
+    }
+
+    return {
+      transactionId: notifyPayload.out_trade_no,
+      status: mapWechatTradeState(notifyPayload.trade_state),
+      amountFen: typeof notifyPayload.amount?.total === 'number' ? notifyPayload.amount.total : undefined,
+      upstreamTransactionId: typeof notifyPayload.transaction_id === 'string' ? notifyPayload.transaction_id : undefined,
+      paidAt: typeof notifyPayload.success_time === 'string' ? new Date(notifyPayload.success_time) : undefined,
+      raw: {
+        envelope,
+        payload: notifyPayload,
+      },
+    };
   }
 }
 
@@ -124,10 +345,10 @@ export function createPaymentChannelProvider(): IPaymentChannelProvider {
   }
 
   if (provider === PAYMENT_PROVIDER_WECHAT) {
-    return new WechatPaymentChannelProvider();
+    return new WechatPaymentChannelProvider(parseWechatConfigOrThrow());
   }
 
-  throw new Error(`[payment] Invalid PAYMENT_PROVIDER: \"${provider}\"`);
+  throw new Error(`[payment] Invalid PAYMENT_PROVIDER: "${provider}"`);
 }
 
 export function setMockPaymentOrderResult(input: {

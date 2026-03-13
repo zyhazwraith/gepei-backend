@@ -16,6 +16,7 @@ import OrderSupportBar from "@/components/order/OrderSupportBar";
 import GuideActions from "@/components/order/GuideActions";
 import UserActions from "@/components/order/UserActions";
 import { Badge } from "@/components/ui/badge";
+import { invokeWechatJsapiPay, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
@@ -108,11 +109,39 @@ export default function OrderDetail() {
 
   const handleOvertimePayConfirm = async () => {
       if (!pendingOvertime) return;
+      const authCode = resolveAuthCodeFromUrl();
+      if (!authCode) {
+          toast.error("缺少微信授权，请重新进入支付页");
+          return;
+      }
       const toastId = toast.loading("正在支付加时费...");
       try {
-          await payOvertime(pendingOvertime.id, 'wechat');
-          toast.success("支付成功", { id: toastId });
-          handleOvertimePaymentSuccess();
+          const res = await payOvertime(pendingOvertime.id, 'wechat', authCode);
+          if (res.code !== 0 || !res.data) {
+            toast.error(res.message || "支付失败", { id: toastId });
+            return;
+          }
+
+          const prepay = res.data;
+          const invokeResult = await invokeWechatJsapiPay(prepay.payParams);
+          if (invokeResult === 'cancel') {
+            toast.error("已取消支付", { id: toastId });
+            return;
+          }
+
+          const syncResult = await waitPaymentSuccess(prepay.transactionId);
+          if (syncResult === 'success') {
+            toast.success("支付成功", { id: toastId });
+            handleOvertimePaymentSuccess();
+            return;
+          }
+
+          if (syncResult === 'failed') {
+            toast.error("支付失败，请重试", { id: toastId });
+            return;
+          }
+
+          toast("支付处理中，请稍后刷新订单状态", { id: toastId });
       } catch (error: any) {
           toast.error(error.message || "支付失败", { id: toastId });
       }
