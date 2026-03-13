@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { createDecipheriv, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
 import {
   PAYMENT_PROVIDER_MOCK,
@@ -19,11 +19,11 @@ import type {
 import { AppError, ValidationError } from '../../utils/errors.js';
 import { logger } from '../../lib/logger.js';
 import {
+  decryptWechatNotifyResource,
   getHeaderValue,
   mapWechatTradeState,
   parseWechatConfigOrThrow,
   signMessage,
-  toRawBodyText,
   type WechatCreatePrepayResponse,
   type WechatNotifyEnvelope,
   type WechatNotifyPaymentPayload,
@@ -35,18 +35,11 @@ import {
 type MockOrderState = ProviderPaymentResult;
 
 const mockOrderState = new Map<string, MockOrderState>();
+const WECHAT_PAY_JSAPI_CANONICAL_URL = '/v3/pay/transactions/jsapi';
+const WECHAT_PAY_QUERY_ORDER_CANONICAL_PREFIX = '/v3/pay/transactions/out-trade-no/';
 
-function parseRawBodyObject(rawBody: unknown): Record<string, unknown> {
-  if (rawBody && typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
-    return rawBody as Record<string, unknown>;
-  }
-
-  let text = '';
-  try {
-    text = toRawBodyText(rawBody).trim();
-  } catch {
-    throw new ValidationError('微信回调参数无效');
-  }
+function parseRawBodyObject(rawBody: Buffer): Record<string, unknown> {
+  const text = rawBody.toString('utf8').trim();
 
   if (!text) {
     throw new ValidationError('微信回调参数无效');
@@ -63,7 +56,7 @@ function parseRawBodyObject(rawBody: unknown): Record<string, unknown> {
   }
 }
 
-function extractTransactionId(rawBody: unknown): string {
+function extractTransactionId(rawBody: Buffer): string {
   const body = parseRawBodyObject(rawBody);
   const candidate = body.outTradeNo ?? body.out_trade_no;
   if (typeof candidate !== 'string' || !candidate.trim()) {
@@ -191,7 +184,7 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
       throw new AppError('微信支付配置异常，请稍后重试', ErrorCodes.WECHAT_CONFIG_ERROR, 500);
     }
 
-    const canonicalUrl = '/v3/pay/transactions/jsapi';
+    const canonicalUrl = WECHAT_PAY_JSAPI_CANONICAL_URL;
     const payload = {
       appid: this.config.appId,
       mchid: this.config.mchId,
@@ -232,7 +225,7 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
   }
 
   async queryOrder(transactionId: string): Promise<ProviderPaymentResult> {
-    const canonicalUrl = `/v3/pay/transactions/out-trade-no/${encodeURIComponent(transactionId)}?mchid=${this.config.mchId}`;
+    const canonicalUrl = `${WECHAT_PAY_QUERY_ORDER_CANONICAL_PREFIX}${encodeURIComponent(transactionId)}?mchid=${this.config.mchId}`;
     const data = await this.requestWechat<WechatQueryOrderResponse>('GET', canonicalUrl);
 
     const amountFen = typeof data.amount?.total === 'number' ? data.amount.total : undefined;
@@ -249,12 +242,7 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
   }
 
   async parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult> {
-    let rawBodyText = '';
-    try {
-      rawBodyText = toRawBodyText(input.rawBody);
-    } catch {
-      throw new ValidationError('微信回调参数无效');
-    }
+    const rawBodyText = input.rawBody.toString('utf8');
     const timestamp = getHeaderValue(input.headers, 'wechatpay-timestamp');
     const nonce = getHeaderValue(input.headers, 'wechatpay-nonce');
     const signature = getHeaderValue(input.headers, 'wechatpay-signature');
@@ -282,32 +270,13 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
     }
 
     const resource = envelope.resource;
-    if (!resource?.ciphertext || !resource.nonce || resource.algorithm !== 'AEAD_AES_256_GCM') {
+    if (!resource) {
       throw new ValidationError('微信回调密文结构无效');
     }
-
-    const encrypted = Buffer.from(resource.ciphertext, 'base64');
-    if (encrypted.length <= 16) {
-      throw new ValidationError('微信回调密文结构无效');
-    }
-
-    const associatedData = resource.associated_data || '';
-    const ciphertext = encrypted.subarray(0, encrypted.length - 16);
-    const authTag = encrypted.subarray(encrypted.length - 16);
 
     let decrypted: string;
     try {
-      const decipher = createDecipheriv(
-        'aes-256-gcm',
-        Buffer.from(this.config.apiV3Key, 'utf8'),
-        Buffer.from(resource.nonce, 'utf8'),
-      );
-      decipher.setAAD(Buffer.from(associatedData, 'utf8'));
-      decipher.setAuthTag(authTag);
-      decrypted = Buffer.concat([
-        decipher.update(ciphertext),
-        decipher.final(),
-      ]).toString('utf8');
+      decrypted = decryptWechatNotifyResource(resource, this.config.apiV3Key);
     } catch {
       throw new ValidationError('微信回调解密失败');
     }

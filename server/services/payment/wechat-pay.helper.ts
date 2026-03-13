@@ -1,4 +1,4 @@
-import { createSign, createVerify } from 'crypto';
+import { createDecipheriv, createSign, createVerify } from 'crypto';
 import { readFileSync } from 'fs';
 import {
   PAYMENT_STATUS_FAILED,
@@ -64,6 +64,8 @@ export type WechatNotifyPaymentPayload = {
   };
   [key: string]: unknown;
 };
+
+type WechatNotifyResource = NonNullable<WechatNotifyEnvelope['resource']>;
 
 function readRequiredEnv(name: string): string {
   const raw = process.env[name]?.trim();
@@ -143,18 +145,26 @@ export function getHeaderValue(
   return candidate;
 }
 
-export function toRawBodyText(rawBody: unknown): string {
-  if (Buffer.isBuffer(rawBody)) {
-    return rawBody.toString('utf8');
+export function decryptWechatNotifyResource(resource: WechatNotifyResource, apiV3Key: string): string {
+  if (!resource.ciphertext || !resource.nonce || resource.algorithm !== 'AEAD_AES_256_GCM') {
+    throw new Error('invalid wechat notify resource');
   }
 
-  if (typeof rawBody === 'string') {
-    return rawBody;
+  const encrypted = Buffer.from(resource.ciphertext, 'base64');
+  if (encrypted.length <= 16) {
+    throw new Error('invalid wechat notify ciphertext');
   }
 
-  if (rawBody && typeof rawBody === 'object') {
-    return JSON.stringify(rawBody);
-  }
+  const associatedData = resource.associated_data || '';
+  const ciphertext = encrypted.subarray(0, encrypted.length - 16);
+  const authTag = encrypted.subarray(encrypted.length - 16);
+  const decipher = createDecipheriv(
+    'aes-256-gcm',
+    Buffer.from(apiV3Key, 'utf8'),
+    Buffer.from(resource.nonce, 'utf8'),
+  );
 
-  throw new Error('invalid raw body');
+  decipher.setAAD(Buffer.from(associatedData, 'utf8'));
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 }

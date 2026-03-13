@@ -49,22 +49,11 @@ export async function getPaymentStatus(req: Request, res: Response, next: NextFu
  */
 export async function wechatNotify(req: Request, res: Response, _next: NextFunction) {
   try {
-    const rawBody = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {}), 'utf8');
-
-    const rawBodyText = rawBody.toString('utf8');
-    let parsedBody: unknown;
-    try {
-      parsedBody = rawBodyText ? JSON.parse(rawBodyText) : undefined;
-    } catch {
-      parsedBody = undefined;
-    }
+    const rawBody = req.body as Buffer;
 
     await PaymentService.handleNotify({
       headers: req.headers as Record<string, string | string[] | undefined>,
       rawBody,
-      parsedBody,
     });
 
     res.status(200).json({

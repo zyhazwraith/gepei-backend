@@ -102,10 +102,10 @@ describe('payment channel provider', () => {
 
     const result = await provider.parseNotify({
       headers: {},
-      rawBody: JSON.stringify({
+      rawBody: Buffer.from(JSON.stringify({
         out_trade_no: 'WX_ORD_2_123_xxx',
         status: 'SUCCESS',
-      }),
+      }), 'utf8'),
     });
 
     expect(result.transactionId).toBe('WX_ORD_2_123_xxx');
@@ -235,7 +235,7 @@ describe('payment channel provider', () => {
         'wechatpay-signature': signature,
         'wechatpay-serial': process.env.WECHAT_PAY_PLATFORM_SERIAL_NO!,
       },
-      rawBody,
+      rawBody: Buffer.from(rawBody, 'utf8'),
     });
 
     expect(result.transactionId).toBe('WX_ORD_11_123_xxx');
