@@ -18,7 +18,7 @@ const plugins = [
 
 export default defineConfig({
   plugins,
-  envPrefix: ['VITE_', 'OPENID_PROVIDER', 'WECHAT_OAUTH_APP_ID'],
+  envPrefix: ['VITE_', 'WECHAT_OAUTH_APP_ID'],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

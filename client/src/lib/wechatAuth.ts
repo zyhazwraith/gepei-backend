@@ -5,11 +5,6 @@ const WECHAT_UA_PATTERN = /micromessenger/i;
 const WECHAT_OAUTH_ATTEMPT_KEY = 'wechat_oauth_attempted_url';
 const WECHAT_AUTH_DEBUG_TOAST_ID = 'wechat-auth-debug';
 
-function resolveOpenIdProvider(): 'mock' | 'wechat' {
-  const provider = import.meta.env.OPENID_PROVIDER?.trim().toLowerCase();
-  return provider === 'wechat' ? 'wechat' : 'mock';
-}
-
 function logAuth(message: string, extra?: unknown): void {
   if (extra === undefined) {
     toast(message, { id: WECHAT_AUTH_DEBUG_TOAST_ID, duration: 5000 });
@@ -55,15 +50,14 @@ function readWechatOauthErrorFromUrl(url: URL): string | null {
 export function ensureWechatAuthCode(options: { force?: boolean; trigger?: 'app_init' | 'pay_click' } = {}): void {
   const force = options.force === true;
   const trigger = options.trigger ?? 'app_init';
-  const openIdProvider = resolveOpenIdProvider();
   logAuth('ensureWechatAuthCode start', {
     href: window.location.href,
-    openIdProvider,
+    dev: import.meta.env.DEV,
     force,
     trigger,
   });
-  if (openIdProvider !== 'wechat') {
-    logAuth('skip oauth redirect because OPENID provider is mock');
+  if (import.meta.env.DEV) {
+    logAuth('skip oauth redirect in DEV mode');
     return;
   }
   if (!isWechatBrowser()) {
