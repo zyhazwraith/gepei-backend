@@ -26,7 +26,7 @@ function buildCurrentUrlWithoutOauthParams(): URL {
 }
 
 function getWechatOauthAppId(): string | null {
-  const appId = import.meta.env.WECHAT_OAUTH_APP_ID?.trim();
+  const appId = import.meta.env.VITE_WECHAT_OAUTH_APP_ID?.trim();
   return appId || null;
 }
 
@@ -82,7 +82,7 @@ export function ensureWechatAuthCode(options: { force?: boolean; trigger?: 'app_
 
   const appId = getWechatOauthAppId();
   if (!appId) {
-    logAuth('missing WECHAT_OAUTH_APP_ID, skip oauth redirect');
+    logAuth('missing VITE_WECHAT_OAUTH_APP_ID, skip oauth redirect');
     return;
   }
 
