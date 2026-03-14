@@ -18,6 +18,7 @@ import UserActions from "@/components/order/UserActions";
 import { Badge } from "@/components/ui/badge";
 import { invokeWechatJsapiPay, isDevMockAuthFallbackActive, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
 import { DEV_MOCK_AUTH_NOTICE } from "@/lib/paymentDev";
+import { ensureWechatAuthCode } from "@/lib/wechatAuth";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
@@ -113,7 +114,8 @@ export default function OrderDetail() {
       if (!pendingOvertime) return;
       const authCode = resolveAuthCodeFromUrl();
       if (!authCode) {
-          toast.error("缺少微信授权，请重新进入支付页");
+          toast("正在拉起微信授权...");
+          ensureWechatAuthCode({ force: true, trigger: 'pay_click' });
           return;
       }
       const toastId = toast.loading("正在支付加时费...");

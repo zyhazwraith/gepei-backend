@@ -29,6 +29,8 @@ import AdminSettings from "./pages/admin/SettingsPage";
 import AdminAuditLogList from "./pages/admin/AuditLogList";
 import AdminWithdrawList from "./pages/admin/withdrawals/WithdrawList";
 import AdminStats from "./pages/admin/stats/AdminStats";
+import { useEffect } from "react";
+import { ensureWechatAuthCode } from "./lib/wechatAuth";
 
 function Router() {
   return (
@@ -74,6 +76,10 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  useEffect(() => {
+    ensureWechatAuthCode();
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider

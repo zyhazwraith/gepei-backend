@@ -13,7 +13,8 @@ function getBridge(): JsBridge | undefined {
 }
 
 export function isDevMockAuthFallbackActive(): boolean {
-  if (!import.meta.env.DEV) {
+  const provider = import.meta.env.OPENID_PROVIDER?.trim().toLowerCase();
+  if (provider !== 'mock') {
     return false;
   }
   const code = new URLSearchParams(window.location.search).get('code');
@@ -21,13 +22,14 @@ export function isDevMockAuthFallbackActive(): boolean {
 }
 
 export function resolveAuthCodeFromUrl(): string | null {
+  const provider = import.meta.env.OPENID_PROVIDER?.trim().toLowerCase();
   const code = new URLSearchParams(window.location.search).get('code');
   const normalized = code?.trim();
   if (normalized) {
     return normalized;
   }
 
-  if (import.meta.env.DEV) {
+  if (provider === 'mock') {
     return 'mock_code';
   }
 
