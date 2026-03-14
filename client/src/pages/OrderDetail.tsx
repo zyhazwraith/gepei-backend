@@ -16,7 +16,8 @@ import OrderSupportBar from "@/components/order/OrderSupportBar";
 import GuideActions from "@/components/order/GuideActions";
 import UserActions from "@/components/order/UserActions";
 import { Badge } from "@/components/ui/badge";
-import { invokeWechatJsapiPay, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
+import { invokeWechatJsapiPay, isDevMockAuthFallbackActive, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
+import { DEV_MOCK_AUTH_NOTICE } from "@/lib/paymentDev";
 
 export default function OrderDetail() {
   const [, params] = useRoute("/orders/:id");
@@ -38,6 +39,7 @@ export default function OrderDetail() {
   
   // User & Guide Status
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const isMockAuthMode = isDevMockAuthFallbackActive();
 
   useEffect(() => {
     // Load current user
@@ -475,6 +477,11 @@ export default function OrderDetail() {
                       <div className="text-3xl font-bold text-orange-600 mb-1"><Price amount={pendingOvertime.amount} /></div>
                       <p className="text-sm text-gray-500">微信支付</p>
                   </div>
+                  {isMockAuthMode && (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                      {DEV_MOCK_AUTH_NOTICE}
+                    </p>
+                  )}
                   <Button 
                     className="w-full bg-[#07C160] hover:bg-[#06AD56]" 
                     size="lg"

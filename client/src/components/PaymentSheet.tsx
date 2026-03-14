@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { payOrder } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import Price from "@/components/Price";
-import { invokeWechatJsapiPay, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
+import { invokeWechatJsapiPay, isDevMockAuthFallbackActive, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
+import { DEV_MOCK_AUTH_NOTICE } from "@/lib/paymentDev";
 
 interface PaymentSheetProps {
   orderId: number | null;
@@ -21,6 +22,7 @@ interface PaymentSheetProps {
 export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSuccess }: PaymentSheetProps) {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("wechat");
+  const isMockAuthMode = isDevMockAuthFallbackActive();
 
   const handlePay = async () => {
     if (!orderId) return;
@@ -94,6 +96,11 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
                   <RadioGroupItem value="wechat" id="wechat" />
                 </div>
               </RadioGroup>
+              {isMockAuthMode && (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {DEV_MOCK_AUTH_NOTICE}
+                </p>
+              )}
             </div>
           </div>
 

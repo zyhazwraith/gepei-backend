@@ -12,10 +12,26 @@ function getBridge(): JsBridge | undefined {
   return (window as unknown as { WeixinJSBridge?: JsBridge }).WeixinJSBridge;
 }
 
+export function isDevMockAuthFallbackActive(): boolean {
+  if (!import.meta.env.DEV) {
+    return false;
+  }
+  const code = new URLSearchParams(window.location.search).get('code');
+  return !code?.trim();
+}
+
 export function resolveAuthCodeFromUrl(): string | null {
   const code = new URLSearchParams(window.location.search).get('code');
   const normalized = code?.trim();
-  return normalized || null;
+  if (normalized) {
+    return normalized;
+  }
+
+  if (import.meta.env.DEV) {
+    return 'mock_code';
+  }
+
+  return null;
 }
 
 export async function invokeWechatJsapiPay(payParams: PrepayPayParams): Promise<'success' | 'cancel' | 'fail' | 'skipped'> {
