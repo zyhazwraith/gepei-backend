@@ -4,6 +4,7 @@ import { ValidationError } from '../utils/errors.js';
 import { PaymentService } from '../services/payment/payment.service.js';
 import { PAYMENT_STATUS_PENDING } from '../constants/payment.js';
 import { logger } from '../lib/logger.js';
+import { buildOpenIdSessionKey } from '../services/payment/openid-session-key.js';
 
 const bindOpenIdSchema = z.object({
   authCode: z.string().trim().min(1, 'authCode不能为空'),
@@ -14,7 +15,14 @@ export async function bindSessionOpenId(req: Request, res: Response, next: NextF
 
   try {
     const validated = bindOpenIdSchema.parse(req.body);
-    await PaymentService.bindSessionOpenIdByCode(userId, validated.authCode);
+    const sessionKey = buildOpenIdSessionKey(userId, req.headers.authorization);
+    await PaymentService.bindSessionOpenIdByCode({
+      userId,
+      sessionKey,
+      authCode: validated.authCode,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     res.json({
       code: 0,
       message: '绑定成功',

@@ -26,6 +26,8 @@ import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import { OrderService } from '../order.service.js';
 import { ErrorCodes } from '../../../shared/errorCodes.js';
 import { bindSessionOpenId, getSessionOpenId } from './openid-session.store.js';
+import { hashOpenId } from './openid-session-key.js';
+import { logger } from '../../lib/logger.js';
 
 const paymentProvider = createPaymentChannelProvider();
 
@@ -123,13 +125,24 @@ async function assertPaymentOwnership(relatedType: PaymentRelatedType, relatedId
 }
 
 export class PaymentService {
-  static async bindSessionOpenIdByCode(userId: number, authCode: string): Promise<void> {
+  static async bindSessionOpenIdByCode(input: { userId: number; sessionKey: string; authCode: string; ip?: string; userAgent?: string }): Promise<void> {
+    const { userId, sessionKey, authCode, ip, userAgent } = input;
     const code = authCode.trim();
     if (!code) {
       throw new ValidationError('authCode不能为空');
     }
     const resolved = await openIdProvider.resolveOpenIdByCode(code);
-    bindSessionOpenId(userId, resolved.openid, resolved.appId);
+    bindSessionOpenId(sessionKey, resolved.openid, resolved.appId);
+    logger.security(
+      `openid_session_bind ${logger.kv({
+        uid: userId,
+        sid: sessionKey,
+        appId: resolved.appId,
+        openidHash: hashOpenId(resolved.openid),
+        ip: ip ?? '-',
+        ua: userAgent ?? '-',
+      })}`,
+    );
   }
 
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
@@ -176,11 +189,20 @@ export class PaymentService {
     }
 
     const code = resolveAuthCode(input.authCode);
-    let openid = getSessionOpenId(input.userId);
+    let openid = getSessionOpenId(input.sessionKey);
 
     if (code) {
       const resolved = await openIdProvider.resolveOpenIdByCode(code);
-      bindSessionOpenId(input.userId, resolved.openid, resolved.appId);
+      bindSessionOpenId(input.sessionKey, resolved.openid, resolved.appId);
+      logger.security(
+        `openid_session_bind_via_prepay ${logger.kv({
+          uid: input.userId,
+          sid: input.sessionKey,
+          appId: resolved.appId,
+          openidHash: hashOpenId(resolved.openid),
+          ip: input.clientIp ?? '-',
+        })}`,
+      );
       openid = resolved;
     }
 

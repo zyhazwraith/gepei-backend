@@ -8,6 +8,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.
 import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
 import { PaymentService } from '../services/payment/payment.service.js';
 import { PAYMENT_METHOD_WECHAT } from '../constants/payment.js';
+import { buildOpenIdSessionKey } from '../services/payment/openid-session-key.js';
 
 // 验证 Schema
 const createCustomOrderSchema = z.object({
@@ -151,11 +152,13 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
     // 1. 验证输入
     const validated = payRequestSchema.parse(req.body);
     const intent = await OrderService.prepareOrderPaymentIntent(orderId, userId);
+    const sessionKey = buildOpenIdSessionKey(userId, req.headers.authorization);
 
     const prepay = await PaymentService.createPrepay({
       intent,
       paymentMethod: validated.paymentMethod,
       userId,
+      sessionKey,
       authCode: validated.authCode,
       clientIp: req.ip,
     });
@@ -387,11 +390,13 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
     // Validate Input
     const validated = payRequestSchema.parse(req.body);
     const intent = await OrderService.prepareOvertimePaymentIntent(overtimeId, userId);
+    const sessionKey = buildOpenIdSessionKey(userId, req.headers.authorization);
 
     const prepay = await PaymentService.createPrepay({
       intent,
       paymentMethod: validated.paymentMethod,
       userId,
+      sessionKey,
       authCode: validated.authCode,
       clientIp: req.ip,
     });
