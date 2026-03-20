@@ -111,7 +111,7 @@ export async function createCustomOrder(req: Request, res: Response) {
 
 // 更新状态 Schema
 const updateStatusSchema = z.object({
-  status: z.enum(['pending', 'paid', 'waiting_service', 'in_service', 'service_ended', 'completed', 'cancelled', 'refunded']),
+  status: z.enum(['pending', 'waiting_service', 'in_service', 'service_ended', 'completed', 'cancelled', 'refunded']),
   force: z.boolean().optional(),
 });
 
@@ -132,8 +132,7 @@ const refundOrderSchema = z.object({
  * 
  * 2. Order Status Transition (订单状态流转):
  *    - Pending (待支付): 初始状态。
- *    - Paid (已支付): 用户支付完成。
- *    - Waiting Service (待服务): 定制单可进入该状态，表示待履约准备完成。
+ *    - Waiting Service (待服务): 用户支付完成后进入该状态，表示待履约准备完成。
  *    - In Service (服务中): 订单开始执行。
  *    - Service Ended (服务结束): 双方确认结束。
  *    - Completed (已完成): 系统结算完成 (终态)。
@@ -149,8 +148,7 @@ const refundOrderSchema = z.object({
 
 // 状态流转规则 (Updated for V2)
 export const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ['paid', 'waiting_service', 'cancelled'], 
-  paid: ['in_service', 'cancelled', 'refunded', 'waiting_service'], // Added waiting_service
+  pending: ['waiting_service', 'cancelled'], 
   waiting_service: ['in_service', 'cancelled'],
   in_service: ['service_ended', 'completed', 'cancelled'], 
   service_ended: ['completed', 'cancelled'], // Added cancelled

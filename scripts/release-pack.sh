@@ -14,7 +14,7 @@ die() {
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/release-pack.sh [git-ref] [--type source|binary|both] [--out-dir DIR] [--no-fetch] [--allow-dirty]
+  scripts/release-pack.sh [git-ref] [--type source|binary|both] [--out-dir DIR] [--no-fetch] [--strict-clean]
 
 Examples:
   scripts/release-pack.sh origin/release --type binary
@@ -35,7 +35,7 @@ REF="HEAD"
 PACKAGE_TYPE="binary"
 OUT_DIR="${RELEASE_OUTPUT_DIR:-/tmp/gepei-releases}"
 DO_FETCH=1
-ALLOW_DIRTY=0
+STRICT_CLEAN=0
 POSITIONAL_REF_SET=0
 
 while [[ $# -gt 0 ]]; do
@@ -54,8 +54,8 @@ while [[ $# -gt 0 ]]; do
       DO_FETCH=0
       shift
       ;;
-    --allow-dirty)
-      ALLOW_DIRTY=1
+    --strict-clean)
+      STRICT_CLEAN=1
       shift
       ;;
     -h|--help)
@@ -83,10 +83,11 @@ case "$PACKAGE_TYPE" in
     ;;
 esac
 
-if [[ "$ALLOW_DIRTY" -eq 0 ]]; then
-  if [[ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]]; then
-    die "Working tree is not clean. Commit/stash changes or re-run with --allow-dirty."
+if [[ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]]; then
+  if [[ "$STRICT_CLEAN" -eq 1 ]]; then
+    die "Working tree is not clean. Commit/stash changes or remove --strict-clean."
   fi
+  log "Warning: working tree is dirty. Packaging still uses committed ref ${REF} only."
 fi
 
 if [[ "$DO_FETCH" -eq 1 ]]; then

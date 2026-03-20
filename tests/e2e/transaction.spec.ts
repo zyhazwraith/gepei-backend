@@ -111,7 +111,7 @@ test.describe('Transaction Flow (Home -> Guide -> Order -> Payment)', () => {
     await page.click('button:has-text("立即支付")');
 
     // 10. Verify Success
-    // Status text for 'paid' is "等待地陪接单"
+    // Status text for 'waiting_service' is "等待地陪接单"
     await expect(page.locator('text=等待地陪接单')).toBeVisible();
   });
 });

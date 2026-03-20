@@ -9,7 +9,7 @@
 
 ## 1. 概述 (Overview)
 
-允许超级管理员 (Super Admin) 对已支付订单执行退款操作。本阶段采用 **Manual Confirm (手工确认)** 模式，即管理员在线下完成退款后，在系统内录入金额与原因，变更订单状态。
+允许超级管理员 (Super Admin) 对待服务订单执行退款操作。本阶段采用 **Manual Confirm (手工确认)** 模式，即管理员在线下完成退款后，在系统内录入金额与原因，变更订单状态。
 
 ## 2. 业务规则 (Business Rules)
 
@@ -19,8 +19,7 @@
 
 ### 2.2 触发条件
 仅以下状态的订单可发起退款：
-1.  `paid` (已支付)
-2.  `waiting_service` (待服务)
+1.  `waiting_service` (待服务)
 
 **单次限制**:
 *   每个订单仅能执行一次退款。
@@ -37,7 +36,7 @@
     4.  (TODO) 记录审计日志。
 
 ### 2.4 状态流转
-*   `paid` / `waiting_service` -> `refunded` (终态)
+*   `waiting_service` -> `refunded` (终态)
 
 ## 3. 数据模型 (Data Model)
 
@@ -93,7 +92,7 @@
 ### 5.1 Admin Console (Frontend)
 *   **入口**: 订单详情弹窗 (`OrderDetailDialog`)。
 *   **交互**:
-    *   在 `Paid` 或 `WaitingService` 状态下，显示【退款】按钮 (Destructive Style)。
+    *   在 `WaitingService` 状态下，显示【退款】按钮 (Destructive Style)。
     *   点击按钮弹出确认对话框：
         *   **退款金额**: 默认为 `订单总额 - 150元` (自动计算违约金扣除)。
         *   **退款原因**: 默认为 "用户取消，扣除违约金 ¥150"。

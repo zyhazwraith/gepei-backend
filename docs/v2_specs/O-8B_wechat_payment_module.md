@@ -17,6 +17,7 @@
 ## 3. 目标状态机
 订单状态:
 - `pending` -> `waiting_service`（仅支付确认成功时）
+- 无 `paid` 中间态，支付成功直接进入 `waiting_service`
 
 支付流水状态:
 - `pending`（创建预支付后）

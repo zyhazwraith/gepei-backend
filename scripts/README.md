@@ -28,9 +28,23 @@
 
 # 同时打 source + binary
 ./scripts/release-pack.sh origin/release --type both --out-dir /tmp/gepei-releases
+
+# 如需强制要求工作区干净（否则失败）
+./scripts/release-pack.sh origin/release --strict-clean
 ```
 
 说明：
 - 版本号来源：仓库根目录 `VERSION`
 - 元信息注入：`release-manifest.json`（包含 version / commit / build time / ref）
 - 校验文件：每个产物会生成对应 `.sha256`
+- 默认允许脏工作区，但产物只包含目标 ref 的已提交内容
+
+## 部署自动化说明
+
+生产部署脚本已迁移到技能目录，不放在业务仓库：
+
+- `/home/ubuntu/.codex/skills/deploy-remote-manual/scripts/deploy-workingtree-remote.sh`
+
+调用方式请参考对应 skill：
+
+- `/home/ubuntu/.codex/skills/deploy-remote-manual/SKILL.md`

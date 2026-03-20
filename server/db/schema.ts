@@ -113,7 +113,6 @@ export const orders = mysqlTable('orders', {
   type: mysqlEnum('type', ['standard', 'custom']).notNull().default('standard'),
   status: mysqlEnum('status', [
     'pending',
-    'paid',
     'waiting_service',
     'in_service',
     'service_ended',

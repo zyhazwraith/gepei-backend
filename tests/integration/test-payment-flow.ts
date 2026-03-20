@@ -83,14 +83,14 @@ async function runTests() {
       throw new Error(`Expected notify SUCCESS, got ${notifyRes.data.code}`);
     }
 
-    // 5. Verify Final Status (Paid)
+    // 5. Verify Final Status (Waiting Service)
     const finalRes = await axios.get(`${API_URL}/orders/${orderId}`, {
       headers: { Authorization: `Bearer ${userToken}` }
     });
-    if (finalRes.data.data.status === 'paid') {
-      logPass('Final Order Status is Paid');
+    if (finalRes.data.data.status === 'waiting_service') {
+      logPass('Final Order Status is Waiting Service');
     } else {
-      throw new Error(`Expected paid, got ${finalRes.data.data.status}`);
+      throw new Error(`Expected waiting_service, got ${finalRes.data.data.status}`);
     }
 
   } catch (e: any) {

@@ -127,10 +127,10 @@ describe('Custom Order Feature E2E', () => {
       });
 
     expect(payRes.status).toBe(200);
-    expect(payRes.body.data.status).toBe('paid');
+    expect(payRes.body.data.status).toBe('waiting_service');
 
     // 3. Verify DB status
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-    expect(order.status).toBe('paid');
+    expect(order.status).toBe('waiting_service');
   });
 });

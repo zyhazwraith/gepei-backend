@@ -5,7 +5,6 @@
  */
 export enum OrderStatus {
   PENDING = 'pending',               // 待支付
-  PAID = 'paid',                     // 已支付 (待接单/待指派)
   WAITING_SERVICE = 'waiting_service', // 待服务 (已指派/已接单)
   IN_SERVICE = 'in_service',         // 服务中
   SERVICE_ENDED = 'service_ended',   // 服务结束 (等待结算)

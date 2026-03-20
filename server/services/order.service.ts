@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { orders, checkInRecords, attachments, overtimeRecords, payments, refundRecords } from '../db/schema.js';
-import { eq, and, lt, sql, desc, or } from 'drizzle-orm';
+import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
 import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
@@ -88,7 +88,7 @@ export class OrderService {
       const [result] = await tx
         .update(orders)
         .set({
-          status: 'paid',
+          status: OrderStatus.WAITING_SERVICE,
           paidAt,
           updatedAt: new Date(),
         })
@@ -165,7 +165,7 @@ export class OrderService {
       };
     }
 
-    if (!order.status || (order.status !== OrderStatus.PAID && order.status !== OrderStatus.WAITING_SERVICE)) {
+    if (!order.status || order.status !== OrderStatus.WAITING_SERVICE) {
       throw new ValidationError(`当前订单状态为 ${order.status}，无法申请退款`);
     }
 
@@ -210,7 +210,7 @@ export class OrderService {
     const now = new Date();
 
     await db.transaction(async (tx) => {
-      // 5.1 CAS: paid|waiting_service -> refunded
+      // 5.1 CAS: waiting_service -> refunded
       const [updateResult] = await tx.update(orders)
         .set({
           status: OrderStatus.REFUNDED,
@@ -219,10 +219,7 @@ export class OrderService {
         })
         .where(and(
           eq(orders.id, order.id),
-          or(
-            eq(orders.status, OrderStatus.PAID),
-            eq(orders.status, OrderStatus.WAITING_SERVICE)
-          )
+          eq(orders.status, OrderStatus.WAITING_SERVICE)
         ));
 
       if (updateResult.affectedRows === 0) {
