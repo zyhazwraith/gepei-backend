@@ -6,7 +6,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../../utils/erro
 import { PAYMENT_RELATED_TYPE_ORDER, PAYMENT_STATUS_SUCCESS } from '../../constants/payment.js';
 import { OrderStatus } from '../../constants/index.js';
 import { createPaymentChannelProvider } from './payment-channel.provider.js';
-import type { ProviderRefundResult } from './payment.types.js';
+import type { ProviderNotifyInput, ProviderRefundResult } from './payment.types.js';
 
 const paymentProvider = createPaymentChannelProvider();
 const PENALTY_FEN = 15000;
@@ -19,6 +19,14 @@ export interface RefundApplyResult {
   refundedAmount: number;
   penaltyApplied: boolean;
   message: string;
+}
+
+export interface RefundStatusResult {
+  outRefundNo: string;
+  orderId: number;
+  refundStatus: 'pending' | 'success' | 'failed';
+  refundedAmount: number;
+  refundTransactionId?: string;
 }
 
 function buildOutRefundNo(orderNumber: string): string {
@@ -215,5 +223,57 @@ export class RefundService {
     });
 
     return result;
+  }
+
+  static async handleNotify(input: ProviderNotifyInput): Promise<RefundStatusResult> {
+    const upstream = await paymentProvider.parseRefundNotify(input);
+    await this.confirmRefund(upstream.outRefundNo, upstream);
+    return this.getRefundStatusByOutRefundNo(upstream.outRefundNo);
+  }
+
+  static async queryAndSyncByOutRefundNo(outRefundNo: string): Promise<RefundStatusResult> {
+    const [row] = await db.select().from(refundRecords).where(eq(refundRecords.outRefundNo, outRefundNo)).limit(1);
+    if (!row) {
+      throw new NotFoundError('退款记录不存在');
+    }
+
+    if ((row.status || 'pending') !== 'pending') {
+      return {
+        outRefundNo,
+        orderId: row.orderId,
+        refundStatus: row.status || 'pending',
+        refundedAmount: row.amount,
+        refundTransactionId: row.refundTransactionId || undefined,
+      };
+    }
+
+    const upstream = await paymentProvider.queryRefund(outRefundNo);
+    if (upstream.status !== 'pending') {
+      await this.confirmRefund(outRefundNo, upstream);
+    }
+
+    return this.getRefundStatusByOutRefundNo(outRefundNo);
+  }
+
+  static async getRefundStatusByOutRefundNo(outRefundNo: string, userId?: number): Promise<RefundStatusResult> {
+    const [row] = await db.select().from(refundRecords).where(eq(refundRecords.outRefundNo, outRefundNo)).limit(1);
+    if (!row) {
+      throw new NotFoundError('退款记录不存在');
+    }
+
+    if (typeof userId === 'number') {
+      const [order] = await db.select({ id: orders.id, userId: orders.userId }).from(orders).where(eq(orders.id, row.orderId));
+      if (!order || order.userId !== userId) {
+        throw new ForbiddenError('无权查看该退款状态');
+      }
+    }
+
+    return {
+      outRefundNo,
+      orderId: row.orderId,
+      refundStatus: row.status || 'pending',
+      refundedAmount: row.amount,
+      refundTransactionId: row.refundTransactionId || undefined,
+    };
   }
 }
