@@ -127,6 +127,35 @@ describe('payment channel provider', () => {
     expect(result.upstreamTransactionId).toBe('MOCK_TX_3');
   });
 
+  it('mock provider refund roundtrip works', async () => {
+    process.env.PAYMENT_PROVIDER = 'mock';
+    const provider = createPaymentChannelProvider();
+
+    const created = await provider.createRefund({
+      outRefundNo: 'REF_1_123_xxx',
+      transactionId: 'WX_ORD_3_123_xxx',
+      amountFen: 5000,
+      totalAmountFen: 18800,
+      reason: 'test refund',
+    });
+    expect(created.status).toBe('pending');
+
+    const notified = await provider.parseRefundNotify({
+      headers: {},
+      rawBody: Buffer.from(JSON.stringify({
+        out_refund_no: 'REF_1_123_xxx',
+        status: 'SUCCESS',
+        amountFen: 5000,
+        refundId: 'WX_REF_001',
+      }), 'utf8'),
+    });
+    expect(notified.status).toBe('success');
+
+    const queried = await provider.queryRefund('REF_1_123_xxx');
+    expect(queried.status).toBe('success');
+    expect(queried.refundTransactionId).toBe('WX_REF_001');
+  });
+
   it('throws on invalid provider', () => {
     process.env.PAYMENT_PROVIDER = 'invalid';
     expect(() => createPaymentChannelProvider()).toThrow('Invalid PAYMENT_PROVIDER');
@@ -240,5 +269,90 @@ describe('payment channel provider', () => {
     expect(result.status).toBe('success');
     expect(result.amountFen).toBe(10100);
     expect(result.upstreamTransactionId).toBe('4200001922202401010987654321');
+  });
+
+  it('wechat provider queryRefund maps SUCCESS to success', async () => {
+    createWechatEnv();
+    vi.spyOn(axios, 'request').mockResolvedValueOnce({
+      data: {
+        out_refund_no: 'REF_2_123_xxx',
+        refund_id: '50302101212026010199999999999',
+        status: 'SUCCESS',
+        success_time: '2026-01-03T10:00:00+08:00',
+        amount: { refund: 5200 },
+      },
+    } as never);
+
+    const provider = createPaymentChannelProvider();
+    const result = await provider.queryRefund('REF_2_123_xxx');
+    expect(result.status).toBe('success');
+    expect(result.amountFen).toBe(5200);
+    expect(result.refundTransactionId).toBe('50302101212026010199999999999');
+  });
+
+  it('wechat provider parseRefundNotify verifies signature and decrypts payload', async () => {
+    const { platformPrivateKey } = createWechatEnv();
+    const provider = createPaymentChannelProvider();
+
+    const notifyPayload = {
+      out_refund_no: 'REF_3_123_xxx',
+      refund_id: '50302101212026010188888888888',
+      refund_status: 'SUCCESS',
+      success_time: '2026-01-04T10:00:00+08:00',
+      amount: { refund: 6600 },
+    };
+
+    const resourceNonce = '0123456789ab';
+    const associatedData = 'refund';
+    const cipher = createCipheriv(
+      'aes-256-gcm',
+      Buffer.from(process.env.WECHAT_PAY_API_V3_KEY!, 'utf8'),
+      Buffer.from(resourceNonce, 'utf8'),
+    );
+    cipher.setAAD(Buffer.from(associatedData, 'utf8'));
+    const encryptedBody = Buffer.concat([
+      cipher.update(JSON.stringify(notifyPayload), 'utf8'),
+      cipher.final(),
+    ]);
+    const encrypted = Buffer.concat([encryptedBody, cipher.getAuthTag()]).toString('base64');
+
+    const envelope = {
+      id: 'EV-REF-000001',
+      create_time: '2026-01-04T10:00:01+08:00',
+      event_type: 'REFUND.SUCCESS',
+      resource_type: 'encrypt-resource',
+      summary: '退款成功',
+      resource: {
+        algorithm: 'AEAD_AES_256_GCM',
+        ciphertext: encrypted,
+        associated_data: associatedData,
+        nonce: resourceNonce,
+        original_type: 'refund',
+      },
+    };
+    const rawBody = JSON.stringify(envelope);
+
+    const timestamp = `${Math.floor(Date.now() / 1000)}`;
+    const headerNonce = 'nonce-refund-123';
+    const message = `${timestamp}\n${headerNonce}\n${rawBody}\n`;
+    const signer = createSign('RSA-SHA256');
+    signer.update(message);
+    signer.end();
+    const signature = signer.sign(platformPrivateKey, 'base64');
+
+    const result = await provider.parseRefundNotify({
+      headers: {
+        'wechatpay-timestamp': timestamp,
+        'wechatpay-nonce': headerNonce,
+        'wechatpay-signature': signature,
+        'wechatpay-serial': process.env.WECHAT_PAY_PLATFORM_SERIAL_NO!,
+      },
+      rawBody: Buffer.from(rawBody, 'utf8'),
+    });
+
+    expect(result.outRefundNo).toBe('REF_3_123_xxx');
+    expect(result.status).toBe('success');
+    expect(result.amountFen).toBe(6600);
+    expect(result.refundTransactionId).toBe('50302101212026010188888888888');
   });
 });

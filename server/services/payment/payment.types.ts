@@ -78,6 +78,32 @@ export interface ProviderPaymentResult {
   raw?: unknown;
 }
 
+export interface ProviderCreateRefundInput {
+  outRefundNo: string;
+  transactionId?: string;
+  amountFen: number;
+  totalAmountFen: number;
+  reason: string;
+  notifyUrl?: string;
+}
+
+export interface ProviderCreateRefundResult {
+  outRefundNo: string;
+  status: PaymentStatus;
+  amountFen?: number;
+  refundTransactionId?: string;
+  raw?: unknown;
+}
+
+export interface ProviderRefundResult {
+  outRefundNo: string;
+  status: PaymentStatus;
+  amountFen?: number;
+  refundTransactionId?: string;
+  successAt?: Date;
+  raw?: unknown;
+}
+
 export interface ProviderNotifyInput {
   headers: Record<string, string | string[] | undefined>;
   rawBody: Buffer;
@@ -87,4 +113,7 @@ export interface IPaymentChannelProvider {
   createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult>;
   queryOrder(transactionId: string): Promise<ProviderPaymentResult>;
   parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult>;
+  createRefund(input: ProviderCreateRefundInput): Promise<ProviderCreateRefundResult>;
+  queryRefund(outRefundNo: string): Promise<ProviderRefundResult>;
+  parseRefundNotify(input: ProviderNotifyInput): Promise<ProviderRefundResult>;
 }
