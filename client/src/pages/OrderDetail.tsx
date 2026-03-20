@@ -4,7 +4,7 @@ import { ArrowLeft, MapPin, Calendar, Clock, AlertCircle, Headphones, Info } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide, OrderStatus, refundOrder } from "@/lib/api";
+import { getOrderById, getCurrentUser, OrderDetailResponse, User, payOvertime, getPublicConfigs, getGuideDetail, Guide, OrderStatus, refundOrder, getRefundStatus } from "@/lib/api";
 import Price from "@/components/Price";
 import BottomNav from "@/components/BottomNav";
 import PaymentSheet from "@/components/PaymentSheet";
@@ -165,15 +165,52 @@ export default function OrderDetail() {
     try {
       const res = await refundOrder(order.id);
       if (res.code === 0 && res.data) {
-        toast.success(res.data.message || "退款申请成功", { id: toastId });
+        const apply = res.data;
+        if (apply.refundStatus === 'pending') {
+          toast("退款处理中，正在同步状态...", { id: toastId });
+          const settled = await waitRefundSettled(apply.outRefundNo);
+          if (settled === 'success') {
+            toast.success("退款成功", { id: toastId });
+          } else if (settled === 'failed') {
+            toast.error("退款失败，请联系客服", { id: toastId });
+          } else {
+            toast("退款处理中，请稍后刷新", { id: toastId });
+          }
+        } else if (apply.refundStatus === 'success') {
+          toast.success(apply.message || "退款成功", { id: toastId });
+        } else {
+          toast.error(apply.message || "退款申请失败", { id: toastId });
+        }
+
         setShowRefundDialog(false);
-        fetchOrder(order.id); // Refresh
+        fetchOrder(order.id);
       } else {
         toast.error(res.message || "退款申请失败", { id: toastId });
       }
     } catch (error: any) {
       toast.error(error.message || "网络错误，请稍后重试", { id: toastId });
     }
+  };
+
+  const waitRefundSettled = async (outRefundNo: string): Promise<'success' | 'failed' | 'pending'> => {
+    const maxAttempts = 8;
+    const intervalMs = 1500;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      const statusRes = await getRefundStatus(outRefundNo);
+      if (statusRes.code !== 0 || !statusRes.data) {
+        continue;
+      }
+      if (statusRes.data.refundStatus === 'success') {
+        return 'success';
+      }
+      if (statusRes.data.refundStatus === 'failed') {
+        return 'failed';
+      }
+    }
+
+    return 'pending';
   };
 
   // 简化的状态Badge获取

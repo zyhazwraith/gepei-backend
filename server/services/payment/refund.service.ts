@@ -7,6 +7,7 @@ import { PAYMENT_RELATED_TYPE_ORDER, PAYMENT_STATUS_SUCCESS } from '../../consta
 import { OrderStatus } from '../../constants/index.js';
 import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import type { ProviderNotifyInput, ProviderRefundResult } from './payment.types.js';
+import { logger } from '../../lib/logger.js';
 
 const paymentProvider = createPaymentChannelProvider();
 const PENALTY_FEN = 15000;
@@ -144,6 +145,7 @@ export class RefundService {
       totalAmountFen: order.amount,
       reason,
     });
+    logger.system(`refund_apply_submitted ${logger.kv({ orderId: order.id, outRefundNo, status: created.status })}`);
 
     let nextStatus = created.status;
     if (created.status === 'success' || created.status === 'failed') {
@@ -212,6 +214,7 @@ export class RefundService {
           })
           .where(and(eq(orders.id, row.orderId), eq(orders.status, OrderStatus.WAITING_SERVICE)));
       }
+      logger.system(`refund_confirmed ${logger.kv({ orderId: row.orderId, outRefundNo, status: upstream.status })}`);
 
       return {
         outRefundNo,

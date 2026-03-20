@@ -843,6 +843,25 @@ export interface RefundOrderRequest {
   reason: string;
 }
 
+export interface RefundApplyResponse {
+  success: boolean;
+  alreadyRefunded?: boolean;
+  outRefundNo: string;
+  refundStatus: 'pending' | 'success' | 'failed';
+  refundedAmount: number;
+  penaltyApplied: boolean;
+  message: string;
+}
+
+export interface RefundStatusResponse {
+  outRefundNo: string;
+  orderId: number;
+  refundStatus: 'pending' | 'success' | 'failed';
+  refundedAmount: number;
+  refundTransactionId?: string;
+  queryTriggered: boolean;
+}
+
 /**
  * 订单退款 (管理员) - Deprecated/Removed
  */
@@ -855,11 +874,18 @@ export interface RefundOrderRequest {
  */
 export async function refundOrder(orderId: number): Promise<ApiResponse<{
   success: boolean;
+  alreadyRefunded?: boolean;
+  outRefundNo: string;
+  refundStatus: 'pending' | 'success' | 'failed';
   refundedAmount: number;
   penaltyApplied: boolean;
   message: string;
 }>> {
   return apiClient.post(`/orders/${orderId}/refund`);
+}
+
+export async function getRefundStatus(outRefundNo: string): Promise<ApiResponse<RefundStatusResponse>> {
+  return apiClient.get(`/refunds/${encodeURIComponent(outRefundNo)}/status`);
 }
 
 export default apiClient;
