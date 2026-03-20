@@ -204,18 +204,6 @@ export async function refundOrder(req: Request, res: Response, next: NextFunctio
       data: result
     });
   } catch (error) {
-    if (error instanceof ValidationError && error.message === '订单已退款') {
-      res.json({
-        code: 0,
-        message: '订单已退款',
-        data: {
-          success: true,
-          alreadyRefunded: true,
-          message: '订单已退款'
-        }
-      });
-      return;
-    }
     next(error);
   }
 }
