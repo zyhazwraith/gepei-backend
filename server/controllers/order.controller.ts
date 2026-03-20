@@ -36,10 +36,10 @@ const createNormalOrderSchema = z.object({
   content: z.string().optional(), // Add content field
 });
 
-// 支付请求 Schema（authCode 强制必填）
+// 支付请求 Schema（authCode 可选：优先用本次code，否则复用服务端会话中的openid）
 const payRequestSchema = z.object({
   paymentMethod: z.enum([PAYMENT_METHOD_WECHAT]),
-  authCode: z.string().trim().min(1, 'authCode不能为空'),
+  authCode: z.string().trim().min(1, 'authCode不能为空').optional(),
 });
 
 // 加时申请 Schema
@@ -155,6 +155,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
     const prepay = await PaymentService.createPrepay({
       intent,
       paymentMethod: validated.paymentMethod,
+      userId,
       authCode: validated.authCode,
       clientIp: req.ip,
     });
@@ -390,6 +391,7 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
     const prepay = await PaymentService.createPrepay({
       intent,
       paymentMethod: validated.paymentMethod,
+      userId,
       authCode: validated.authCode,
       clientIp: req.ip,
     });

@@ -34,7 +34,8 @@ export interface PaymentIntent {
 export interface CreatePrepayInput {
   intent: PaymentIntent;
   paymentMethod: PaymentMethod;
-  authCode: string;
+  userId: number;
+  authCode?: string;
   clientIp?: string;
 }
 

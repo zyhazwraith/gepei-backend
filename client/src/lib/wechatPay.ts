@@ -1,5 +1,4 @@
 import { getPaymentStatus, PrepayPayParams } from './api';
-import { readCachedWechatAuthCode, cacheWechatAuthCode } from './wechatAuth';
 
 type JsBridge = {
   invoke: (
@@ -25,13 +24,11 @@ export function resolveAuthCodeFromUrl(): string | null {
   const code = new URLSearchParams(window.location.search).get('code');
   const normalized = code?.trim();
   if (normalized) {
-    cacheWechatAuthCode(normalized);
+    const cleanedUrl = new URL(window.location.href);
+    cleanedUrl.searchParams.delete('code');
+    cleanedUrl.searchParams.delete('state');
+    window.history.replaceState(null, '', `${cleanedUrl.pathname}${cleanedUrl.search}${cleanedUrl.hash}`);
     return normalized;
-  }
-
-  const cachedCode = readCachedWechatAuthCode();
-  if (cachedCode) {
-    return cachedCode;
   }
 
   if (import.meta.env.DEV) {

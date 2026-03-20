@@ -77,7 +77,7 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    ensureWechatAuthCode();
+    void ensureWechatAuthCode();
   }, []);
 
   return (

@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../../db/index.js';
 import { orders, overtimeRecords, payments } from '../../db/schema.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../../utils/errors.js';
+import { AppError, ForbiddenError, NotFoundError, ValidationError } from '../../utils/errors.js';
 import { openIdProvider } from './openid.service.js';
 import {
   PAYMENT_RELATED_TYPE_ORDER,
@@ -24,6 +24,8 @@ import type {
 } from './payment.types.js';
 import { createPaymentChannelProvider } from './payment-channel.provider.js';
 import { OrderService } from '../order.service.js';
+import { ErrorCodes } from '../../../shared/errorCodes.js';
+import { bindSessionOpenId, getSessionOpenId } from './openid-session.store.js';
 
 const paymentProvider = createPaymentChannelProvider();
 
@@ -32,13 +34,12 @@ function buildTransactionId(relatedType: PaymentRelatedType, relatedId: number):
   return `${prefix}_${relatedId}_${Date.now()}_${nanoid(6)}`;
 }
 
-function resolveAuthCodeOrThrow(authCode?: string): string {
+function resolveAuthCode(authCode?: string): string | null {
   const normalized = authCode?.trim();
   if (normalized) {
     return normalized;
   }
-
-  throw new ValidationError('authCode不能为空');
+  return null;
 }
 
 function mapPaymentStatus(transactionId: string, payment: typeof payments.$inferSelect): PaymentStatusResult {
@@ -122,6 +123,15 @@ async function assertPaymentOwnership(relatedType: PaymentRelatedType, relatedId
 }
 
 export class PaymentService {
+  static async bindSessionOpenIdByCode(userId: number, authCode: string): Promise<void> {
+    const code = authCode.trim();
+    if (!code) {
+      throw new ValidationError('authCode不能为空');
+    }
+    const resolved = await openIdProvider.resolveOpenIdByCode(code);
+    bindSessionOpenId(userId, resolved.openid, resolved.appId);
+  }
+
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
     const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
     let payment: typeof payments.$inferSelect | undefined;
@@ -165,8 +175,18 @@ export class PaymentService {
       throw new ValidationError('支付流水号缺失，请稍后重试');
     }
 
-    const code = resolveAuthCodeOrThrow(input.authCode);
-    const openid = await openIdProvider.resolveOpenIdByCode(code);
+    const code = resolveAuthCode(input.authCode);
+    let openid = getSessionOpenId(input.userId);
+
+    if (code) {
+      const resolved = await openIdProvider.resolveOpenIdByCode(code);
+      bindSessionOpenId(input.userId, resolved.openid, resolved.appId);
+      openid = resolved;
+    }
+
+    if (!openid) {
+      throw new AppError('授权已失效，请重新进入支付页面', ErrorCodes.WECHAT_REAUTH_REQUIRED, 400);
+    }
 
     const upstream = await paymentProvider.createPrepay({
       transactionId: payment.transactionId,

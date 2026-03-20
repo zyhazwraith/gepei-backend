@@ -323,9 +323,9 @@ export async function createOvertime(orderId: number, duration: number): Promise
 export async function payOvertime(
   overtimeId: number,
   paymentMethod: 'wechat',
-  authCode: string,
+  authCode?: string,
 ): Promise<ApiResponse<PayOrderResponse>> {
-  return apiClient.post(`/overtime/${overtimeId}/pay`, { paymentMethod, authCode });
+  return apiClient.post(`/overtime/${overtimeId}/pay`, { paymentMethod, ...(authCode ? { authCode } : {}) });
 }
 
 // ==================== API方法 ====================
@@ -367,9 +367,13 @@ export async function getOrderById(id: number): Promise<ApiResponse<OrderDetailR
 export async function payOrder(
   orderId: number,
   paymentMethod: 'wechat',
-  authCode: string,
+  authCode?: string,
 ): Promise<ApiResponse<PayOrderResponse>> {
-  return apiClient.post(`/orders/${orderId}/payment`, { paymentMethod, authCode });
+  return apiClient.post(`/orders/${orderId}/payment`, { paymentMethod, ...(authCode ? { authCode } : {}) });
+}
+
+export async function bindWechatSessionOpenId(authCode: string): Promise<ApiResponse<{ bound: boolean }>> {
+  return apiClient.post('/payments/wechat/session-openid', { authCode });
 }
 
 /**

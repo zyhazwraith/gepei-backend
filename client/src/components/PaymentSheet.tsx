@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { payOrder } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import Price from "@/components/Price";
-import { invokeWechatJsapiPay, isDevMockAuthFallbackActive, resolveAuthCodeFromUrl, waitPaymentSuccess } from "@/lib/wechatPay";
+import { invokeWechatJsapiPay, isDevMockAuthFallbackActive, waitPaymentSuccess } from "@/lib/wechatPay";
 import { DEV_MOCK_AUTH_NOTICE } from "@/lib/paymentDev";
 import { ensureWechatAuthCode } from "@/lib/wechatAuth";
 
@@ -31,15 +31,13 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
 
     setLoading(true);
     try {
-      const authCode = resolveAuthCodeFromUrl();
-      if (!authCode) {
-        toast("正在拉起微信授权...");
-        ensureWechatAuthCode({ force: true, trigger: 'pay_click' });
-        return;
-      }
-
-      const res = await payOrder(orderId, "wechat", authCode);
+      const res = await payOrder(orderId, "wechat");
       if (res.code !== 0 || !res.data) {
+        if (res.code === 1101) {
+          toast("正在初始化微信授权，请稍后重试");
+          void ensureWechatAuthCode({ force: true, trigger: 'pay_click' });
+          return;
+        }
         toast.error(res.message || "支付失败");
         return;
       }
