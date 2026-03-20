@@ -30,6 +30,7 @@ import {
   type WechatPayConfig,
   type WechatQueryOrderResponse,
   verifyMessage,
+  WECHAT_API_BASE_URL,
 } from './wechat-pay.helper.js';
 
 type MockOrderState = ProviderPaymentResult;
@@ -157,7 +158,7 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
     try {
       const response = await axios.request<T>({
         method,
-        baseURL: this.config.baseUrl,
+        baseURL: WECHAT_API_BASE_URL,
         url: canonicalUrl,
         headers: {
           Accept: 'application/json',

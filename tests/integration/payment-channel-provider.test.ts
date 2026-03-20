@@ -20,7 +20,6 @@ const ENV_KEYS = [
   'WECHAT_PAY_PLATFORM_SERIAL_NO',
   'WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH',
   'WECHAT_PAY_API_V3_KEY',
-  'WECHAT_PAY_BASE_URL',
 ] as const;
 
 const ORIGINAL_ENV = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]])) as Record<string, string | undefined>;
@@ -62,7 +61,6 @@ function createWechatEnv() {
   process.env.WECHAT_PAY_PLATFORM_SERIAL_NO = 'platform_serial_001';
   process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH = platformPubPath;
   process.env.WECHAT_PAY_API_V3_KEY = '12345678901234567890123456789012';
-  process.env.WECHAT_PAY_BASE_URL = 'https://api.mch.weixin.qq.com';
 
   return { platformPrivateKey };
 }

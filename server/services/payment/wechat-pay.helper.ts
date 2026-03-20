@@ -18,7 +18,6 @@ export type WechatPayConfig = {
   platformPublicKeyPem: string;
   platformSerialNo: string;
   apiV3Key: string;
-  baseUrl: string;
 };
 
 export type WechatCreatePrepayResponse = {
@@ -99,9 +98,10 @@ export function parseWechatConfigOrThrow(): WechatPayConfig {
     platformPublicKeyPem: readPemFile('WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH'),
     platformSerialNo: readRequiredEnv('WECHAT_PAY_PLATFORM_SERIAL_NO'),
     apiV3Key,
-    baseUrl: process.env.WECHAT_PAY_BASE_URL?.trim() || WECHAT_API_BASE_URL,
   };
 }
+
+export { WECHAT_API_BASE_URL };
 
 export function signMessage(privateKeyPem: string, message: string): string {
   const signer = createSign('RSA-SHA256');
