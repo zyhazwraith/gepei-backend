@@ -189,7 +189,9 @@ export class RefundService {
 
     const created = await paymentProvider.createRefund({
       outRefundNo,
-      transactionId: payment.transactionId,
+      // 当前 payments 表中的 transactionId 是商户单号（out_trade_no），
+      // 这里显式按 outTradeNo 透传，避免被 provider 当成微信 transaction_id。
+      outTradeNo: payment.transactionId,
       amountFen: refundAmount,
       totalAmountFen: order.amount,
       reason,

@@ -80,7 +80,8 @@ export interface ProviderPaymentResult {
 
 export interface ProviderCreateRefundInput {
   outRefundNo: string;
-  transactionId?: string;
+  upstreamTransactionId?: string;
+  outTradeNo?: string;
   amountFen: number;
   totalAmountFen: number;
   reason: string;

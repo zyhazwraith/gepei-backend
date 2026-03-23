@@ -290,6 +290,32 @@ describe('payment channel provider', () => {
     expect(result.refundTransactionId).toBe('50302101212026010199999999999');
   });
 
+  it('wechat provider createRefund should use out_trade_no when only merchant trade no is provided', async () => {
+    createWechatEnv();
+    const requestSpy = vi.spyOn(axios, 'request').mockResolvedValueOnce({
+      data: {
+        out_refund_no: 'REF_4_123_xxx',
+        refund_id: '50302101212026010177777777777',
+        status: 'PROCESSING',
+      },
+    } as never);
+
+    const provider = createPaymentChannelProvider();
+    const result = await provider.createRefund({
+      outRefundNo: 'REF_4_123_xxx',
+      outTradeNo: 'WX_ORD_4_123_xxx',
+      amountFen: 5000,
+      totalAmountFen: 18800,
+      reason: 'test refund by out_trade_no',
+    });
+
+    expect(result.status).toBe('pending');
+    const req = requestSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+    const reqData = req.data as Record<string, unknown>;
+    expect(reqData.out_trade_no).toBe('WX_ORD_4_123_xxx');
+    expect(reqData.transaction_id).toBeUndefined();
+  });
+
   it('wechat provider parseRefundNotify verifies signature and decrypts payload', async () => {
     const { platformPrivateKey } = createWechatEnv();
     const provider = createPaymentChannelProvider();

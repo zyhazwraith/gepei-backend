@@ -378,12 +378,16 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
   }
 
   async createRefund(input: ProviderCreateRefundInput): Promise<ProviderCreateRefundResult> {
-    if (!input.transactionId) {
-      throw new ValidationError('缺少transactionId');
+    const upstreamTransactionId = input.upstreamTransactionId?.trim();
+    const outTradeNo = input.outTradeNo?.trim();
+    const hasUpstreamTransactionId = typeof upstreamTransactionId === 'string' && /^\d{1,32}$/.test(upstreamTransactionId);
+    const hasOutTradeNo = typeof outTradeNo === 'string' && outTradeNo.length > 0;
+
+    if (!hasUpstreamTransactionId && !hasOutTradeNo) {
+      throw new ValidationError('缺少有效退款单关联标识');
     }
 
     const payload = {
-      transaction_id: input.transactionId,
       out_refund_no: input.outRefundNo,
       reason: input.reason,
       notify_url: input.notifyUrl || this.config.refundNotifyUrl,
@@ -392,6 +396,9 @@ class WechatPaymentChannelProvider implements IPaymentChannelProvider {
         total: input.totalAmountFen,
         currency: 'CNY',
       },
+      ...(hasUpstreamTransactionId
+        ? { transaction_id: upstreamTransactionId }
+        : { out_trade_no: outTradeNo! }),
     };
 
     const data = await this.requestWechat<WechatCreateRefundResponse>('POST', WECHAT_REFUND_CREATE_CANONICAL_URL, payload);
