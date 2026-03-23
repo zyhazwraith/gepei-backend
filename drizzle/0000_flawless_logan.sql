@@ -107,7 +107,7 @@ CREATE TABLE `overtime_records` (
 CREATE TABLE `payments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`amount` int NOT NULL,
-	`transaction_id` varchar(64) NOT NULL,
+	`out_trade_no` varchar(64) NOT NULL,
 	`payment_method` enum('wechat') DEFAULT 'wechat',
 	`status` enum('pending','success','failed') DEFAULT 'pending',
 	`related_type` enum('order','overtime') NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE `payments` (
 	`created_at` timestamp DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `payments_id` PRIMARY KEY(`id`),
-	CONSTRAINT `uk_payments_transaction_id` UNIQUE(`transaction_id`),
+	CONSTRAINT `uk_payments_out_trade_no` UNIQUE(`out_trade_no`),
 	CONSTRAINT `uk_payments_related` UNIQUE(`related_type`,`related_id`)
 );
 --> statement-breakpoint

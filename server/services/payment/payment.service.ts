@@ -75,7 +75,7 @@ async function findPaymentByTransactionId(transactionId: string) {
   const [payment] = await db
     .select()
     .from(payments)
-    .where(eq(payments.transactionId, transactionId))
+    .where(eq(payments.outTradeNo, transactionId))
     .orderBy(desc(payments.createdAt))
     .limit(1);
 
@@ -154,7 +154,7 @@ export class PaymentService {
         relatedType: input.intent.relatedType,
         relatedId: input.intent.relatedId,
         paymentMethod: input.paymentMethod,
-        transactionId,
+        outTradeNo: transactionId,
         amount: input.intent.amountFen,
         status: PAYMENT_STATUS_PENDING,
         createdAt: new Date(),
@@ -184,7 +184,7 @@ export class PaymentService {
       throw new ValidationError('该支付状态异常，请联系客服处理');
     }
 
-    if (!payment.transactionId) {
+    if (!payment.outTradeNo) {
       throw new ValidationError('支付流水号缺失，请稍后重试');
     }
 
@@ -211,7 +211,7 @@ export class PaymentService {
     }
 
     const upstream = await paymentProvider.createPrepay({
-      transactionId: payment.transactionId,
+      transactionId: payment.outTradeNo,
       amountFen: payment.amount,
       openid: openid.openid,
       appId: openid.appId,
@@ -222,7 +222,7 @@ export class PaymentService {
     return {
       relatedType: payment.relatedType,
       relatedId: payment.relatedId,
-      transactionId: payment.transactionId,
+      transactionId: payment.outTradeNo,
       paymentStatus: PAYMENT_STATUS_PENDING,
       payParams: upstream.payParams,
     };

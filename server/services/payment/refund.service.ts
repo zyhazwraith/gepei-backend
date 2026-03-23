@@ -141,7 +141,7 @@ export class RefundService {
       .orderBy(desc(payments.createdAt))
       .limit(1);
 
-    if (!payment?.transactionId) {
+    if (!payment?.outTradeNo) {
       throw new ValidationError('系统异常：找不到关联的支付流水，请联系客服处理');
     }
 
@@ -189,9 +189,7 @@ export class RefundService {
 
     const created = await paymentProvider.createRefund({
       outRefundNo,
-      // 当前 payments 表中的 transactionId 是商户单号（out_trade_no），
-      // 这里显式按 outTradeNo 透传，避免被 provider 当成微信 transaction_id。
-      outTradeNo: payment.transactionId,
+      outTradeNo: payment.outTradeNo,
       amountFen: refundAmount,
       totalAmountFen: order.amount,
       reason,

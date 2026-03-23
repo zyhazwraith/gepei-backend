@@ -177,7 +177,7 @@ export const overtimeRecords = mysqlTable('overtime_records', {
 export const payments = mysqlTable('payments', {
   id: int('id').primaryKey().autoincrement(),
   amount: int('amount').notNull(), // 单位: 分
-  transactionId: varchar('transaction_id', { length: 64 }).notNull(),
+  outTradeNo: varchar('out_trade_no', { length: 64 }).notNull(),
   paymentMethod: mysqlEnum('payment_method', ['wechat']).default('wechat'),
   status: mysqlEnum('status', ['pending', 'success', 'failed']).default('pending'),
   relatedType: mysqlEnum('related_type', ['order', 'overtime']).notNull(),
@@ -187,7 +187,7 @@ export const payments = mysqlTable('payments', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => {
   return {
-    ukTransactionId: unique('uk_payments_transaction_id').on(table.transactionId),
+    ukOutTradeNo: unique('uk_payments_out_trade_no').on(table.outTradeNo),
     ukRelated: unique('uk_payments_related').on(table.relatedType, table.relatedId),
   };
 });

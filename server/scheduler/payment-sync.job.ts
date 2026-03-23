@@ -24,7 +24,7 @@ function errorMessage(error: unknown): string {
 
 async function syncPendingPayments(threshold: Date): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ transactionId: payments.outTradeNo })
     .from(payments)
     .where(and(eq(payments.status, PAYMENT_STATUS_PENDING), lt(payments.createdAt, threshold)))
     .limit(BATCH_SIZE);
@@ -46,7 +46,7 @@ async function syncPendingPayments(threshold: Date): Promise<number> {
 
 async function repairSuccessOrderPayments(): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ transactionId: payments.outTradeNo })
     .from(payments)
     .innerJoin(
       orders,
@@ -68,7 +68,7 @@ async function repairSuccessOrderPayments(): Promise<number> {
 
 async function repairSuccessOvertimePayments(): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ transactionId: payments.outTradeNo })
     .from(payments)
     .innerJoin(
       overtimeRecords,

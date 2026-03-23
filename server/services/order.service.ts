@@ -337,7 +337,7 @@ export class OrderService {
             status: 'success',
             relatedType: 'overtime',
             relatedId: overtimeId,
-            transactionId: `MOCK_OT_${nanoid()}`, // Mock ID
+            outTradeNo: `MOCK_OT_${nanoid()}`, // Mock ID
             paidAt: new Date(),
         });
     });
