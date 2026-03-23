@@ -547,7 +547,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('pending','paid','waiting_service','in_service','service_ended','completed','cancelled','refunded')",
+          "type": "enum('pending','waiting_service','in_service','service_ended','completed','cancelled','refunded')",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -910,8 +910,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "transaction_id": {
-          "name": "transaction_id",
+        "out_trade_no": {
+          "name": "out_trade_no",
           "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true,
@@ -983,10 +983,10 @@
         }
       },
       "uniqueConstraints": {
-        "uk_payments_transaction_id": {
-          "name": "uk_payments_transaction_id",
+        "uk_payments_out_trade_no": {
+          "name": "uk_payments_out_trade_no",
           "columns": [
-            "transaction_id"
+            "out_trade_no"
           ]
         },
         "uk_payments_related": {

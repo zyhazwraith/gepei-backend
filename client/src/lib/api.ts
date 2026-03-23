@@ -228,7 +228,7 @@ export interface CreateOrderResponse {
 export interface PayOrderResponse {
   orderId?: number;
   overtimeId?: number;
-  transactionId: string;
+  outTradeNo: string;
   paymentStatus: 'pending' | 'success' | 'failed';
   payParams: PrepayPayParams;
 }
@@ -243,7 +243,7 @@ export interface PrepayPayParams {
 }
 
 export interface PaymentStatusResponse {
-  transactionId: string;
+  outTradeNo: string;
   relatedType: 'order' | 'overtime';
   relatedId: number;
   paymentStatus: 'pending' | 'success' | 'failed';
@@ -379,8 +379,8 @@ export async function bindWechatSessionOpenId(authCode: string): Promise<ApiResp
 /**
  * 查询支付状态（pending时后端会主动触发一次查单）
  */
-export async function getPaymentStatus(transactionId: string): Promise<ApiResponse<PaymentStatusResponse>> {
-  return apiClient.get(`/payments/${transactionId}/status`);
+export async function getPaymentStatus(outTradeNo: string): Promise<ApiResponse<PaymentStatusResponse>> {
+  return apiClient.get(`/payments/${outTradeNo}/status`);
 }
 
 /**

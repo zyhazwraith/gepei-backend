@@ -83,7 +83,7 @@ describe('payment channel provider', () => {
     const provider = createPaymentChannelProvider();
 
     const prepay = await provider.createPrepay({
-      transactionId: 'WX_ORD_1_123_xxx',
+      outTradeNo: 'WX_ORD_1_123_xxx',
       amountFen: 100,
       openid: 'openid_xxx',
       appId: 'app_xxx',
@@ -106,7 +106,7 @@ describe('payment channel provider', () => {
       }), 'utf8'),
     });
 
-    expect(result.transactionId).toBe('WX_ORD_2_123_xxx');
+    expect(result.outTradeNo).toBe('WX_ORD_2_123_xxx');
     expect(result.status).toBe('success');
   });
 
@@ -115,7 +115,7 @@ describe('payment channel provider', () => {
     const provider = createPaymentChannelProvider();
 
     setMockPaymentOrderResult({
-      transactionId: 'WX_ORD_3_123_xxx',
+      outTradeNo: 'WX_ORD_3_123_xxx',
       status: 'success',
       amountFen: 888,
       upstreamTransactionId: 'MOCK_TX_3',
@@ -133,7 +133,7 @@ describe('payment channel provider', () => {
 
     const created = await provider.createRefund({
       outRefundNo: 'REF_1_123_xxx',
-      transactionId: 'WX_ORD_3_123_xxx',
+      outTradeNo: 'WX_ORD_3_123_xxx',
       amountFen: 5000,
       totalAmountFen: 18800,
       reason: 'test refund',
@@ -169,7 +169,7 @@ describe('payment channel provider', () => {
 
     const provider = createPaymentChannelProvider();
     const result = await provider.createPrepay({
-      transactionId: 'WX_ORD_9_123_xxx',
+      outTradeNo: 'WX_ORD_9_123_xxx',
       amountFen: 18800,
       openid: 'oUpF8uMuAJO_M2pxb1Q9zNjWeS6o',
       appId: 'wx_phase3_test',
@@ -265,7 +265,7 @@ describe('payment channel provider', () => {
       rawBody: Buffer.from(rawBody, 'utf8'),
     });
 
-    expect(result.transactionId).toBe('WX_ORD_11_123_xxx');
+    expect(result.outTradeNo).toBe('WX_ORD_11_123_xxx');
     expect(result.status).toBe('success');
     expect(result.amountFen).toBe(10100);
     expect(result.upstreamTransactionId).toBe('4200001922202401010987654321');

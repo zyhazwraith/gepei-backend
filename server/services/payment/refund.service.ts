@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../../db/index.js';
 import { orders, payments, refundRecords } from '../../db/schema.js';
@@ -67,93 +67,84 @@ function buildResult(input: {
   };
 }
 
-function isDuplicateEntryError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const anyError = error as {
-    code?: string;
-    errno?: number;
-    message?: string;
-  };
-
-  if (anyError.code === 'ER_DUP_ENTRY' || anyError.errno === 1062) {
-    return true;
-  }
-
-  return typeof anyError.message === 'string' && anyError.message.includes('Duplicate entry');
-}
-
 export class RefundService {
   static async applyByUser(userId: number, orderId: number): Promise<RefundApplyResult> {
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-    if (order.userId !== userId) {
-      throw new ForbiddenError('无权操作此订单');
-    }
+    const prepared = await db.transaction(async (tx) => {
+      // Lock order row to serialize concurrent refund requests for the same order.
+      await tx.execute(sql`SELECT id FROM orders WHERE id = ${orderId} FOR UPDATE`);
 
-    const [latestRefund] = await db
-      .select()
-      .from(refundRecords)
-      .where(eq(refundRecords.orderId, order.id))
-      .orderBy(desc(refundRecords.id))
-      .limit(1);
+      const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) {
+        throw new NotFoundError('订单不存在');
+      }
+      if (order.userId !== userId) {
+        throw new ForbiddenError('无权操作此订单');
+      }
 
-    if (latestRefund?.status === REFUND_STATUS_PENDING) {
-      return buildResult({
-        outRefundNo: latestRefund.outRefundNo || `REF_PENDING_${order.id}`,
-        refundStatus: REFUND_STATUS_PENDING,
-        refundedAmount: latestRefund.amount,
-        penaltyApplied: latestRefund.amount < order.amount,
-      });
-    }
+      const [latestRefund] = await tx
+        .select()
+        .from(refundRecords)
+        .where(eq(refundRecords.orderId, order.id))
+        .orderBy(desc(refundRecords.id))
+        .limit(1);
 
-    if (order.status === OrderStatus.REFUNDED || latestRefund?.status === REFUND_STATUS_SUCCESS) {
-      return buildResult({
-        alreadyRefunded: true,
-        outRefundNo: latestRefund?.outRefundNo || `REF_DONE_${order.id}`,
-        refundStatus: REFUND_STATUS_SUCCESS,
-        refundedAmount: order.refundAmount || latestRefund?.amount || 0,
-        penaltyApplied: (order.refundAmount || latestRefund?.amount || 0) < order.amount,
-      });
-    }
+      if (latestRefund?.status === REFUND_STATUS_PENDING) {
+        return {
+          done: true as const,
+          result: buildResult({
+            outRefundNo: latestRefund.outRefundNo || `REF_PENDING_${order.id}`,
+            refundStatus: REFUND_STATUS_PENDING,
+            refundedAmount: latestRefund.amount,
+            penaltyApplied: latestRefund.amount < order.amount,
+          }),
+        };
+      }
 
-    if (!order.status || order.status !== OrderStatus.WAITING_SERVICE) {
-      throw new ValidationError(`当前订单状态为 ${order.status}，无法申请退款`);
-    }
-    if (!order.paidAt) {
-      throw new ValidationError('订单支付信息缺失');
-    }
+      if (order.status === OrderStatus.REFUNDED || latestRefund?.status === REFUND_STATUS_SUCCESS) {
+        return {
+          done: true as const,
+          result: buildResult({
+            alreadyRefunded: true,
+            outRefundNo: latestRefund?.outRefundNo || `REF_DONE_${order.id}`,
+            refundStatus: REFUND_STATUS_SUCCESS,
+            refundedAmount: order.refundAmount || latestRefund?.amount || 0,
+            penaltyApplied: (order.refundAmount || latestRefund?.amount || 0) < order.amount,
+          }),
+        };
+      }
 
-    const [payment] = await db
-      .select()
-      .from(payments)
-      .where(
-        and(
-          eq(payments.relatedType, PAYMENT_RELATED_TYPE_ORDER),
-          eq(payments.relatedId, order.id),
-          eq(payments.status, PAYMENT_STATUS_SUCCESS),
-        ),
-      )
-      .orderBy(desc(payments.createdAt))
-      .limit(1);
+      if (!order.status || order.status !== OrderStatus.WAITING_SERVICE) {
+        throw new ValidationError(`当前订单状态为 ${order.status}，无法申请退款`);
+      }
+      if (!order.paidAt) {
+        throw new ValidationError('订单支付信息缺失');
+      }
 
-    if (!payment?.outTradeNo) {
-      throw new ValidationError('系统异常：找不到关联的支付流水，请联系客服处理');
-    }
+      const [payment] = await tx
+        .select()
+        .from(payments)
+        .where(
+          and(
+            eq(payments.relatedType, PAYMENT_RELATED_TYPE_ORDER),
+            eq(payments.relatedId, order.id),
+            eq(payments.status, PAYMENT_STATUS_SUCCESS),
+          ),
+        )
+        .orderBy(desc(payments.createdAt))
+        .limit(1);
 
-    const paidAtTime = new Date(order.paidAt).getTime();
-    const hoursSincePaid = (Date.now() - paidAtTime) / (1000 * 60 * 60);
-    const penaltyApplied = hoursSincePaid > 1;
-    const refundAmount = penaltyApplied ? Math.max(0, order.amount - PENALTY_FEN) : order.amount;
-    const reason = penaltyApplied ? '用户自主申请退款（扣除违约金 ¥150）' : '用户自主申请退款（无责）';
+      if (!payment?.outTradeNo) {
+        throw new ValidationError('系统异常：找不到关联的支付流水，请联系客服处理');
+      }
 
-    const outRefundNo = buildOutRefundNo(order.orderNumber);
-    try {
-      await db.insert(refundRecords).values({
+      const paidAtTime = new Date(order.paidAt).getTime();
+      const hoursSincePaid = (Date.now() - paidAtTime) / (1000 * 60 * 60);
+      const penaltyApplied = hoursSincePaid > 1;
+      const refundAmount = penaltyApplied ? Math.max(0, order.amount - PENALTY_FEN) : order.amount;
+      const reason = penaltyApplied ? '用户自主申请退款（扣除违约金 ¥150）' : '用户自主申请退款（无责）';
+      const outRefundNo = buildOutRefundNo(order.orderNumber);
+
+      await tx.insert(refundRecords).values({
         orderId: order.id,
         amount: refundAmount,
         reason,
@@ -162,46 +153,40 @@ export class RefundService {
         operatorId: userId,
         createdAt: new Date(),
       });
-    } catch (error) {
-      if (!isDuplicateEntryError(error)) {
-        throw error;
-      }
 
-      const [existed] = await db
-        .select()
-        .from(refundRecords)
-        .where(eq(refundRecords.orderId, order.id))
-        .orderBy(desc(refundRecords.id))
-        .limit(1);
+      return {
+        done: false as const,
+        orderId: order.id,
+        orderAmount: order.amount,
+        outRefundNo,
+        outTradeNo: payment.outTradeNo,
+        refundAmount,
+        penaltyApplied,
+        reason,
+      };
+    });
 
-      if (!existed) {
-        throw new ValidationError('退款请求提交失败，请稍后重试');
-      }
-
-      return buildResult({
-        outRefundNo: existed.outRefundNo || `REF_PENDING_${order.id}`,
-        refundStatus: (existed.status || REFUND_STATUS_PENDING) as RefundStatus,
-        refundedAmount: existed.amount,
-        penaltyApplied: existed.amount < order.amount,
-        alreadyRefunded: existed.status === REFUND_STATUS_SUCCESS,
-      });
+    if (prepared.done) {
+      return prepared.result;
     }
 
     const created = await paymentProvider.createRefund({
-      outRefundNo,
-      outTradeNo: payment.outTradeNo,
-      amountFen: refundAmount,
-      totalAmountFen: order.amount,
-      reason,
+      outRefundNo: prepared.outRefundNo,
+      outTradeNo: prepared.outTradeNo,
+      amountFen: prepared.refundAmount,
+      totalAmountFen: prepared.orderAmount,
+      reason: prepared.reason,
     });
-    logger.system(`refund_apply_submitted ${logger.kv({ orderId: order.id, outRefundNo, status: created.status })}`);
+    logger.system(
+      `refund_apply_submitted ${logger.kv({ orderId: prepared.orderId, outRefundNo: prepared.outRefundNo, status: created.status })}`,
+    );
 
     let nextStatus = created.status;
     if (created.status === REFUND_STATUS_SUCCESS || created.status === REFUND_STATUS_FAILED) {
-      const confirmed = await this.confirmRefund(outRefundNo, {
-        outRefundNo,
+      const confirmed = await this.confirmRefund(prepared.outRefundNo, {
+        outRefundNo: prepared.outRefundNo,
         status: created.status,
-        amountFen: refundAmount,
+        amountFen: prepared.refundAmount,
         refundTransactionId: created.refundTransactionId,
         raw: created.raw,
       });
@@ -209,10 +194,10 @@ export class RefundService {
     }
 
     return buildResult({
-      outRefundNo,
+      outRefundNo: prepared.outRefundNo,
       refundStatus: nextStatus,
-      refundedAmount: refundAmount,
-      penaltyApplied,
+      refundedAmount: prepared.refundAmount,
+      penaltyApplied: prepared.penaltyApplied,
     });
   }
 

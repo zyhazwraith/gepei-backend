@@ -67,14 +67,27 @@ async function runTests() {
       logPass('Prepay API Successful');
     }
 
-    const transactionId = payRes.data?.data?.transactionId;
-    if (!transactionId) {
-      throw new Error('Missing transactionId in prepay response');
+    const outTradeNo = payRes.data?.data?.outTradeNo;
+    if (!outTradeNo) {
+      throw new Error('Missing outTradeNo in prepay response');
     }
 
-    // 4.1 Simulate WeChat notify success (mock provider)
+    // 4.1 Repeat pay should reuse existing pending payment (same outTradeNo)
+    const payAgainRes = await axios.post(`${API_URL}/orders/${orderId}/payment`, {
+      paymentMethod: 'wechat',
+      authCode: 'mock_code',
+    }, { headers: { Authorization: `Bearer ${userToken}` } });
+
+    const outTradeNoAgain = payAgainRes.data?.data?.outTradeNo;
+    if (payAgainRes.data.code === 0 && outTradeNoAgain === outTradeNo) {
+      logPass('Repeat Prepay Reuses Existing Pending Payment');
+    } else {
+      throw new Error(`Expected same outTradeNo on repeat prepay, got ${outTradeNoAgain} vs ${outTradeNo}`);
+    }
+
+    // 4.2 Simulate WeChat notify success (mock provider)
     const notifyRes = await axios.post(`${API_URL.replace('/api/v1', '')}/wechat/pay/notify`, {
-      out_trade_no: transactionId,
+      out_trade_no: outTradeNo,
       status: 'SUCCESS',
     });
     if (notifyRes.data.code === 'SUCCESS') {

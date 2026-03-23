@@ -127,12 +127,20 @@ export default function OrderDetail() {
 
           const prepay = res.data;
           const invokeResult = await invokeWechatJsapiPay(prepay.payParams);
-          if (invokeResult === 'cancel') {
-            toast.error("已取消支付", { id: toastId });
+          if (invokeResult.status === 'skipped') {
+            toast.error("未检测到微信支付环境，请在微信内打开", { id: toastId });
+            return;
+          }
+          if (invokeResult.status === 'cancel') {
+            toast.error(`已取消支付 (${invokeResult.errMsg || "cancel"})`, { id: toastId });
+            return;
+          }
+          if (invokeResult.status === 'fail') {
+            toast.error(`拉起微信支付失败: ${invokeResult.errMsg || "unknown"}`, { id: toastId });
             return;
           }
 
-          const syncResult = await waitPaymentSuccess(prepay.transactionId);
+          const syncResult = await waitPaymentSuccess(prepay.outTradeNo);
           if (syncResult === 'success') {
             toast.success("支付成功", { id: toastId });
             handleOvertimePaymentSuccess();

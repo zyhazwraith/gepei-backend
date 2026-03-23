@@ -8,7 +8,7 @@ const router = Router();
 // POST /api/v1/payments/wechat/session-openid - 绑定本会话openid（内存版）
 router.post('/wechat/session-openid', asyncHandler(authenticate), asyncHandler(paymentController.bindSessionOpenId));
 
-// GET /api/v1/payments/:transactionId/status - 查询支付状态（pending 时触发一次主动查询）
-router.get('/:transactionId/status', asyncHandler(authenticate), asyncHandler(paymentController.getPaymentStatus));
+// GET /api/v1/payments/:outTradeNo/status - 查询支付状态（pending 时触发一次主动查询）
+router.get('/:outTradeNo/status', asyncHandler(authenticate), asyncHandler(paymentController.getPaymentStatus));
 
 export default router;

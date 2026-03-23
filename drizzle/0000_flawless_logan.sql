@@ -68,7 +68,7 @@ CREATE TABLE `orders` (
 	`guide_id` int NOT NULL,
 	`creator_id` int,
 	`type` enum('standard','custom') NOT NULL DEFAULT 'standard',
-	`status` enum('pending','paid','waiting_service','in_service','service_ended','completed','cancelled','refunded') DEFAULT 'pending',
+	`status` enum('pending','waiting_service','in_service','service_ended','completed','cancelled','refunded') DEFAULT 'pending',
 	`price_per_hour` int,
 	`duration` int,
 	`total_duration` int,

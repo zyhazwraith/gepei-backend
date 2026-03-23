@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../../db/index.js';
 import { orders, overtimeRecords, payments } from '../../db/schema.js';
@@ -44,55 +44,26 @@ function resolveAuthCode(authCode?: string): string | null {
   return null;
 }
 
-function mapPaymentStatus(transactionId: string, payment: typeof payments.$inferSelect): PaymentStatusResult {
+function mapPaymentStatus(outTradeNo: string, payment: typeof payments.$inferSelect): PaymentStatusResult {
   return {
-    transactionId,
+    outTradeNo,
     relatedType: payment.relatedType,
     relatedId: payment.relatedId,
     paymentStatus: (payment.status ?? PAYMENT_STATUS_PENDING) as PaymentStatus,
   };
 }
 
-function isDuplicateEntryError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const anyError = error as {
-    code?: string;
-    errno?: number;
-    message?: string;
-  };
-
-  if (anyError.code === 'ER_DUP_ENTRY' || anyError.errno === 1062) {
-    return true;
-  }
-
-  return typeof anyError.message === 'string' && anyError.message.includes('Duplicate entry');
-}
-
-async function findPaymentByTransactionId(transactionId: string) {
+async function findPaymentByOutTradeNo(outTradeNo: string) {
   const [payment] = await db
     .select()
     .from(payments)
-    .where(eq(payments.outTradeNo, transactionId))
+    .where(eq(payments.outTradeNo, outTradeNo))
     .orderBy(desc(payments.createdAt))
     .limit(1);
 
   if (!payment) {
     throw new NotFoundError('支付单不存在');
   }
-
-  return payment;
-}
-
-async function findLatestPaymentByRelated(relatedType: PaymentRelatedType, relatedId: number) {
-  const [payment] = await db
-    .select()
-    .from(payments)
-    .where(and(eq(payments.relatedType, relatedType), eq(payments.relatedId, relatedId)))
-    .orderBy(desc(payments.createdAt))
-    .limit(1);
 
   return payment;
 }
@@ -146,31 +117,43 @@ export class PaymentService {
   }
 
   static async createPrepay(input: CreatePrepayInput): Promise<CreatePrepayResult> {
-    const transactionId = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
-    let payment: typeof payments.$inferSelect | undefined;
+    const payment = await db.transaction(async (tx) => {
+      // Lock parent business row to serialize concurrent pay requests for the same order/overtime.
+      if (input.intent.relatedType === PAYMENT_RELATED_TYPE_ORDER) {
+        await tx.execute(sql`SELECT id FROM orders WHERE id = ${input.intent.relatedId} FOR UPDATE`);
+      } else {
+        await tx.execute(sql`SELECT id FROM overtime_records WHERE id = ${input.intent.relatedId} FOR UPDATE`);
+      }
 
-    try {
-      await db.insert(payments).values({
+      const [existed] = await tx
+        .select()
+        .from(payments)
+        .where(and(eq(payments.relatedType, input.intent.relatedType), eq(payments.relatedId, input.intent.relatedId)))
+        .orderBy(desc(payments.createdAt))
+        .limit(1);
+
+      if (existed) {
+        return existed;
+      }
+
+      const outTradeNo = buildTransactionId(input.intent.relatedType, input.intent.relatedId);
+      await tx.insert(payments).values({
         relatedType: input.intent.relatedType,
         relatedId: input.intent.relatedId,
         paymentMethod: input.paymentMethod,
-        outTradeNo: transactionId,
+        outTradeNo,
         amount: input.intent.amountFen,
         status: PAYMENT_STATUS_PENDING,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      payment = await findPaymentByTransactionId(transactionId);
-    } catch (error) {
-      if (!isDuplicateEntryError(error)) {
-        throw error;
-      }
 
-      payment = await findLatestPaymentByRelated(input.intent.relatedType, input.intent.relatedId);
-      if (!payment) {
+      const [created] = await tx.select().from(payments).where(eq(payments.outTradeNo, outTradeNo)).limit(1);
+      if (!created) {
         throw new ValidationError('支付单创建失败，请稍后重试');
       }
-    }
+      return created;
+    });
 
     if (!payment) {
       throw new ValidationError('支付单创建失败，请稍后重试');
@@ -211,7 +194,7 @@ export class PaymentService {
     }
 
     const upstream = await paymentProvider.createPrepay({
-      transactionId: payment.outTradeNo,
+      outTradeNo: payment.outTradeNo,
       amountFen: payment.amount,
       openid: openid.openid,
       appId: openid.appId,
@@ -222,52 +205,52 @@ export class PaymentService {
     return {
       relatedType: payment.relatedType,
       relatedId: payment.relatedId,
-      transactionId: payment.outTradeNo,
+      outTradeNo: payment.outTradeNo,
       paymentStatus: PAYMENT_STATUS_PENDING,
       payParams: upstream.payParams,
     };
   }
 
-  static async getPaymentStatusByTransactionId(transactionId: string, userId: number): Promise<PaymentStatusResult> {
-    const payment = await findPaymentByTransactionId(transactionId);
+  static async getPaymentStatusByOutTradeNo(outTradeNo: string, userId: number): Promise<PaymentStatusResult> {
+    const payment = await findPaymentByOutTradeNo(outTradeNo);
     await assertPaymentOwnership(payment.relatedType, payment.relatedId, userId);
-    return mapPaymentStatus(transactionId, payment);
+    return mapPaymentStatus(outTradeNo, payment);
   }
 
-  static async queryAndSyncByTransactionId(transactionId: string, userId?: number): Promise<PaymentStatusResult> {
-    const payment = await findPaymentByTransactionId(transactionId);
+  static async queryAndSyncByOutTradeNo(outTradeNo: string, userId?: number): Promise<PaymentStatusResult> {
+    const payment = await findPaymentByOutTradeNo(outTradeNo);
 
     if (typeof userId === 'number') {
       await assertPaymentOwnership(payment.relatedType, payment.relatedId, userId);
     }
 
     if (payment.status !== PAYMENT_STATUS_PENDING) {
-      return mapPaymentStatus(transactionId, payment);
+      return mapPaymentStatus(outTradeNo, payment);
     }
 
-    const upstream = await paymentProvider.queryOrder(transactionId);
+    const upstream = await paymentProvider.queryOrder(outTradeNo);
     if (upstream.status === PAYMENT_STATUS_SUCCESS) {
       await this.confirmPaid(payment.id, upstream);
     }
 
-    const refreshed = await findPaymentByTransactionId(transactionId);
-    return mapPaymentStatus(transactionId, refreshed);
+    const refreshed = await findPaymentByOutTradeNo(outTradeNo);
+    return mapPaymentStatus(outTradeNo, refreshed);
   }
 
   static async handleNotify(input: ProviderNotifyInput): Promise<PaymentStatusResult> {
     const upstream = await paymentProvider.parseNotify(input);
 
     if (upstream.status === PAYMENT_STATUS_SUCCESS) {
-      const payment = await findPaymentByTransactionId(upstream.transactionId);
+      const payment = await findPaymentByOutTradeNo(upstream.outTradeNo);
       await this.confirmPaid(payment.id, upstream);
     }
 
-    const refreshed = await findPaymentByTransactionId(upstream.transactionId);
-    return mapPaymentStatus(upstream.transactionId, refreshed);
+    const refreshed = await findPaymentByOutTradeNo(upstream.outTradeNo);
+    return mapPaymentStatus(upstream.outTradeNo, refreshed);
   }
 
-  static async reconcileBusinessByTransactionId(transactionId: string): Promise<void> {
-    const payment = await findPaymentByTransactionId(transactionId);
+  static async reconcileBusinessByOutTradeNo(outTradeNo: string): Promise<void> {
+    const payment = await findPaymentByOutTradeNo(outTradeNo);
     if (payment.status !== PAYMENT_STATUS_SUCCESS) {
       return;
     }
