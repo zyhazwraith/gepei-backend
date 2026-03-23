@@ -263,12 +263,13 @@ export const refundRecords = mysqlTable('refund_records', {
   reason: varchar('reason', { length: 255 }),
   outRefundNo: varchar('out_refund_no', { length: 64 }).unique(),
   refundTransactionId: varchar('refund_transaction_id', { length: 64 }),
-  status: mysqlEnum('status', ['pending', 'success', 'failed']).default('success'),
+  status: mysqlEnum('status', ['pending', 'success', 'failed']).default('pending'),
   operatorId: int('operator_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => {
   return {
     idxOrder: index('idx_order_id').on(table.orderId),
+    ukOrderId: unique('uk_refund_order_id').on(table.orderId),
   };
 });
 

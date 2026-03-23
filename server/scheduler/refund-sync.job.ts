@@ -4,6 +4,7 @@ import { db } from '../db/index.js';
 import { refundRecords } from '../db/schema.js';
 import { logger } from '../lib/logger.js';
 import { RefundService } from '../services/payment/refund.service.js';
+import { REFUND_STATUS_PENDING } from '../constants/refund.js';
 
 const BATCH_SIZE = 100;
 const PENDING_AGE_MINUTES = 2;
@@ -20,7 +21,7 @@ async function syncPendingRefunds(threshold: Date): Promise<number> {
   const rows = await db
     .select({ outRefundNo: refundRecords.outRefundNo })
     .from(refundRecords)
-    .where(and(eq(refundRecords.status, 'pending'), lt(refundRecords.createdAt, threshold)))
+    .where(and(eq(refundRecords.status, REFUND_STATUS_PENDING), lt(refundRecords.createdAt, threshold)))
     .limit(BATCH_SIZE);
 
   for (const row of rows) {

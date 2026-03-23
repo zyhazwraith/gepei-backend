@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { ValidationError } from '../utils/errors.js';
 import { RefundService } from '../services/payment/refund.service.js';
+import { REFUND_STATUS_PENDING } from '../constants/refund.js';
 
 /**
  * 获取退款状态（统一按 outRefundNo）
@@ -20,7 +21,7 @@ export async function getRefundStatus(req: Request, res: Response, next: NextFun
     let currentStatus = localStatus;
     let queryTriggered = false;
 
-    if (localStatus.refundStatus === 'pending') {
+    if (localStatus.refundStatus === REFUND_STATUS_PENDING) {
       queryTriggered = true;
       currentStatus = await RefundService.queryAndSyncByOutRefundNo(outRefundNo);
     }
