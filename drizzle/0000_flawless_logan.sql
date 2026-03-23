@@ -127,11 +127,12 @@ CREATE TABLE `refund_records` (
 	`reason` varchar(255),
 	`out_refund_no` varchar(64),
 	`refund_transaction_id` varchar(64),
-	`status` enum('pending','success','failed') DEFAULT 'success',
+	`status` enum('pending','success','failed') DEFAULT 'pending',
 	`operator_id` int,
 	`created_at` timestamp DEFAULT (now()),
 	CONSTRAINT `refund_records_id` PRIMARY KEY(`id`),
-	CONSTRAINT `refund_records_out_refund_no_unique` UNIQUE(`out_refund_no`)
+	CONSTRAINT `refund_records_out_refund_no_unique` UNIQUE(`out_refund_no`),
+	CONSTRAINT `uk_refund_order_id` UNIQUE(`order_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `reviews` (

@@ -1050,7 +1050,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'success'"
+          "default": "'pending'"
         },
         "operator_id": {
           "name": "operator_id",
@@ -1118,6 +1118,12 @@
           "name": "refund_records_out_refund_no_unique",
           "columns": [
             "out_refund_no"
+          ]
+        },
+        "uk_refund_order_id": {
+          "name": "uk_refund_order_id",
+          "columns": [
+            "order_id"
           ]
         }
       },
