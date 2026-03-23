@@ -12,6 +12,35 @@ function getBridge(): JsBridge | undefined {
   return (window as unknown as { WeixinJSBridge?: JsBridge }).WeixinJSBridge;
 }
 
+function waitBridgeReady(timeoutMs = 2500): Promise<JsBridge | undefined> {
+  const direct = getBridge();
+  if (direct) {
+    return Promise.resolve(direct);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(getBridge());
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('WeixinJSBridgeReady', done as EventListener);
+      document.removeEventListener('WeixinJSBridgeReady', done as EventListener);
+      clearTimeout(timer);
+    };
+
+    const timer = window.setTimeout(done, timeoutMs);
+    window.addEventListener('WeixinJSBridgeReady', done as EventListener, { once: true });
+    document.addEventListener('WeixinJSBridgeReady', done as EventListener, { once: true });
+  });
+}
+
 export function isDevMockAuthFallbackActive(): boolean {
   if (!import.meta.env.DEV) {
     return false;
@@ -38,24 +67,26 @@ export function resolveAuthCodeFromUrl(): string | null {
   return null;
 }
 
-export async function invokeWechatJsapiPay(payParams: PrepayPayParams): Promise<'success' | 'cancel' | 'fail' | 'skipped'> {
-  const bridge = getBridge();
+export async function invokeWechatJsapiPay(
+  payParams: PrepayPayParams,
+): Promise<{ status: 'success' | 'cancel' | 'fail' | 'skipped'; errMsg?: string }> {
+  const bridge = await waitBridgeReady();
   if (!bridge) {
-    return 'skipped';
+    return { status: 'skipped' };
   }
 
   return new Promise((resolve) => {
     bridge.invoke('getBrandWCPayRequest', payParams, (res) => {
       const errMsg = res?.err_msg?.toLowerCase() || '';
       if (errMsg.includes('ok')) {
-        resolve('success');
+        resolve({ status: 'success', errMsg });
         return;
       }
       if (errMsg.includes('cancel')) {
-        resolve('cancel');
+        resolve({ status: 'cancel', errMsg });
         return;
       }
-      resolve('fail');
+      resolve({ status: 'fail', errMsg });
     });
   });
 }
@@ -67,7 +98,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function waitPaymentSuccess(
-  transactionId: string,
+  outTradeNo: string,
   options: { timeoutMs?: number; intervalMs?: number } = {},
 ): Promise<'success' | 'failed' | 'timeout'> {
   const timeoutMs = options.timeoutMs ?? 20_000;
@@ -75,7 +106,7 @@ export async function waitPaymentSuccess(
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() <= deadline) {
-    const statusRes = await getPaymentStatus(transactionId);
+    const statusRes = await getPaymentStatus(outTradeNo);
     if (statusRes.code === 0 && statusRes.data) {
       if (statusRes.data.paymentStatus === 'success') {
         return 'success';

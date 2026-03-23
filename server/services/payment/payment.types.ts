@@ -43,20 +43,20 @@ export interface CreatePrepayInput {
 export interface CreatePrepayResult {
   relatedType: PaymentRelatedType;
   relatedId: number;
-  transactionId: string;
+  outTradeNo: string;
   paymentStatus: typeof PAYMENT_STATUS_PENDING;
   payParams: PrepayPayParams;
 }
 
 export interface PaymentStatusResult {
-  transactionId: string;
+  outTradeNo: string;
   relatedType: PaymentRelatedType;
   relatedId: number;
   paymentStatus: PaymentStatus;
 }
 
 export interface ProviderCreatePrepayInput {
-  transactionId: string;
+  outTradeNo: string;
   amountFen: number;
   openid: string;
   appId: string;
@@ -70,11 +70,38 @@ export interface ProviderCreatePrepayResult {
 }
 
 export interface ProviderPaymentResult {
-  transactionId: string;
+  outTradeNo: string;
   status: PaymentStatus;
   amountFen?: number;
   upstreamTransactionId?: string;
   paidAt?: Date;
+  raw?: unknown;
+}
+
+export interface ProviderCreateRefundInput {
+  outRefundNo: string;
+  upstreamTransactionId?: string;
+  outTradeNo?: string;
+  amountFen: number;
+  totalAmountFen: number;
+  reason: string;
+  notifyUrl?: string;
+}
+
+export interface ProviderCreateRefundResult {
+  outRefundNo: string;
+  status: PaymentStatus;
+  amountFen?: number;
+  refundTransactionId?: string;
+  raw?: unknown;
+}
+
+export interface ProviderRefundResult {
+  outRefundNo: string;
+  status: PaymentStatus;
+  amountFen?: number;
+  refundTransactionId?: string;
+  successAt?: Date;
   raw?: unknown;
 }
 
@@ -85,6 +112,9 @@ export interface ProviderNotifyInput {
 
 export interface IPaymentChannelProvider {
   createPrepay(input: ProviderCreatePrepayInput): Promise<ProviderCreatePrepayResult>;
-  queryOrder(transactionId: string): Promise<ProviderPaymentResult>;
+  queryOrder(outTradeNo: string): Promise<ProviderPaymentResult>;
   parseNotify(input: ProviderNotifyInput): Promise<ProviderPaymentResult>;
+  createRefund(input: ProviderCreateRefundInput): Promise<ProviderCreateRefundResult>;
+  queryRefund(outRefundNo: string): Promise<ProviderRefundResult>;
+  parseRefundNotify(input: ProviderNotifyInput): Promise<ProviderRefundResult>;
 }

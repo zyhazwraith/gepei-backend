@@ -68,7 +68,7 @@ CREATE TABLE `orders` (
 	`guide_id` int NOT NULL,
 	`creator_id` int,
 	`type` enum('standard','custom') NOT NULL DEFAULT 'standard',
-	`status` enum('pending','paid','waiting_service','in_service','service_ended','completed','cancelled','refunded') DEFAULT 'pending',
+	`status` enum('pending','waiting_service','in_service','service_ended','completed','cancelled','refunded') DEFAULT 'pending',
 	`price_per_hour` int,
 	`duration` int,
 	`total_duration` int,
@@ -107,7 +107,7 @@ CREATE TABLE `overtime_records` (
 CREATE TABLE `payments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`amount` int NOT NULL,
-	`transaction_id` varchar(64) NOT NULL,
+	`out_trade_no` varchar(64) NOT NULL,
 	`payment_method` enum('wechat') DEFAULT 'wechat',
 	`status` enum('pending','success','failed') DEFAULT 'pending',
 	`related_type` enum('order','overtime') NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE `payments` (
 	`created_at` timestamp DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `payments_id` PRIMARY KEY(`id`),
-	CONSTRAINT `uk_payments_transaction_id` UNIQUE(`transaction_id`),
+	CONSTRAINT `uk_payments_out_trade_no` UNIQUE(`out_trade_no`),
 	CONSTRAINT `uk_payments_related` UNIQUE(`related_type`,`related_id`)
 );
 --> statement-breakpoint
@@ -127,11 +127,12 @@ CREATE TABLE `refund_records` (
 	`reason` varchar(255),
 	`out_refund_no` varchar(64),
 	`refund_transaction_id` varchar(64),
-	`status` enum('pending','success','failed') DEFAULT 'success',
+	`status` enum('pending','success','failed') DEFAULT 'pending',
 	`operator_id` int,
 	`created_at` timestamp DEFAULT (now()),
 	CONSTRAINT `refund_records_id` PRIMARY KEY(`id`),
-	CONSTRAINT `refund_records_out_refund_no_unique` UNIQUE(`out_refund_no`)
+	CONSTRAINT `refund_records_out_refund_no_unique` UNIQUE(`out_refund_no`),
+	CONSTRAINT `uk_refund_order_id` UNIQUE(`order_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `reviews` (

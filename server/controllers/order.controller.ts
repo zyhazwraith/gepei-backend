@@ -168,7 +168,7 @@ export async function payOrder(req: Request, res: Response, next: NextFunction) 
       message: '预支付创建成功',
       data: {
         orderId,
-        transactionId: prepay.transactionId,
+        outTradeNo: prepay.outTradeNo,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       },
@@ -204,18 +204,6 @@ export async function refundOrder(req: Request, res: Response, next: NextFunctio
       data: result
     });
   } catch (error) {
-    if (error instanceof ValidationError && error.message === '订单已退款') {
-      res.json({
-        code: 0,
-        message: '订单已退款',
-        data: {
-          success: true,
-          alreadyRefunded: true,
-          message: '订单已退款'
-        }
-      });
-      return;
-    }
     next(error);
   }
 }
@@ -406,7 +394,7 @@ export async function payOvertime(req: Request, res: Response, next: NextFunctio
       message: '预支付创建成功',
       data: {
         overtimeId,
-        transactionId: prepay.transactionId,
+        outTradeNo: prepay.outTradeNo,
         paymentStatus: prepay.paymentStatus,
         payParams: prepay.payParams,
       }

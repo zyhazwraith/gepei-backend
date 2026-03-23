@@ -228,7 +228,7 @@ export interface CreateOrderResponse {
 export interface PayOrderResponse {
   orderId?: number;
   overtimeId?: number;
-  transactionId: string;
+  outTradeNo: string;
   paymentStatus: 'pending' | 'success' | 'failed';
   payParams: PrepayPayParams;
 }
@@ -243,7 +243,7 @@ export interface PrepayPayParams {
 }
 
 export interface PaymentStatusResponse {
-  transactionId: string;
+  outTradeNo: string;
   relatedType: 'order' | 'overtime';
   relatedId: number;
   paymentStatus: 'pending' | 'success' | 'failed';
@@ -379,8 +379,8 @@ export async function bindWechatSessionOpenId(authCode: string): Promise<ApiResp
 /**
  * 查询支付状态（pending时后端会主动触发一次查单）
  */
-export async function getPaymentStatus(transactionId: string): Promise<ApiResponse<PaymentStatusResponse>> {
-  return apiClient.get(`/payments/${transactionId}/status`);
+export async function getPaymentStatus(outTradeNo: string): Promise<ApiResponse<PaymentStatusResponse>> {
+  return apiClient.get(`/payments/${outTradeNo}/status`);
 }
 
 /**
@@ -843,6 +843,25 @@ export interface RefundOrderRequest {
   reason: string;
 }
 
+export interface RefundApplyResponse {
+  success: boolean;
+  alreadyRefunded?: boolean;
+  outRefundNo: string;
+  refundStatus: 'pending' | 'success' | 'failed';
+  refundedAmount: number;
+  penaltyApplied: boolean;
+  message: string;
+}
+
+export interface RefundStatusResponse {
+  outRefundNo: string;
+  orderId: number;
+  refundStatus: 'pending' | 'success' | 'failed';
+  refundedAmount: number;
+  refundTransactionId?: string;
+  queryTriggered: boolean;
+}
+
 /**
  * 订单退款 (管理员) - Deprecated/Removed
  */
@@ -855,11 +874,18 @@ export interface RefundOrderRequest {
  */
 export async function refundOrder(orderId: number): Promise<ApiResponse<{
   success: boolean;
+  alreadyRefunded?: boolean;
+  outRefundNo: string;
+  refundStatus: 'pending' | 'success' | 'failed';
   refundedAmount: number;
   penaltyApplied: boolean;
   message: string;
 }>> {
   return apiClient.post(`/orders/${orderId}/refund`);
+}
+
+export async function getRefundStatus(outRefundNo: string): Promise<ApiResponse<RefundStatusResponse>> {
+  return apiClient.get(`/refunds/${encodeURIComponent(outRefundNo)}/status`);
 }
 
 export default apiClient;

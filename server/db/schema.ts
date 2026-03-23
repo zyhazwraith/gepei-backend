@@ -177,7 +177,7 @@ export const overtimeRecords = mysqlTable('overtime_records', {
 export const payments = mysqlTable('payments', {
   id: int('id').primaryKey().autoincrement(),
   amount: int('amount').notNull(), // 单位: 分
-  transactionId: varchar('transaction_id', { length: 64 }).notNull(),
+  outTradeNo: varchar('out_trade_no', { length: 64 }).notNull(),
   paymentMethod: mysqlEnum('payment_method', ['wechat']).default('wechat'),
   status: mysqlEnum('status', ['pending', 'success', 'failed']).default('pending'),
   relatedType: mysqlEnum('related_type', ['order', 'overtime']).notNull(),
@@ -187,7 +187,7 @@ export const payments = mysqlTable('payments', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => {
   return {
-    ukTransactionId: unique('uk_payments_transaction_id').on(table.transactionId),
+    ukOutTradeNo: unique('uk_payments_out_trade_no').on(table.outTradeNo),
     ukRelated: unique('uk_payments_related').on(table.relatedType, table.relatedId),
   };
 });
@@ -263,12 +263,13 @@ export const refundRecords = mysqlTable('refund_records', {
   reason: varchar('reason', { length: 255 }),
   outRefundNo: varchar('out_refund_no', { length: 64 }).unique(),
   refundTransactionId: varchar('refund_transaction_id', { length: 64 }),
-  status: mysqlEnum('status', ['pending', 'success', 'failed']).default('success'),
+  status: mysqlEnum('status', ['pending', 'success', 'failed']).default('pending'),
   operatorId: int('operator_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => {
   return {
     idxOrder: index('idx_order_id').on(table.orderId),
+    ukOrderId: unique('uk_refund_order_id').on(table.orderId),
   };
 });
 

@@ -1,12 +1,12 @@
 import { db } from '../db/index.js';
-import { orders, checkInRecords, attachments, overtimeRecords, payments, refundRecords } from '../db/schema.js';
+import { orders, checkInRecords, attachments, overtimeRecords, payments } from '../db/schema.js';
 import { eq, and, lt, sql, desc } from 'drizzle-orm';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { nanoid } from 'nanoid';
 import { GUIDE_INCOME_RATIO } from '../shared/constants.js';
-import { paymentProvider } from './payment/payment.provider.js';
 import { OrderStatus } from '../constants/index.js';
 import type { PaymentIntent } from './payment/payment.types.js';
+import { RefundService } from './payment/refund.service.js';
 import {
   PAYMENT_RELATED_TYPE_ORDER,
   PAYMENT_RELATED_TYPE_OVERTIME,
@@ -143,127 +143,7 @@ export class OrderService {
    * User Initiated Refund
    */
   static async refundByUser(userId: number, orderId: number) {
-    // 1. Fetch Order
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-
-    if (!order) {
-      throw new NotFoundError('订单不存在');
-    }
-
-    // 2. Eligibility Checks
-    if (order.userId !== userId) {
-      throw new ForbiddenError('无权操作此订单');
-    }
-
-    if (order.status === OrderStatus.REFUNDED) {
-      return {
-        success: true,
-        alreadyRefunded: true,
-        refundedAmount: order.refundAmount || 0,
-        penaltyApplied: false,
-        message: '订单已退款'
-      };
-    }
-
-    if (!order.status || order.status !== OrderStatus.WAITING_SERVICE) {
-      throw new ValidationError(`当前订单状态为 ${order.status}，无法申请退款`);
-    }
-
-    if (!order.paidAt) {
-      throw new ValidationError('订单支付信息缺失');
-    }
-
-    // 3. Find Original Payment Transaction (Strict Check)
-    const [payment] = await db.select().from(payments)
-      .where(and(
-        eq(payments.relatedType, 'order'),
-        eq(payments.relatedId, order.id),
-        eq(payments.status, 'success')
-      ))
-      .orderBy(desc(payments.createdAt))
-      .limit(1);
-
-    if (!payment || !payment.transactionId) {
-      // Critical Data Inconsistency
-      throw new Error('系统异常：找不到关联的支付流水，请联系客服处理');
-    }
-    const originalTransactionId = payment.transactionId;
-
-    // 4. Calculate Refund Amount
-    const paidAtTime = new Date(order.paidAt).getTime();
-    const nowMs = Date.now();
-    const hoursSincePaid = (nowMs - paidAtTime) / (1000 * 60 * 60);
-
-    let refundAmount = order.amount; // Base: Full Refund
-    let penalty = 0;
-    let reason = '用户自主申请退款（无责）';
-
-    // Rule: > 1 Hour, deduct 150 RMB
-    if (hoursSincePaid > 1) {
-      penalty = 15000; // 150 RMB in cents
-      refundAmount = Math.max(0, order.amount - penalty);
-      reason = `用户自主申请退款（扣除违约金 ¥150）`;
-    }
-
-    // 5. CAS + Refund (Atomic in mocked stage)
-    const outRefundNo = `REF_${order.orderNumber}_${Date.now()}`;
-    const now = new Date();
-
-    await db.transaction(async (tx) => {
-      // 5.1 CAS: waiting_service -> refunded
-      const [updateResult] = await tx.update(orders)
-        .set({
-          status: OrderStatus.REFUNDED,
-          refundAmount: refundAmount,
-          updatedAt: now
-        })
-        .where(and(
-          eq(orders.id, order.id),
-          eq(orders.status, OrderStatus.WAITING_SERVICE)
-        ));
-
-      if (updateResult.affectedRows === 0) {
-        const [latestOrder] = await tx.select().from(orders).where(eq(orders.id, order.id));
-        if (latestOrder?.status === OrderStatus.REFUNDED) {
-          throw new ValidationError('订单已退款');
-        }
-        throw new ValidationError(`当前订单状态为 ${latestOrder?.status}，无法申请退款`);
-      }
-
-      // 5.2 Process external refund (mock provider in current stage)
-      const paymentResult = await paymentProvider.refund(
-        order.orderNumber,
-        refundAmount,
-        originalTransactionId,
-        outRefundNo,
-        reason
-      );
-
-      if (!paymentResult.success) {
-        throw new Error('退款请求失败，请联系客服');
-      }
-
-      // 5.3 Create refund record
-      await tx.insert(refundRecords).values({
-        orderId: order.id,
-        amount: refundAmount,
-        reason: reason,
-        outRefundNo: outRefundNo,
-        refundTransactionId: paymentResult.refundTransactionId,
-        status: 'success',
-        operatorId: userId, // User himself
-        createdAt: now
-      });
-    });
-
-    return {
-      success: true,
-      refundedAmount: refundAmount,
-      penaltyApplied: penalty > 0,
-      message: penalty > 0 
-        ? '退款申请成功，扣除违约金 ¥150，资金预计1-3个工作日到账'
-        : '退款申请成功，资金预计1-3个工作日到账'
-    };
+    return RefundService.applyByUser(userId, orderId);
   }
 
   /**
@@ -457,7 +337,7 @@ export class OrderService {
             status: 'success',
             relatedType: 'overtime',
             relatedId: overtimeId,
-            transactionId: `MOCK_OT_${nanoid()}`, // Mock ID
+            outTradeNo: `MOCK_OT_${nanoid()}`, // Mock ID
             paidAt: new Date(),
         });
     });

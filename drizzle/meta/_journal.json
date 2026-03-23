@@ -8,13 +8,6 @@
       "when": 1773393310354,
       "tag": "0000_flawless_logan",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1773473976194,
-      "tag": "0001_remove_order_paid",
-      "breakpoints": true
     }
   ]
 }

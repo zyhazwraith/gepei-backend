@@ -38,18 +38,26 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
           void ensureWechatAuthCode({ force: true, trigger: 'pay_click' });
           return;
         }
-        toast.error(res.message || "支付失败");
+        toast.error(`预支付失败 [${res.code}] ${res.message || "未知错误"}`);
         return;
       }
 
       const prepay = res.data;
       const invokeResult = await invokeWechatJsapiPay(prepay.payParams);
-      if (invokeResult === "cancel") {
-        toast.error("已取消支付");
+      if (invokeResult.status === "skipped") {
+        toast.error("未检测到微信支付环境，请在微信内打开");
+        return;
+      }
+      if (invokeResult.status === "cancel") {
+        toast.error(`已取消支付 (${invokeResult.errMsg || "cancel"})`);
+        return;
+      }
+      if (invokeResult.status === "fail") {
+        toast.error(`拉起微信支付失败: ${invokeResult.errMsg || "unknown"}`);
         return;
       }
 
-      const syncResult = await waitPaymentSuccess(prepay.transactionId);
+      const syncResult = await waitPaymentSuccess(prepay.outTradeNo);
       if (syncResult === "success") {
         toast.success("支付成功");
         onSuccess();
@@ -63,8 +71,10 @@ export default function PaymentSheet({ orderId, amount, isOpen, onClose, onSucce
       }
 
       toast("支付处理中，请稍后刷新订单状态");
-    } catch (error) {
-      toast.error("网络错误，请重试");
+    } catch (error: any) {
+      const codePart = typeof error?.code === "number" ? ` [${error.code}]` : "";
+      const message = typeof error?.message === "string" && error.message.trim() ? error.message : "网络错误，请重试";
+      toast.error(`支付异常${codePart}: ${message}`);
     } finally {
       setLoading(false);
     }

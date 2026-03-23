@@ -24,20 +24,20 @@ function errorMessage(error: unknown): string {
 
 async function syncPendingPayments(threshold: Date): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ outTradeNo: payments.outTradeNo })
     .from(payments)
     .where(and(eq(payments.status, PAYMENT_STATUS_PENDING), lt(payments.createdAt, threshold)))
     .limit(BATCH_SIZE);
 
   for (const row of rows) {
-    if (!row.transactionId) {
+    if (!row.outTradeNo) {
       continue;
     }
 
     try {
-      await PaymentService.queryAndSyncByTransactionId(row.transactionId);
+      await PaymentService.queryAndSyncByOutTradeNo(row.outTradeNo);
     } catch (error) {
-      logger.error(`payment_sync_pending_failed transactionId=${row.transactionId}`, errorMessage(error));
+      logger.error(`payment_sync_pending_failed outTradeNo=${row.outTradeNo}`, errorMessage(error));
     }
   }
 
@@ -46,7 +46,7 @@ async function syncPendingPayments(threshold: Date): Promise<number> {
 
 async function repairSuccessOrderPayments(): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ outTradeNo: payments.outTradeNo })
     .from(payments)
     .innerJoin(
       orders,
@@ -57,9 +57,9 @@ async function repairSuccessOrderPayments(): Promise<number> {
 
   for (const row of rows) {
     try {
-      await PaymentService.reconcileBusinessByTransactionId(row.transactionId);
+      await PaymentService.reconcileBusinessByOutTradeNo(row.outTradeNo);
     } catch (error) {
-      logger.error(`payment_sync_repair_order_failed transactionId=${row.transactionId}`, errorMessage(error));
+      logger.error(`payment_sync_repair_order_failed outTradeNo=${row.outTradeNo}`, errorMessage(error));
     }
   }
 
@@ -68,7 +68,7 @@ async function repairSuccessOrderPayments(): Promise<number> {
 
 async function repairSuccessOvertimePayments(): Promise<number> {
   const rows = await db
-    .select({ transactionId: payments.transactionId })
+    .select({ outTradeNo: payments.outTradeNo })
     .from(payments)
     .innerJoin(
       overtimeRecords,
@@ -79,9 +79,9 @@ async function repairSuccessOvertimePayments(): Promise<number> {
 
   for (const row of rows) {
     try {
-      await PaymentService.reconcileBusinessByTransactionId(row.transactionId);
+      await PaymentService.reconcileBusinessByOutTradeNo(row.outTradeNo);
     } catch (error) {
-      logger.error(`payment_sync_repair_overtime_failed transactionId=${row.transactionId}`, errorMessage(error));
+      logger.error(`payment_sync_repair_overtime_failed outTradeNo=${row.outTradeNo}`, errorMessage(error));
     }
   }
 
