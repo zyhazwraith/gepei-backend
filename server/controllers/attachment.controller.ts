@@ -6,11 +6,11 @@ import { z } from 'zod';
 import { db } from '../db/index.js';
 import { orders } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { resolveGuidePhotoStorageSlot } from '../utils/guide-photo-slot.js';
 
 const usageSchema = z.enum(['avatar', 'guide_photo', 'check_in', 'system']);
 const positiveIntStringSchema = z.string().regex(/^[1-9]\d*$/, 'contextId 必须为正整数');
 const checkInSlotSchema = z.enum(['start', 'end']);
-const guidePhotoSlotSchema = z.enum(['1', '2', '3', '4', '5']);
 const systemSlotSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,50}$/, 'slot 格式无效');
 
 export const uploadAttachment = async (req: Request, res: Response) => {
@@ -51,7 +51,11 @@ export const uploadAttachment = async (req: Request, res: Response) => {
       }
 
       if (usage === 'guide_photo') {
-        finalSlot = slot ? guidePhotoSlotSchema.parse(String(slot)) : '1';
+        const resolvedSlot = resolveGuidePhotoStorageSlot(slot);
+        if (!resolvedSlot) {
+          throw new ValidationError('guide_photo slot 仅支持 0-4');
+        }
+        finalSlot = resolvedSlot;
       }
     } else if (usage === 'check_in') {
       if (!contextId) {

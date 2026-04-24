@@ -26,12 +26,12 @@ const STRATEGIES: Record<string, Strategy> = {
     description: "用户/地陪头像，单例覆盖"
   },
   guide_photo: {
-    slot: '1',
+    slot: '0',
     path: (ctx) => `guides/u_${ctx.contextId}_p_${ctx.slot}.webp`,
     format: 'webp',
     resize: { width: 1080, fit: 'inside' },
     quality: 80,
-    description: "地陪相册 (slot: 1-5)"
+    description: "地陪相册 (slot: 0-4)"
   },
   check_in: {
     slot: 'start', // or 'end'

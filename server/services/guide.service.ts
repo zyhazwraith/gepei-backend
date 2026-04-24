@@ -2,6 +2,7 @@ import { db } from '../db/index.js';
 import { attachments } from '../db/schema.js';
 import { inArray } from 'drizzle-orm';
 import { Guide } from '../types/index.js';
+import { toGuidePhotoApiSlot } from '../utils/guide-photo-slot.js';
 const SLOT_REGEX = /_p_(\d+)\./;
 
 /**
@@ -60,7 +61,8 @@ export class GuideService {
             // Extract slot from key (e.g., ..._p_1.webp)
             // Regex: matches _p_ followed by digits followed by a dot
             const match = att.key ? att.key.match(SLOT_REGEX) : null;
-            const slot = match ? parseInt(match[1], 10) : undefined;
+            const storageSlot = match ? parseInt(match[1], 10) : undefined;
+            const slot = toGuidePhotoApiSlot(storageSlot);
 
             return { id, url: att.url, slot };
           })
