@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, Clock, AlertCircle, Headphones, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Clock, AlertCircle, Headphones, Info, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -200,6 +200,16 @@ export default function OrderDetail() {
     }
   };
 
+  const handleCopyOrderNumber = async () => {
+    if (!order?.orderNumber) return;
+    try {
+      await navigator.clipboard.writeText(order.orderNumber);
+      toast.success("订单号已复制");
+    } catch (error) {
+      toast.error("复制失败，请手动复制");
+    }
+  };
+
   const waitRefundSettled = async (outRefundNo: string): Promise<'success' | 'failed' | 'pending'> => {
     const maxAttempts = 8;
     const intervalMs = 1500;
@@ -342,9 +352,21 @@ export default function OrderDetail() {
             )}
 
             <div className="pt-3 border-t border-slate-100 mt-2">
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex items-start justify-between gap-3">
                     <span>订单编号</span>
-                    <span className="font-mono">{order.orderNumber}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-base font-bold text-slate-700 break-all text-right">{order.orderNumber}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[11px] border-slate-200 text-slate-600 hover:bg-slate-50"
+                        onClick={handleCopyOrderNumber}
+                      >
+                        <Copy className="w-3.5 h-3.5 mr-1" />
+                        复制
+                      </Button>
+                    </div>
                 </div>
                 <div className="flex justify-between text-xs text-slate-400 mt-1">
                     <span>下单时间</span>

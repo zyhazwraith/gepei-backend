@@ -25,12 +25,12 @@ export default function OrderCreate() {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [loadingGuide, setLoadingGuide] = useState(!!guideId);
   const [submitting, setSubmitting] = useState(false);
+  const [serviceHoursInput, setServiceHoursInput] = useState("8");
 
   // Form Data
   const [formData, setFormData] = useState({
     serviceDate: new Date().toISOString().split('T')[0], // Default to today
     serviceTime: "09:00",
-    serviceHours: 8, // default 8 hours (普通单)
     serviceAddress: "",
     serviceLat: 0,
     serviceLng: 0,
@@ -68,8 +68,15 @@ export default function OrderCreate() {
 
   // 优先使用 guide.price (通常等于 realPrice) 或 realPrice，兜底 expectedPrice
   const unitPrice = guide ? (guide.price || guide.realPrice || guide.expectedPrice || 0) : 0;
-  
-  const totalPrice = unitPrice * formData.serviceHours;
+
+  const parseServiceHours = (value: string) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? NaN : parsed;
+  };
+  const MAX_SERVICE_HOURS = 720;
+  const clampServiceHours = (value: number) => Math.min(MAX_SERVICE_HOURS, Math.max(3, value));
+  const parsedServiceHours = parseServiceHours(serviceHoursInput);
+  const totalPrice = unitPrice * (Number.isNaN(parsedServiceHours) ? 0 : parsedServiceHours);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -97,6 +104,17 @@ export default function OrderCreate() {
       return;
     }
 
+    const parsedHours = parseServiceHours(serviceHoursInput);
+    if (Number.isNaN(parsedHours)) {
+      toast.error("请填写服务时长");
+      return;
+    }
+
+    if (parsedHours < 3) {
+      toast.error("服务时长至少3小时");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const serviceStartTime = new Date(`${formData.serviceDate}T${formData.serviceTime}:00`).toISOString();
@@ -104,7 +122,7 @@ export default function OrderCreate() {
       const payload: CreateOrderRequest = {
         type: 'normal',
         serviceStartTime,
-        duration: Number(formData.serviceHours),
+        duration: clampServiceHours(parsedHours),
         serviceAddress: formData.serviceAddress,
         serviceLat: Number(formData.serviceLat),
         serviceLng: Number(formData.serviceLng),
@@ -235,7 +253,7 @@ export default function OrderCreate() {
             <div className="relative">
               <FileText className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Textarea 
-                placeholder="例如：市内一日游、机场接送、商务翻译..."
+                placeholder="例如： 逛街，吃饭，喝酒，爬山，线下游戏陪玩，商务接待等"
                 className="pl-9 min-h-[80px] bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl resize-none transition-all"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -250,11 +268,24 @@ export default function OrderCreate() {
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 type="number"
-                min={1}
-                max={24}
+                min={3}
+                max={MAX_SERVICE_HOURS}
                 className="pl-9 bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl h-11 transition-all"
-                value={formData.serviceHours}
-                onChange={(e) => setFormData({ ...formData, serviceHours: parseInt(e.target.value) || 1 })}
+                value={serviceHoursInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d*$/.test(value)) {
+                    setServiceHoursInput(value);
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = parseServiceHours(serviceHoursInput);
+                  if (Number.isNaN(parsed)) {
+                    setServiceHoursInput("3");
+                    return;
+                  }
+                  setServiceHoursInput(String(clampServiceHours(parsed)));
+                }}
               />
             </div>
           </div>
@@ -264,7 +295,7 @@ export default function OrderCreate() {
             <div className="relative">
               <Info className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <Textarea
-                placeholder="其他特殊要求..."
+                placeholder="例如： 穿着打扮，是否需要自带相机等"
                 className="pl-9 min-h-[80px] bg-slate-50 border-transparent focus:bg-white focus:border-orange-200 rounded-xl resize-none transition-all"
                 value={formData.requirements}
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
@@ -282,7 +313,7 @@ export default function OrderCreate() {
              <Price amount={totalPrice} className="text-2xl font-black text-rose-500" />
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5 font-medium">
-             <Price amount={unitPrice} /> x {formData.serviceHours}小时
+             <Price amount={unitPrice} /> x {(Number.isNaN(parsedServiceHours) || parsedServiceHours <= 0) ? "--" : parsedServiceHours}小时
           </div>
         </div>
         <Button 
