@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, MapPin, Filter } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,15 @@ export default function Guides() {
   
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [keyword, setKeyword] = useState(query.get("keyword") || "");
   const [selectedCity, setSelectedCity] = useState(query.get("city") || "");
-  const [showCitySelector, setShowCitySelector] = useState(false);
   const [userLat, setUserLat] = useState<number>();
   const [userLng, setUserLng] = useState<number>();
+  const observer = useRef<IntersectionObserver | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -39,31 +43,75 @@ export default function Guides() {
     }
   }, []);
 
-  // 加载数据
-  const fetchGuides = async () => {
-    setLoading(true);
+  const fetchGuides = async (targetPage: number, append = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const res = await getGuides(1, 20, selectedCity, keyword, userLat, userLng);
+      const res = await getGuides(targetPage, 20, selectedCity, keyword, userLat, userLng);
       if (res.code === 0 && res.data) {
-        setGuides(res.data.list);
+        const currentPage = Number((res.data.pagination as any)?.page ?? targetPage);
+        const totalPages = Number(
+          (res.data.pagination as any)?.totalPages ??
+          (res.data.pagination as any)?.total_pages ??
+          currentPage
+        );
+
+        setPage(currentPage);
+        setHasMore(currentPage < totalPages);
+        setGuides((prev) => {
+          if (!append) return res.data.list;
+          const existingIds = new Set(prev.map((g) => g.userId));
+          const next = res.data.list.filter((g) => !existingIds.has(g.userId));
+          return [...prev, ...next];
+        });
       }
     } catch (error) {
       console.error("加载地陪列表失败:", error);
       toast.error("加载失败，请重试");
     } finally {
-      setLoading(false);
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
   };
 
-  // 初始加载和筛选条件变化时加载
+  // 初始加载和筛选条件变化时重置
   useEffect(() => {
-    fetchGuides();
+    setPage(1);
+    setHasMore(true);
+    fetchGuides(1, false);
   }, [selectedCity, userLat, userLng]); // 坐标变化时也重新加载以更新距离
+
+  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    if (loading || loadingMore || !hasMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isFetchingRef.current && hasMore) {
+        fetchGuides(page + 1, true);
+      }
+    }, { rootMargin: "120px" });
+    if (node) observer.current.observe(node);
+  }, [loading, loadingMore, hasMore, page]);
+
+  useEffect(() => {
+    return () => observer.current?.disconnect();
+  }, []);
 
   // 处理搜索
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchGuides();
+    setPage(1);
+    setHasMore(true);
+    fetchGuides(1, false);
   };
 
   return (
@@ -111,9 +159,17 @@ export default function Guides() {
             </Card>
           ))
         ) : guides.length > 0 ? (
-          guides.map((guide) => (
-            <HomeGuideCard key={guide.userId} guide={guide} />
-          ))
+          <>
+            {guides.map((guide) => (
+              <HomeGuideCard key={guide.userId} guide={guide} />
+            ))}
+            <div ref={loadMoreRef} className="h-1" />
+            {loadingMore && (
+              <div className="text-center text-sm text-muted-foreground py-2">
+                加载更多中...
+              </div>
+            )}
+          </>
         ) : (
           <EmptyState 
             icon={Search}
