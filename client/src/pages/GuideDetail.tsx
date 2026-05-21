@@ -206,9 +206,19 @@ export default function GuideDetail() {
 
         {/* 价格与标签 */}
         <div className="flex items-center justify-between mb-6">
-            <div className="text-3xl font-black text-rose-500 font-sans tracking-tight" data-testid="guide-detail-price">
-              {guide.price ? <Price amount={guide.price} /> : "面议"}
-              <span className="text-sm text-slate-400 font-normal ml-1">/小时</span>
+            <div>
+              <div className="text-3xl font-black text-rose-500 font-sans tracking-tight" data-testid="guide-detail-price">
+                {guide.price ? <Price amount={guide.price} /> : "面议"}
+                <span className="text-sm text-slate-400 font-normal ml-1">/小时</span>
+              </div>
+              <div className="mt-2 rounded-xl bg-rose-50 border border-rose-100 px-3 py-2 max-w-[340px]">
+                <p className="text-sm font-extrabold text-rose-500 leading-relaxed">
+                  升级服务：牵拥每小时加60，喝酒每小时加60
+                </p>
+                <p className="text-xs font-semibold text-rose-400 leading-relaxed mt-0.5">
+                  地陪是否能接受，具体请与客服沟通
+                </p>
+              </div>
             </div>
             
             {/* 标签 */}
