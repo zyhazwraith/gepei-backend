@@ -9,6 +9,7 @@
 - `tool-setup-admin.ts`
 - `tool-reset-db.ts`
 - `release-pack.sh`（按指定 Git ref 打包发布产物，自动注入版本与提交信息）
+- `deploy-workingtree-remote.sh`（将当前工作区打包上传到远端服务器，并保留 `.env`、`uploads`、`node_modules` 等运行期目录）
 
 ## 交接建议
 - 核心交接优先包含：
@@ -41,10 +42,25 @@
 
 ## 部署自动化说明
 
-生产部署脚本已迁移到技能目录，不放在业务仓库：
+仓库内保留了通用部署脚本：
 
-- `/home/ubuntu/.codex/skills/deploy-remote-manual/scripts/deploy-workingtree-remote.sh`
+```bash
+DEPLOY_HOST=<host> \
+DEPLOY_SSH_KEY=/path/to/key.pem \
+DEPLOY_APP_DIR=/home/<runtime-user>/gepei-backend \
+./scripts/deploy-workingtree-remote.sh
+```
 
-调用方式请参考对应 skill：
+也可以用 CLI 参数传入目标：
 
-- `/home/ubuntu/.codex/skills/deploy-remote-manual/SKILL.md`
+```bash
+./scripts/deploy-workingtree-remote.sh \
+  --host <host> \
+  --ssh-user root \
+  --runtime-user <runtime-user> \
+  --ssh-key /path/to/key.pem \
+  --app-dir /home/<runtime-user>/gepei-backend \
+  --pm2-app gepei-app
+```
+
+注意：目标机器 IP、SSH key 路径、生产 `.env`、证书、上传文件等运行期资产不写入 Git。
